@@ -1,0 +1,45 @@
+{
+  "timestamp": "20260412_164313",
+  "llm_model": "qwen3-max-2026-01-23",
+  "n_evolution_iters": 10,
+  "resumed": false,
+  "resume_start_iteration": null,
+  "experiment_dir": "C:\\Operation Research\\HybridSVM\\experiments\\by_model\\qwen3-max-2026-01-23\\exp_20260412_164313",
+  "svm": {
+    "accuracy": 0.9276,
+    "precision": 0.9443645083932853,
+    "recall": 0.9680432645034415,
+    "auc": 0.9651398331370984,
+    "tn": 350,
+    "fp": 116,
+    "fn": 65,
+    "tp": 1969,
+    "fpr": 0.24892703862660945,
+    "fnr": 0.0319567354965585,
+    "tpr_at_fpr1pct": 0.6347099311701082
+  },
+  "hybrid": {
+    "accuracy": 0.8036,
+    "precision": 0.8122217725617159,
+    "recall": 0.9867256637168141,
+    "auc": 0.6789302881064817,
+    "tn": 2,
+    "fp": 464,
+    "fn": 27,
+    "tp": 2007,
+    "fpr": 0.9957081545064378,
+    "fnr": 0.01327433628318584,
+    "tpr_at_fpr1pct": 0.5162241887905604,
+    "best_rule_score": 0.4990136428846937
+  },
+  "n_hard_cases": {
+    "fn": 65,
+    "fp": 116,
+    "easy_tn": 350,
+    "easy_tp": 1969
+  },
+  "n_hard_cases_hybrid": {
+    "fn": 27,
+    "fp": 464
+  }
+}

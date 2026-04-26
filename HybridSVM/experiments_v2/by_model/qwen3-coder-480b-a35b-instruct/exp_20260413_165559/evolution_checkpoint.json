@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "data_path": "C:\\Operation Research\\FunSearch_test\\training_2orientations.csv",
+  "model_path": "C:\\Operation Research\\HybridSVM\\models\\linear_svm_20260413_165559.json",
+  "test_size": 0.25,
+  "random_state": 42,
+  "seed": 42,
+  "n_islands": 4,
+  "max_island_size": 50,
+  "llm_model": "qwen3-coder-480b-a35b-instruct",
+  "n_evolution_iters": 10,
+  "llm_max_tokens": 4096,
+  "rule_placement": "round_robin",
+  "island_reset_mode": "trim_top_k",
+  "island_reset_keep_top": 3,
+  "island_reset_every": 5,
+  "timeout_per_call": 60,
+  "experiments_root": "C:\\Operation Research\\HybridSVM\\experiments_v2",
+  "n_easy_typical": 3,
+  "n_near_hard_easy": 3,
+  "iteration": 10
+}

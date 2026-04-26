@@ -1,0 +1,10 @@
+{"iteration": 1, "step_ok": false, "best_score": 0.025760334247106893, "n_rules": 2}
+{"iteration": 2, "step_ok": false, "best_score": 0.025760334247106893, "n_rules": 2}
+{"iteration": 3, "step_ok": true, "best_score": 0.053813395789836536, "n_rules": 3}
+{"iteration": 4, "step_ok": true, "best_score": 0.053813395789836536, "n_rules": 4}
+{"iteration": 5, "step_ok": false, "best_score": 0.053813395789836536, "n_rules": 4}
+{"iteration": 6, "step_ok": false, "best_score": 0.053813395789836536, "n_rules": 4}
+{"iteration": 7, "step_ok": false, "best_score": 0.053813395789836536, "n_rules": 4}
+{"iteration": 8, "step_ok": false, "best_score": 0.053813395789836536, "n_rules": 4}
+{"iteration": 9, "step_ok": false, "best_score": 0.053813395789836536, "n_rules": 4}
+{"iteration": 10, "step_ok": true, "best_score": 0.14018952573462415, "n_rules": 6}

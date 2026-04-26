@@ -1,0 +1,68 @@
+{
+  "timestamp": "20260420_200201",
+  "baseline_mode": "ensemble",
+  "baseline_models": [
+    "svm",
+    "lr",
+    "rf",
+    "gbdt_fallback"
+  ],
+  "meta_model": "logreg",
+  "xgb_fallback_used": true,
+  "llm_model": "qwen3-max-2026-01-23",
+  "n_evolution_iters": 1,
+  "resumed": false,
+  "resume_start_iteration": null,
+  "experiment_dir": "C:\\Operation Research\\HybridSVM\\experiments_ensemble_eval\\by_model\\qwen3-max-2026-01-23\\exp_20260420_200201",
+  "baseline": {
+    "name": "Ensemble",
+    "accuracy": 0.946,
+    "precision": 0.956271023546372,
+    "recall": 0.9783677482792527,
+    "auc": 0.9841545655192205,
+    "tn": 375,
+    "fp": 91,
+    "fn": 44,
+    "tp": 1990,
+    "fpr": 0.19527896995708155,
+    "fnr": 0.021632251720747297,
+    "tpr_at_fpr1pct": 0.8264503441494592
+  },
+  "svm": {
+    "accuracy": 0.946,
+    "precision": 0.956271023546372,
+    "recall": 0.9783677482792527,
+    "auc": 0.9841545655192205,
+    "tn": 375,
+    "fp": 91,
+    "fn": 44,
+    "tp": 1990,
+    "fpr": 0.19527896995708155,
+    "fnr": 0.021632251720747297,
+    "tpr_at_fpr1pct": 0.8264503441494592
+  },
+  "hybrid": {
+    "accuracy": 0.848,
+    "precision": 0.9484815618221258,
+    "recall": 0.859882005899705,
+    "auc": 0.9322530922810083,
+    "tn": 371,
+    "fp": 95,
+    "fn": 285,
+    "tp": 1749,
+    "fpr": 0.20386266094420602,
+    "fnr": 0.140117994100295,
+    "tpr_at_fpr1pct": 0.7359882005899705,
+    "best_rule_score": 0.016417751421063574
+  },
+  "n_hard_cases": {
+    "fn": 44,
+    "fp": 91,
+    "easy_tn": 375,
+    "easy_tp": 1990
+  },
+  "n_hard_cases_hybrid": {
+    "fn": 285,
+    "fp": 95
+  }
+}

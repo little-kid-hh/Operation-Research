@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "data_path": "C:\\Operation Research\\FunSearch_test\\training_2orientations.csv",
+  "model_path": "C:\\Operation Research\\HybridSVM\\models\\linear_svm_20260412_140519.json",
+  "test_size": 0.25,
+  "random_state": 42,
+  "seed": 42,
+  "n_islands": 4,
+  "max_island_size": 50,
+  "iteration": 10
+}

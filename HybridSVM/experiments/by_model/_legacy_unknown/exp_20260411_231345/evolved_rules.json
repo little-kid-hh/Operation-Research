@@ -1,0 +1,58 @@
+[
+  {
+    "id": "seed_0",
+    "code": "# -*- coding: utf-8 -*-\nimport math\n\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    # Seed rule 0: never override (trivial baseline)\n    return -1\n",
+    "fn_corr": 0,
+    "fp_corr": 0,
+    "fn_miss": 65,
+    "fp_over": 116,
+    "score": 0.0,
+    "fitness_history": [
+      0.0
+    ],
+    "island_id": 0,
+    "easy_overrides": 0
+  },
+  {
+    "id": "seed_1",
+    "code": "# -*- coding: utf-8 -*-\nimport math\n\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    sku_counts   = features.get('sku_counts', 0)\n    fill_ratio   = features.get('fill_ratio', 1.0)\n    max_asr      = features.get('max_asr', 1.0)\n    sku_avg_vol  = features.get('sku_average_volume', 0)\n    vehicle_cap  = features.get('vehicle_capacity', 45000)\n    total_vol    = sku_counts * sku_avg_vol\n\n    # Correct FP: very high fill_ratio with many small items — likely infeasible\n    if fill_ratio > 0.93 and sku_counts > 15:\n        return 0\n\n    # Correct FN: low fill_ratio but SVM is uncertain\n    if fill_ratio < 0.70 and svm_prob < 0.60:\n        return 1\n\n    return -1\n",
+    "fn_corr": 0,
+    "fp_corr": 6,
+    "fn_miss": 65,
+    "fp_over": 110,
+    "score": 0.025760334247106893,
+    "fitness_history": [
+      0.025861818744985016
+    ],
+    "island_id": 0,
+    "easy_overrides": 91
+  },
+  {
+    "id": "iter1_cand0_a9ad99",
+    "code": "# -*- coding: utf-8 -*-\n'''\n3D-BPP Rule Patch — SVM Hard Case Corrector\n\nThis function is called AFTER SVM prediction to correct hard cases.\nParameters:\n    svm_prob : float  — P(y=1) from SVM (already sigmoid of decision score)\n    features : dict   — raw feature dict with all 41 feature values\n\nReturns:\n    -1  : do not override SVM (rule not triggered)\n    0   : override → predict NO (not feasible)\n    1   : override → predict YES (feasible)\n\nIMPORTANT:\n  - Rules target specific FN/FP patterns identified in hard-case analysis.\n  - Thresholds are calibrated against the provided feature statistics table.\n  - Physical justification: \n      * FN fix: SVM over-penalizes item count/volume. When items are highly uniform \n        (low size variance & ratio std), they pack efficiently despite moderate counts.\n      * FP fix: SVM over-trusts spare capacity. High capacity is misleading when items \n        are highly fragmented (high length variance, long relative lengths, high aspect ratio).\n'''\nimport math\n\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    # Extract relevant features\n    sku_counts    = features.get('sku_counts', 0)\n    spare_cap     = features.get('spare_capacity', 0)\n    sku_len_var   = features.get('sku_length_var', 0)\n    sku_wid_var   = features.get('sku_width_var', 0)\n    l_ratio_std   = features.get('l_to_L_ratio_std', 0)\n    l_ratio_max   = features.get('l_to_L_ratio_max', 0)\n    max_asr       = features.get('max_asr', 1.0)\n\n    # ─── Rule 1: Fix FN (SVM under-confident → YES) ─────────────────────\n    # SVM heavily penalizes sku_counts (-10.59) and sku_average_volume (-16.41).\n    # If count is moderate (10-13) and spare capacity is decent, but items are \n    # highly uniform (low variance & low length-ratio std), fragmentation is minimal \n    # and packing is likely feasible.\n    if svm_prob < 0.5:\n        if (10 <= sku_counts <= 13 and\n            spare_cap > 6000 and\n            sku_len_var < 38.0 and\n            sku_wid_var < 7.0 and\n            l_ratio_std < 0.095):\n            return 1\n\n    # ─── Rule 2: Fix FP (SVM over-confident → NO) ───────────────────────\n    # SVM trusts spare_capacity (+13.56) too much. When spare capacity is high \n    # but items have high length variance, large relative max lengths, and high \n    # aspect ratios, space fragmentation prevents feasible packing despite volume.\n    if svm_prob > 0.5:\n        if (spare_cap > 12000 and\n            sku_len_var > 52.0 and\n            l_ratio_max > 0.58 and\n            max_asr > 5.5):\n            return 0\n\n    return -1",
+    "fn_corr": 1,
+    "fp_corr": 8,
+    "fn_miss": 64,
+    "fp_over": 108,
+    "score": 0.04185630161091475,
+    "fitness_history": [
+      0.04217456590732622
+    ],
+    "island_id": 0,
+    "easy_overrides": 175
+  },
+  {
+    "id": "iter2_cand0_eefaa7",
+    "code": "# -*- coding: utf-8 -*-\n'''\n3D-BPP Rule Patch — SVM Hard Case Corrector\n\nThis function is called AFTER SVM prediction to correct hard cases.\nParameters:\n    svm_prob : float  — P(y=1) from SVM (already sigmoid of decision score)\n    features : dict   — raw feature dict with all 41 feature values\n\nReturns:\n    -1  : do not override SVM (rule not triggered)\n    0   : override → predict NO (not feasible)\n    1   : override → predict YES (feasible)\n\nIMPORTANT:\n  - fill_ratio is a dimensionless fraction (often ~0–1): loaded volume / vehicle capacity.\n    It is NOT cubic meters; use the Feature scales table in the prompt for thresholds.\n  - Base your decision on physical 3D packing constraints:\n      * sku_counts: number of items\n      * sku_average_volume: avg item volume\n      * fill_ratio = total_skuvolume / vehicle_capacity (same as fraction of capacity used)\n      * sku_min_length/max_length, sku_min_width/max_width, sku_min_height/max_height\n      * aspect_ratio (max_asr): longest / shortest dimension of any item\n      * spare_capacity: remaining vehicle volume\n      * sku_length_var, sku_width_var, sku_height_var: variance in item sizes\n      * l_to_L_ratio_avg/min/max: SKU length / vehicle length ratio\n      * etc.\n  - Rules should only fire in specific feature ranges, not globally\n  - Do NOT just return 0 or 1 unconditionally\n  - Test your rule mentally on these patterns before writing code:\n      * High fill_ratio + many items → likely infeasible\n      * Low fill_ratio → likely feasible\n      * Very high aspect ratio items → hard to pack\n'''\nimport math\n\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    # Extract key features\n    sku_counts    = features.get('sku_counts', 0)\n    spare_cap     = features.get('spare_capacity', 0)\n    sku_len_var   = features.get('sku_length_var', 0)\n    l_ratio_std   = features.get('l_to_L_ratio_std', 0)\n    l_ratio_max   = features.get('l_to_L_ratio_max', 0)\n    max_asr       = features.get('max_asr', 1.0)\n\n    # ─── Rule 1: Fix FN (SVM under-confident → YES) ─────────────────────\n    # SVM heavily penalizes sku_counts (-10.59) and sku_average_volume (-16.41).\n    # When items are geometrically uniform (low length variance & low relative-length std),\n    # they tessellate efficiently. Moderate spare capacity (>9500) is sufficient despite\n    # SVM's pessimistic count/volume weighting.\n    if svm_prob < 0.5:\n        if (10 <= sku_counts <= 12 and\n            spare_cap > 9500 and\n            sku_len_var < 40.0 and\n            l_ratio_std < 0.105):\n            return 1\n\n    # ─── Rule 2: Fix FP (SVM over-confident → NO) ───────────────────────\n    # SVM over-trusts spare_capacity (+13.56). When spare capacity is high but item count\n    # is low (<=8), high length variance (>54) and extreme geometry (long relative lengths\n    # or high aspect ratios) create unfillable voids. Volume availability does not guarantee\n    # geometric feasibility.\n    if svm_prob > 0.5:\n        if (spare_cap > 12500 and\n            sku_counts <= 8 and\n            sku_len_var > 54.0 and\n            (l_ratio_max > 0.57 or max_asr > 5.5)):\n            return 0\n\n    return -1",
+    "fn_corr": 2,
+    "fp_corr": 3,
+    "fn_miss": 63,
+    "fp_over": 113,
+    "score": 0.0281869438057953,
+    "fitness_history": [
+      0.02831514952810886
+    ],
+    "island_id": 1,
+    "easy_overrides": 105
+  }
+]

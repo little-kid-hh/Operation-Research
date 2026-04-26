@@ -1,0 +1,40 @@
+sku_counts # sku: 货物
+sku_average_volume
+sku_length_var
+sku_width_var
+sku_height_var
+sku_length_avg
+sku_width_avg
+sku_height_avg
+max_asr # 最大长宽比
+vehicle_length # vehicle：载具
+vehicle_width
+vehicle_height
+spare_capacity
+sku_concentration # 货物集中度，衡量同尺寸物品的重复比例
+sku_min_length
+sku_max_length
+sku_std_length
+sku_min_width
+sku_max_width
+sku_std_width
+sku_min_height
+sku_max_height
+sku_std_height
+l_to_L_ratio_avg
+l_to_L_ratio_min
+l_to_L_ratio_max
+l_to_L_ratio_std
+h_to_H_ratio_avg
+h_to_H_ratio_min
+h_to_H_ratio_max
+h_to_H_ratio_std
+w_to_W_ratio_avg
+w_to_W_ratio_min
+w_to_W_ratio_max
+w_to_W_ratio_std
+wl_to_vehicle_wl_avg
+wl_to_vehicle_wl_min
+wl_to_vehicle_wl_max
+wl_to_vehicle_wl_std
+wl_to_vehicle_wl_total

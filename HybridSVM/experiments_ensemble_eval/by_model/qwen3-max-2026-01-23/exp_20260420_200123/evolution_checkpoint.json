@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "data_path": "C:\\Operation Research\\FunSearch_test\\training_2orientations.csv",
+  "model_path": "C:\\Operation Research\\HybridSVM\\models\\linear_svm_20260420_200123.json",
+  "test_size": 0.25,
+  "random_state": 42,
+  "seed": 42,
+  "n_islands": 4,
+  "max_island_size": 50,
+  "llm_model": "qwen3-max-2026-01-23",
+  "n_evolution_iters": 1,
+  "llm_max_tokens": 4096,
+  "rule_placement": "round_robin",
+  "island_reset_mode": "trim_top_k",
+  "island_reset_keep_top": 3,
+  "island_reset_every": 5,
+  "timeout_per_call": 60,
+  "experiments_root": "C:\\Operation Research\\HybridSVM\\experiments_ensemble_eval",
+  "n_easy_typical": 3,
+  "n_near_hard_easy": 3,
+  "baseline_mode": "svm",
+  "ensemble_base_models": "svm,lr,rf,xgb",
+  "ensemble_meta_model": "logreg",
+  "ensemble_cv_folds": 5,
+  "ensemble_random_state": 42,
+  "ensemble_resolved_base_models": [
+    "svm"
+  ],
+  "xgb_fallback_used": false,
+  "iteration": 1
+}

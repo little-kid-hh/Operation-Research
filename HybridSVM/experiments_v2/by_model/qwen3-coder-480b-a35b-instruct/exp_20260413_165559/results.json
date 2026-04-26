@@ -1,0 +1,45 @@
+{
+  "timestamp": "20260413_165559",
+  "llm_model": "qwen3-coder-480b-a35b-instruct",
+  "n_evolution_iters": 10,
+  "resumed": false,
+  "resume_start_iteration": null,
+  "experiment_dir": "C:\\Operation Research\\HybridSVM\\experiments_v2\\by_model\\qwen3-coder-480b-a35b-instruct\\exp_20260413_165559",
+  "svm": {
+    "accuracy": 0.9276,
+    "precision": 0.9443645083932853,
+    "recall": 0.9680432645034415,
+    "auc": 0.9651398331370984,
+    "tn": 350,
+    "fp": 116,
+    "fn": 65,
+    "tp": 1969,
+    "fpr": 0.24892703862660945,
+    "fnr": 0.0319567354965585,
+    "tpr_at_fpr1pct": 0.6347099311701082
+  },
+  "hybrid": {
+    "accuracy": 0.6664,
+    "precision": 0.8246753246753247,
+    "recall": 0.7492625368731564,
+    "auc": 0.6643218715316022,
+    "tn": 142,
+    "fp": 324,
+    "fn": 510,
+    "tp": 1524,
+    "fpr": 0.6952789699570815,
+    "fnr": 0.25073746312684364,
+    "tpr_at_fpr1pct": 0.45132743362831856,
+    "best_rule_score": 0.6959570023672063
+  },
+  "n_hard_cases": {
+    "fn": 65,
+    "fp": 116,
+    "easy_tn": 350,
+    "easy_tp": 1969
+  },
+  "n_hard_cases_hybrid": {
+    "fn": 510,
+    "fp": 324
+  }
+}

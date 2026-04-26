@@ -1,0 +1,30 @@
+[
+  {
+    "id": "seed_0",
+    "code": "# -*- coding: utf-8 -*-\nimport math\n\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    # Seed rule 0: never override (trivial baseline)\n    return -1\n",
+    "fn_corr": 0,
+    "fp_corr": 0,
+    "fn_miss": 65,
+    "fp_over": 116,
+    "score": 0.0,
+    "fitness_history": [
+      0.0
+    ],
+    "island_id": 0,
+    "easy_overrides": 0
+  },
+  {
+    "id": "seed_1",
+    "code": "# -*- coding: utf-8 -*-\nimport math\n\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    sku_counts   = features.get('sku_counts', 0)\n    fill_ratio   = features.get('fill_ratio', 1.0)\n    max_asr      = features.get('max_asr', 1.0)\n    sku_avg_vol  = features.get('sku_average_volume', 0)\n    vehicle_cap  = features.get('vehicle_capacity', 45000)\n    total_vol    = sku_counts * sku_avg_vol\n\n    # Correct FP: very high fill_ratio with many small items — likely infeasible\n    if fill_ratio > 0.93 and sku_counts > 15:\n        return 0\n\n    # Correct FN: low fill_ratio but SVM is uncertain\n    if fill_ratio < 0.70 and svm_prob < 0.60:\n        return 1\n\n    return -1\n",
+    "fn_corr": 0,
+    "fp_corr": 6,
+    "fn_miss": 65,
+    "fp_over": 110,
+    "score": 0.025760334247106893,
+    "fitness_history": [
+      0.025861818744985016
+    ],
+    "island_id": 0,
+    "easy_overrides": 91
+  }
+]

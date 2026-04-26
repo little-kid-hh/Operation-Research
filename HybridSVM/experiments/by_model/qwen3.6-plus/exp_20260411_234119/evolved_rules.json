@@ -1,0 +1,194 @@
+[
+  {
+    "id": "seed_0",
+    "code": "# -*- coding: utf-8 -*-\nimport math\n\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    # Seed rule 0: never override (trivial baseline)\n    return -1\n",
+    "fn_corr": 0,
+    "fp_corr": 0,
+    "fn_miss": 65,
+    "fp_over": 116,
+    "score": 0.0,
+    "fitness_history": [
+      0.0,
+      0.0
+    ],
+    "island_id": 0,
+    "easy_overrides": 0
+  },
+  {
+    "id": "seed_1",
+    "code": "# -*- coding: utf-8 -*-\nimport math\n\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    sku_counts   = features.get('sku_counts', 0)\n    fill_ratio   = features.get('fill_ratio', 1.0)\n    max_asr      = features.get('max_asr', 1.0)\n    sku_avg_vol  = features.get('sku_average_volume', 0)\n    vehicle_cap  = features.get('vehicle_capacity', 45000)\n    total_vol    = sku_counts * sku_avg_vol\n\n    # Correct FP: very high fill_ratio with many small items — likely infeasible\n    if fill_ratio > 0.93 and sku_counts > 15:\n        return 0\n\n    # Correct FN: low fill_ratio but SVM is uncertain\n    if fill_ratio < 0.70 and svm_prob < 0.60:\n        return 1\n\n    return -1\n",
+    "fn_corr": 0,
+    "fp_corr": 6,
+    "fn_miss": 65,
+    "fp_over": 110,
+    "score": 0.025760334247106893,
+    "fitness_history": [
+      0.025861818744985016,
+      0.025861818744985016
+    ],
+    "island_id": 0,
+    "easy_overrides": 91
+  },
+  {
+    "id": "iter1_cand0_3e030b",
+    "code": "# -*- coding: utf-8 -*-\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    # Extract key geometric & volumetric features\n    sc       = features.get('sku_counts', 0)\n    sp       = features.get('spare_capacity', 0)\n    l_var    = features.get('sku_length_var', 0)\n    w_var    = features.get('sku_width_var', 0)\n    max_asr  = features.get('max_asr', 0)\n    wl_std   = features.get('wl_to_vehicle_wl_std', 0)\n\n    # ── FP Correction (SVM says YES, actually NO) ─────────────────────────\n    # Physical rationale: High spare_capacity misleads SVM into feasibility,\n    # but high dimensional variance (l_var) & high aspect ratios (max_asr)\n    # cause geometric fragmentation, making efficient tiling impossible.\n    # Thresholds target >p50 variance & >p75 aspect ratio.\n    if svm_prob > 0.60 and sp > 11000 and sc >= 7:\n        if (l_var > 50 and max_asr > 5.5) or (wl_std > 42 and max_asr > 5.8):\n            return 0\n\n    # ── FN Correction (SVM says NO, actually YES) ─────────────────────────\n    # Physical rationale: SVM over-penalizes moderate counts/volumes.\n    # However, low dimensional variance & low aspect ratios indicate\n    # uniform, brick-like items that pack with near-zero wasted space.\n    # Thresholds target <p50 variance & <p50 aspect ratio with adequate spare.\n    if svm_prob < 0.45 and sp > 9000 and sc >= 8:\n        if l_var < 40 and w_var < 7.0 and max_asr < 4.8:\n            return 1\n\n    # Default: trust SVM\n    return -1",
+    "fn_corr": 2,
+    "fp_corr": 13,
+    "fn_miss": 63,
+    "fp_over": 103,
+    "score": 0.07063942946189915,
+    "fitness_history": [
+      0.07141859742867163,
+      0.07141859742867163
+    ],
+    "island_id": 0,
+    "easy_overrides": 253
+  },
+  {
+    "id": "iter6_cand0_233086",
+    "code": "# -*- coding: utf-8 -*-\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    sc       = features.get('sku_counts', 0)\n    sp       = features.get('spare_capacity', 0)\n    avg_vol  = features.get('sku_average_volume', 0)\n    l_var    = features.get('sku_length_var', 0)\n    w_var    = features.get('sku_width_var', 0)\n    h_var    = features.get('sku_height_var', 0)\n    max_asr  = features.get('max_asr', 1.0)\n    wl_std   = features.get('wl_to_vehicle_wl_std', 0)\n    l_std    = features.get('l_to_L_ratio_std', 0)\n    wl_total = features.get('wl_to_vehicle_wl_total', 0)\n    w_ratio_std = features.get('w_to_W_ratio_std', 0)\n\n    # ── FN Correction (SVM predicts NO, actually YES) ─────────────────────────\n    # SVM linearly penalizes moderate counts (w=-10.6) and avg volume (w=-16.4).\n    # When items are highly uniform (low dimensional & ratio variance) and\n    # aspect ratios are moderate, they enable efficient brick-like tiling.\n    # This geometric regularity overcomes the SVM's volume/count bias.\n    if 0.15 <= svm_prob <= 0.45:\n        if 9 <= sc <= 13 and 7000 <= sp <= 14000:\n            if wl_total > 900 and avg_vol < 3500:\n                # Strict uniformity: thresholds set at or below p50 from scale table\n                if l_var < 44.0 and w_var < 7.25 and h_var < 11.2:\n                    if l_std < 0.11 and wl_std < 37.0 and max_asr < 5.0:\n                        return 1\n\n    # ── FP Correction (SVM predicts YES, actually NO) ─────────────────────────\n    # SVM over-rewards spare_capacity (w=+13.6), ignoring geometric fragmentation.\n    # Low item counts with high dimensional variance and high aspect ratios\n    # create unusable voids, rendering theoretical spare volume inaccessible.\n    if 0.60 <= svm_prob <= 0.95:\n        if sc <= 9 and sp > 11500:\n            # Fragmentation signature: high length variance or footprint mismatch,\n            # combined with elongated items (high ASR) and inconsistent ratios.\n            if (l_var > 48.0 or wl_std > 38.0) and max_asr > 5.4:\n                if l_std > 0.115 or w_ratio_std > 0.048:\n                    return 0\n\n    return -1",
+    "fn_corr": 0,
+    "fp_corr": 5,
+    "fn_miss": 65,
+    "fp_over": 111,
+    "score": 0.021533816430023216,
+    "fitness_history": [
+      0.02155147395504028,
+      0.02155147395504028
+    ],
+    "island_id": 0,
+    "easy_overrides": 19
+  },
+  {
+    "id": "iter7_cand0_3f88d2",
+    "code": "# -*- coding: utf-8 -*-\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    # Extract key features\n    sc       = features.get('sku_counts', 0)\n    sp       = features.get('spare_capacity', 0)\n    avg_vol  = features.get('sku_average_volume', 0)\n    l_var    = features.get('sku_length_var', 0)\n    w_var    = features.get('sku_width_var', 0)\n    h_var    = features.get('sku_height_var', 0)\n    max_asr  = features.get('max_asr', 1.0)\n    wl_std   = features.get('wl_to_vehicle_wl_std', 0)\n    l_std    = features.get('l_to_L_ratio_std', 0)\n    w_std    = features.get('w_to_W_ratio_std', 0)\n    h_std    = features.get('h_to_H_ratio_std', 0)\n    wl_total = features.get('wl_to_vehicle_wl_total', 0)\n\n    # ── FN Correction (SVM predicts NO, actually YES) ─────────────────────────\n    # SVM heavily penalizes sku_counts (w=-10.6) and avg_vol (w=-16.4).\n    # When items are geometrically uniform (low dimensional & ratio variance),\n    # they enable efficient brick-like tiling that the linear model misses.\n    # Target: uncertain region (0.25-0.55), moderate counts, positive spare space.\n    if 0.25 <= svm_prob <= 0.55:\n        if 9 <= sc <= 13 and 7000 <= sp <= 15000:\n            if wl_total > 1000 and avg_vol < 3600:\n                # Uniformity signature: thresholds near or below p50/p75\n                if l_var < 50.0 and w_var < 8.0 and h_var < 12.5:\n                    if l_std < 0.12 and wl_std < 42.0 and max_asr < 5.5:\n                        return 1\n\n    # ── FP Correction (SVM predicts YES, actually NO) ─────────────────────────\n    # SVM over-rewards spare_capacity (w=+13.6). High theoretical spare volume\n    # with low item counts, high dimensional variance, and elongated items\n    # creates geometric fragmentation. The remaining voids are unusable.\n    if 0.60 <= svm_prob <= 0.98:\n        if sc <= 8 and sp > 11000:\n            # Fragmentation signature: high spread in lengths/footprints\n            # combined with high aspect ratios and inconsistent packing ratios.\n            if (l_var > 46.0 or wl_std > 39.0) and max_asr > 5.3:\n                if l_std > 0.11 or w_std > 0.05 or h_std > 0.06:\n                    return 0\n\n    return -1",
+    "fn_corr": 1,
+    "fp_corr": 2,
+    "fn_miss": 64,
+    "fp_over": 114,
+    "score": 0.0162970217524399,
+    "fitness_history": [
+      0.016312497170195152,
+      0.016312497170195152
+    ],
+    "island_id": 0,
+    "easy_overrides": 22
+  },
+  {
+    "id": "iter8_cand0_0c0453",
+    "code": "# -*- coding: utf-8 -*-\n'''\n3D-BPP Rule Patch — SVM Hard Case Corrector\n\nThis function is called AFTER SVM prediction to correct hard cases.\nParameters:\n    svm_prob : float  — P(y=1) from SVM (already sigmoid of decision score)\n    features : dict   — raw feature dict with all 41 feature values\n\nReturns:\n    -1  : do not override SVM (rule not triggered)\n    0   : override → predict NO (not feasible)\n    1   : override → predict YES (feasible)\n'''\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    # Extract geometric & volumetric features\n    sc       = features.get('sku_counts', 0)\n    sp       = features.get('spare_capacity', 0)\n    avg_vol  = features.get('sku_average_volume', 0)\n    l_var    = features.get('sku_length_var', 0)\n    w_var    = features.get('sku_width_var', 0)\n    h_var    = features.get('sku_height_var', 0)\n    max_asr  = features.get('max_asr', 1.0)\n    l_std    = features.get('l_to_L_ratio_std', 0)\n    w_std    = features.get('w_to_W_ratio_std', 0)\n    wl_std   = features.get('wl_to_vehicle_wl_std', 0)\n    wl_total = features.get('wl_to_vehicle_wl_total', 0)\n\n    # ── FN Correction (SVM predicts NO, actually YES) ─────────────────────────\n    # SVM linearly penalizes moderate counts (w=-10.6) and avg volume (w=-16.4).\n    # When items are geometrically uniform (low dimensional & ratio variance),\n    # they enable efficient brick-like tiling that the linear model misses.\n    # Targets the uncertain probability band (0.25–0.55) with strict uniformity.\n    if 0.25 <= svm_prob <= 0.55:\n        if 9 <= sc <= 13 and 7500 <= sp <= 16000:\n            if avg_vol < 3400 and wl_total > 900:\n                # Uniformity signature: thresholds at or below p50/p75 from scale table\n                if l_var < 45.0 and w_var < 7.5 and h_var < 11.5:\n                    if l_std < 0.115 and wl_std < 40.0 and max_asr < 5.3:\n                        return 1\n\n    # ── FP Correction (SVM predicts YES, actually NO) ─────────────────────────\n    # SVM over-rewards spare_capacity (w=+13.6), ignoring geometric fragmentation.\n    # Low item counts with high dimensional variance and high aspect ratios\n    # create unusable voids, rendering theoretical spare volume inaccessible.\n    # Targets high-confidence SVM outputs (0.60–0.98) with fragmentation signals.\n    if 0.60 <= svm_prob <= 0.98:\n        if sc <= 8 and sp > 11500:\n            # Fragmentation signature: high length/footprint spread + elongated items\n            if (l_var > 47.0 or wl_std > 41.0) and max_asr > 5.5:\n                # Inconsistent packing ratios confirm geometric mismatch\n                if l_std > 0.112 or w_std > 0.048:\n                    return 0\n\n    return -1",
+    "fn_corr": 0,
+    "fp_corr": 2,
+    "fn_miss": 65,
+    "fp_over": 114,
+    "score": 0.00861486362459485,
+    "fitness_history": [
+      0.008620439588105915,
+      0.008620439588105915
+    ],
+    "island_id": 0,
+    "easy_overrides": 15
+  },
+  {
+    "id": "iter9_cand0_3a1280",
+    "code": "# -*- coding: utf-8 -*-\n'''\n3D-BPP Rule Patch — SVM Hard Case Corrector\n\nThis function is called AFTER SVM prediction to correct hard cases.\nParameters:\n    svm_prob : float  — P(y=1) from SVM (already sigmoid of decision score)\n    features : dict   — raw feature dict with all 41 feature values\n\nReturns:\n    -1  : do not override SVM (rule not triggered)\n    0   : override → predict NO (not feasible)\n    1   : override → predict YES (feasible)\n'''\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    # Extract geometric & volumetric features\n    sc       = features.get('sku_counts', 0)\n    sp       = features.get('spare_capacity', 0)\n    l_var    = features.get('sku_length_var', 0)\n    w_var    = features.get('sku_width_var', 0)\n    h_var    = features.get('sku_height_var', 0)\n    max_asr  = features.get('max_asr', 1.0)\n    l_std    = features.get('l_to_L_ratio_std', 0)\n    w_std    = features.get('w_to_W_ratio_std', 0)\n    wl_std   = features.get('wl_to_vehicle_wl_std', 0)\n    wl_total = features.get('wl_to_vehicle_wl_total', 0)\n    avg_vol  = features.get('sku_average_volume', 0)\n\n    # ── FN Correction (SVM predicts NO, actually YES) ─────────────────────\n    # SVM linearly penalizes sku_counts (-10.6) and avg_volume (-16.4).\n    # When items are geometrically uniform (low dimensional & ratio variance)\n    # with positive spare capacity, they pack efficiently via brick-layering.\n    # Targets SVM's low-confidence band where it is overly conservative.\n    if svm_prob < 0.50:\n        if 8 <= sc <= 14 and sp > 8500:\n            # Uniformity signature: thresholds aligned near p75 of scale table\n            if l_var < 52.0 and w_var < 9.5 and h_var < 14.0 and max_asr < 5.8:\n                # Consistent footprint distribution & moderate load volume\n                if wl_total > 900 and l_std < 0.125 and avg_vol < 3800:\n                    return 1\n\n    # ── FP Correction (SVM predicts YES, actually NO) ─────────────────────\n    # SVM over-rewards spare_capacity (+13.6), ignoring geometric fragmentation.\n    # Low item counts with high dimensional variance and elongated shapes\n    # create unusable voids, rendering theoretical spare volume inaccessible.\n    # Targets SVM's medium-high confidence band where fragmentation is severe.\n    if svm_prob > 0.55:\n        if sc <= 9 and sp > 10500:\n            # Fragmentation signature: high length/footprint spread + elongated items\n            if (l_var > 46.0 or wl_std > 40.0) and max_asr > 5.2:\n                # Inconsistent packing ratios confirm geometric mismatch\n                if l_std > 0.108 or w_std > 0.046:\n                    return 0\n\n    return -1",
+    "fn_corr": 4,
+    "fp_corr": 7,
+    "fn_miss": 61,
+    "fp_over": 109,
+    "score": 0.06052330675363668,
+    "fitness_history": [
+      0.06094114383295708,
+      0.06094114383295708
+    ],
+    "island_id": 0,
+    "easy_overrides": 159
+  },
+  {
+    "id": "iter10_cand0_89cf55",
+    "code": "# -*- coding: utf-8 -*-\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    # Extract key geometric & volumetric features\n    sc = features.get('sku_counts', 0)\n    sp = features.get('spare_capacity', 0)\n    max_asr = features.get('max_asr', 1.0)\n    \n    # ── FN Correction (SVM: NO → YES) ──────────────────────────────────────\n    # SVM heavily penalizes moderate counts/volumes (w=-10.6, -16.4).\n    # When items are geometrically uniform (low dimensional variance, moderate ASR),\n    # they pack efficiently via brick-layering despite SVM's conservative score.\n    # Targets SVM's low-confidence band where it underestimates uniform loads.\n    if 0.20 < svm_prob < 0.52:\n        if 10 <= sc <= 15 and sp > 8000:\n            avg_vol = features.get('sku_average_volume', 0)\n            l_var = features.get('sku_length_var', 0)\n            w_var = features.get('sku_width_var', 0)\n            h_var = features.get('sku_height_var', 0)\n            # Uniformity signature: variances below ~p75, ASR below p75\n            if avg_vol < 3400 and l_var < 50 and w_var < 9.0 and h_var < 13.5 and max_asr < 5.4:\n                return 1\n                \n    # ── FP Correction (SVM: YES → NO) ──────────────────────────────────────\n    # SVM over-rewards spare_capacity (+13.6), ignoring geometric fragmentation.\n    # Low item counts with high dimensional spread & elongated shapes create unusable voids.\n    # Targets SVM's medium-high confidence band where theoretical space exists but is fragmented.\n    if svm_prob > 0.58:\n        if sc <= 9 and sp > 10000:\n            l_var = features.get('sku_length_var', 0)\n            wl_std = features.get('wl_to_vehicle_wl_std', 0)\n            l_std = features.get('l_to_L_ratio_std', 0)\n            # Fragmentation signature: high length variance + high aspect ratios\n            # OR high footprint ratio spread + inconsistent length ratios\n            if (l_var > 46 and max_asr > 5.1) or (wl_std > 41 and l_std > 0.118):\n                return 0\n                \n    return -1",
+    "fn_corr": 0,
+    "fp_corr": 18,
+    "fn_miss": 65,
+    "fp_over": 98,
+    "score": 0.07669600951196115,
+    "fitness_history": [
+      0.0775859562285107,
+      0.0775859562285107
+    ],
+    "island_id": 0,
+    "easy_overrides": 266
+  },
+  {
+    "id": "iter12_cand0_c15d25",
+    "code": "# -*- coding: utf-8 -*-\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    sc       = features.get('sku_counts', 0)\n    sp       = features.get('spare_capacity', 0)\n    l_var    = features.get('sku_length_var', 0)\n    w_var    = features.get('sku_width_var', 0)\n    h_var    = features.get('sku_height_var', 0)\n    max_asr  = features.get('max_asr', 0)\n    wl_std   = features.get('wl_to_vehicle_wl_std', 0)\n    l_std    = features.get('l_to_L_ratio_std', 0)\n    w_std    = features.get('w_to_W_ratio_std', 0)\n    avg_vol  = features.get('sku_average_volume', 0)\n    wl_total = features.get('wl_to_vehicle_wl_total', 0)\n\n    # ── FN Correction (SVM predicts NO, actually YES) ─────────────────────────\n    # Pattern: Moderate spare capacity (7500-19000) with uniform items that tile efficiently.\n    # SVM underestimates feasibility due to strong penalties on sku_counts (w=-10.6) \n    # and sku_average_volume (w=-16.4), but low dimensional variance indicates \n    # brick-like items with minimal wasted space.\n    # Key: FN avg spare_capacity=9239 (below p25=10749), sku_counts~11, low variance.\n    if 0.28 <= svm_prob <= 0.52:\n        if 7500 <= sp <= 19000:\n            if 9 <= sc <= 15:\n                # Uniform items pack efficiently (low variance across all dimensions)\n                if l_var < 50 and w_var < 9.0 and h_var < 14:\n                    if max_asr < 5.6 and avg_vol < 3500:\n                        return 1\n\n    # ── FP Correction (SVM predicts YES, actually NO) ─────────────────────────\n    # Pattern: High spare capacity (>14000) with few items (≤8) but geometric fragmentation.\n    # SVM overestimates feasibility due to heavy reliance on spare_capacity (w=+13.6).\n    # Key: FP avg spare_capacity=12277, sku_counts~7-8, high length_var=48.2.\n    # Few large/varied items create unusable gaps despite theoretical volume.\n    if 0.55 <= svm_prob <= 0.95:\n        if sp > 14000 and sc <= 8:\n            # Fragmentation signature: high dimensional variance + poor aspect ratios\n            # OR significant footprint mismatch across items\n            if (l_var > 46 and max_asr > 5.4) or (wl_std > 38 and l_std > 0.11):\n                return 0\n\n    return -1",
+    "fn_corr": 3,
+    "fp_corr": 9,
+    "fn_miss": 62,
+    "fp_over": 107,
+    "score": 0.061765476184707006,
+    "fitness_history": [
+      0.06186952584006546
+    ],
+    "island_id": 0,
+    "easy_overrides": 39
+  },
+  {
+    "id": "iter13_cand0_a2d2b3",
+    "code": "# -*- coding: utf-8 -*-\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    sc = features.get('sku_counts', 0)\n    sp = features.get('spare_capacity', 0)\n    l_var = features.get('sku_length_var', 0)\n    w_var = features.get('sku_width_var', 0)\n    h_var = features.get('sku_height_var', 0)\n    max_asr = features.get('max_asr', 0)\n    wl_std = features.get('wl_to_vehicle_wl_std', 0)\n    l_std = features.get('l_to_L_ratio_std', 0)\n    avg_vol = features.get('sku_average_volume', 0)\n    \n    # ── FN Correction (SVM predicts NO, actually YES) ──────────────────────\n    # Physical rationale: SVM linearly penalizes moderate sku_counts (w=-10.6) \n    # and sku_average_volume (w=-16.4), causing under-confidence on uniform items.\n    # FN pattern: spare_capacity ~9240 (below p25=10749), sku_counts ~11, \n    # low dimensional variance indicates brick-like items that tile efficiently.\n    # These uniform items have minimal wasted space despite SVM's volume bias.\n    if 0.20 <= svm_prob <= 0.50:\n        if 7000 <= sp <= 13000:\n            if 9 <= sc <= 14:\n                # Low variance = uniform items pack with near-zero wasted space\n                if l_var < 50 and w_var < 9.0 and h_var < 14:\n                    if max_asr < 5.7 and avg_vol < 3500:\n                        return 1\n\n    # ── FP Correction (SVM predicts YES, actually NO) ──────────────────────\n    # Physical rationale: SVM over-relies on spare_capacity (w=+13.6).\n    # FP pattern: spare_capacity ~12277 (above median), sku_counts ~7-8 (few items),\n    # high length_var ~48 causes geometric fragmentation - theoretical volume \n    # is unusable for tiling due to size mismatches and poor aspect ratios.\n    # Few large/varied items create gaps that cannot be filled.\n    if 0.55 <= svm_prob <= 0.92:\n        if sp > 13000 and sc <= 8:\n            # Fragmentation signature: high variance + poor aspect ratios\n            # OR significant footprint length mismatch across items\n            if (l_var > 46 and max_asr > 5.4) or (wl_std > 40 and l_std > 0.11):\n                return 0\n\n    return -1",
+    "fn_corr": 7,
+    "fp_corr": 9,
+    "fn_miss": 58,
+    "fp_over": 107,
+    "score": 0.09252290775456141,
+    "fitness_history": [
+      0.09263875613437586
+    ],
+    "island_id": 0,
+    "easy_overrides": 29
+  },
+  {
+    "id": "iter13_cand0_a2d2b3_reset_2857",
+    "code": "# -*- coding: utf-8 -*-\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    sc = features.get('sku_counts', 0)\n    sp = features.get('spare_capacity', 0)\n    l_var = features.get('sku_length_var', 0)\n    w_var = features.get('sku_width_var', 0)\n    h_var = features.get('sku_height_var', 0)\n    max_asr = features.get('max_asr', 0)\n    wl_std = features.get('wl_to_vehicle_wl_std', 0)\n    l_std = features.get('l_to_L_ratio_std', 0)\n    avg_vol = features.get('sku_average_volume', 0)\n    \n    # ── FN Correction (SVM predicts NO, actually YES) ──────────────────────\n    # Physical rationale: SVM linearly penalizes moderate sku_counts (w=-10.6) \n    # and sku_average_volume (w=-16.4), causing under-confidence on uniform items.\n    # FN pattern: spare_capacity ~9240 (below p25=10749), sku_counts ~11, \n    # low dimensional variance indicates brick-like items that tile efficiently.\n    # These uniform items have minimal wasted space despite SVM's volume bias.\n    if 0.20 <= svm_prob <= 0.50:\n        if 7000 <= sp <= 13000:\n            if 9 <= sc <= 14:\n                # Low variance = uniform items pack with near-zero wasted space\n                if l_var < 50 and w_var < 9.0 and h_var < 14:\n                    if max_asr < 5.7 and avg_vol < 3500:\n                        return 1\n\n    # ── FP Correction (SVM predicts YES, actually NO) ──────────────────────\n    # Physical rationale: SVM over-relies on spare_capacity (w=+13.6).\n    # FP pattern: spare_capacity ~12277 (above median), sku_counts ~7-8 (few items),\n    # high length_var ~48 causes geometric fragmentation - theoretical volume \n    # is unusable for tiling due to size mismatches and poor aspect ratios.\n    # Few large/varied items create gaps that cannot be filled.\n    if 0.55 <= svm_prob <= 0.92:\n        if sp > 13000 and sc <= 8:\n            # Fragmentation signature: high variance + poor aspect ratios\n            # OR significant footprint length mismatch across items\n            if (l_var > 46 and max_asr > 5.4) or (wl_std > 40 and l_std > 0.11):\n                return 0\n\n    return -1",
+    "fn_corr": 7,
+    "fp_corr": 9,
+    "fn_miss": 58,
+    "fp_over": 107,
+    "score": 0.09252290775456141,
+    "fitness_history": [
+      0.09263875613437586
+    ],
+    "island_id": 1,
+    "easy_overrides": 29
+  },
+  {
+    "id": "iter3_cand0_c58eea",
+    "code": "# -*- coding: utf-8 -*-\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    sc       = features.get('sku_counts', 0)\n    sp       = features.get('spare_capacity', 0)\n    l_var    = features.get('sku_length_var', 0)\n    w_var    = features.get('sku_width_var', 0)\n    max_asr  = features.get('max_asr', 0)\n    wl_std   = features.get('wl_to_vehicle_wl_std', 0)\n    l_std    = features.get('l_to_L_ratio_std', 0)\n    avg_vol  = features.get('sku_average_volume', 0)\n\n    # ── FN Correction (SVM predicts NO, actually YES) ─────────────────────────\n    # Physical rationale: SVM linearly penalizes moderate counts (w=-10.6) and \n    # average volume (w=-16.4), causing under-confidence. However, low dimensional \n    # variance and moderate aspect ratios indicate uniform, brick-like items that \n    # tile efficiently with near-zero wasted space, making them feasible despite \n    # the SVM's volume bias.\n    # Thresholds target the SVM uncertainty band and <p50 variance/ASR.\n    if 0.25 <= svm_prob <= 0.48:\n        if sc >= 9 and sp > 10000:\n            if l_var < 45 and w_var < 8.0 and max_asr < 5.2:\n                if avg_vol < 3500:\n                    return 1\n\n    # ── FP Correction (SVM predicts YES, actually NO) ─────────────────────────\n    # Physical rationale: SVM over-relies on high spare_capacity (w=+13.6). \n    # High dimensional variance & high aspect ratios cause geometric fragmentation, \n    # making the theoretical spare volume unusable for tiling. Fewer items with \n    # high footprint mismatch exacerbate this trap.\n    # Thresholds target SVM over-confidence band and >p50 variance/ASR.\n    if 0.55 <= svm_prob <= 0.85:\n        if sp > 12000 and sc <= 10:\n            # Fragmentation signature: either high length variance + high ASR,\n            # or high footprint length mismatch + high length ratio std.\n            if (l_var > 50 and max_asr > 5.6) or (wl_std > 40 and l_std > 0.11):\n                return 0\n\n    return -1",
+    "fn_corr": 0,
+    "fp_corr": 21,
+    "fn_miss": 65,
+    "fp_over": 95,
+    "score": 0.09036085952490673,
+    "fitness_history": [
+      0.09051699059967978,
+      0.09051699059967978
+    ],
+    "island_id": 2,
+    "easy_overrides": 40
+  },
+  {
+    "id": "iter3_cand0_c58eea_reset_4877",
+    "code": "# -*- coding: utf-8 -*-\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    sc       = features.get('sku_counts', 0)\n    sp       = features.get('spare_capacity', 0)\n    l_var    = features.get('sku_length_var', 0)\n    w_var    = features.get('sku_width_var', 0)\n    max_asr  = features.get('max_asr', 0)\n    wl_std   = features.get('wl_to_vehicle_wl_std', 0)\n    l_std    = features.get('l_to_L_ratio_std', 0)\n    avg_vol  = features.get('sku_average_volume', 0)\n\n    # ── FN Correction (SVM predicts NO, actually YES) ─────────────────────────\n    # Physical rationale: SVM linearly penalizes moderate counts (w=-10.6) and \n    # average volume (w=-16.4), causing under-confidence. However, low dimensional \n    # variance and moderate aspect ratios indicate uniform, brick-like items that \n    # tile efficiently with near-zero wasted space, making them feasible despite \n    # the SVM's volume bias.\n    # Thresholds target the SVM uncertainty band and <p50 variance/ASR.\n    if 0.25 <= svm_prob <= 0.48:\n        if sc >= 9 and sp > 10000:\n            if l_var < 45 and w_var < 8.0 and max_asr < 5.2:\n                if avg_vol < 3500:\n                    return 1\n\n    # ── FP Correction (SVM predicts YES, actually NO) ─────────────────────────\n    # Physical rationale: SVM over-relies on high spare_capacity (w=+13.6). \n    # High dimensional variance & high aspect ratios cause geometric fragmentation, \n    # making the theoretical spare volume unusable for tiling. Fewer items with \n    # high footprint mismatch exacerbate this trap.\n    # Thresholds target SVM over-confidence band and >p50 variance/ASR.\n    if 0.55 <= svm_prob <= 0.85:\n        if sp > 12000 and sc <= 10:\n            # Fragmentation signature: either high length variance + high ASR,\n            # or high footprint length mismatch + high length ratio std.\n            if (l_var > 50 and max_asr > 5.6) or (wl_std > 40 and l_std > 0.11):\n                return 0\n\n    return -1",
+    "fn_corr": 0,
+    "fp_corr": 21,
+    "fn_miss": 65,
+    "fp_over": 95,
+    "score": 0.09036085952490673,
+    "fitness_history": [
+      0.09051699059967978,
+      0.09051699059967978
+    ],
+    "island_id": 3,
+    "easy_overrides": 40
+  }
+]

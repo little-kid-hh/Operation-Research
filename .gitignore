@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+.eggs/
+*.egg-info/
+dist/
+build/
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Model artifacts (regenerate with scripts; large binaries)
+*.joblib
+*.pt
+# Keep small json checkpoints if needed — uncomment to ignore all models:
+# HybridSVM/models/
+
+# Experiments & generated outputs (optional: track selectively)
+# HybridSVM/experiments*/
+# HybridSVM/experiments_*/
+
+# Cursor local
+.cursor/

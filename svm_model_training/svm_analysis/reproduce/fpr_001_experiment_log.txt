@@ -1,0 +1,10 @@
+Target FPR: 0.01
+Interpolated TPR at FPR=0.01: 0.6347099311701082
+Closest FPR in ROC: 0.01072961373390558
+Threshold at closest FPR: 0.9821224541065613
+
+Precision at closest FPR: 0.996141975308642
+Recall at closest FPR: 0.6347099311701082
+Confusion matrix at closest FPR (rows: true [0,1], cols: pred [0,1]):
+[[ 461    5]
+ [ 743 1291]]

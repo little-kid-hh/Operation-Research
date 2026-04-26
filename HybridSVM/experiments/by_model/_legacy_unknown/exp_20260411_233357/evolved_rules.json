@@ -1,0 +1,44 @@
+[
+  {
+    "id": "seed_0",
+    "code": "# -*- coding: utf-8 -*-\nimport math\n\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    # Seed rule 0: never override (trivial baseline)\n    return -1\n",
+    "fn_corr": 0,
+    "fp_corr": 0,
+    "fn_miss": 65,
+    "fp_over": 116,
+    "score": 0.0,
+    "fitness_history": [
+      0.0
+    ],
+    "island_id": 0,
+    "easy_overrides": 0
+  },
+  {
+    "id": "seed_1",
+    "code": "# -*- coding: utf-8 -*-\nimport math\n\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    sku_counts   = features.get('sku_counts', 0)\n    fill_ratio   = features.get('fill_ratio', 1.0)\n    max_asr      = features.get('max_asr', 1.0)\n    sku_avg_vol  = features.get('sku_average_volume', 0)\n    vehicle_cap  = features.get('vehicle_capacity', 45000)\n    total_vol    = sku_counts * sku_avg_vol\n\n    # Correct FP: very high fill_ratio with many small items — likely infeasible\n    if fill_ratio > 0.93 and sku_counts > 15:\n        return 0\n\n    # Correct FN: low fill_ratio but SVM is uncertain\n    if fill_ratio < 0.70 and svm_prob < 0.60:\n        return 1\n\n    return -1\n",
+    "fn_corr": 0,
+    "fp_corr": 6,
+    "fn_miss": 65,
+    "fp_over": 110,
+    "score": 0.025760334247106893,
+    "fitness_history": [
+      0.025861818744985016
+    ],
+    "island_id": 0,
+    "easy_overrides": 91
+  },
+  {
+    "id": "iter1_cand0_41a841",
+    "code": "# -*- coding: utf-8 -*-\n'''\n3D-BPP Rule Patch — SVM Hard Case Corrector\n\nThis function is called AFTER SVM prediction to correct hard cases.\nParameters:\n    svm_prob : float  — P(y=1) from SVM (already sigmoid of decision score)\n    features : dict   — raw feature dict with all 41 feature values\n\nReturns:\n    -1  : do not override SVM (rule not triggered)\n    0   : override → predict NO (not feasible)\n    1   : override → predict YES (feasible)\n\nIMPORTANT:\n  - fill_ratio is a dimensionless fraction (often ~0–1): loaded volume / vehicle capacity.\n    It is NOT cubic meters; use the Feature scales table in the prompt for thresholds.\n  - Base your decision on physical 3D packing constraints:\n      * sku_counts: number of items\n      * sku_average_volume: avg item volume\n      * fill_ratio = total_skuvolume / vehicle_capacity (same as fraction of capacity used)\n      * sku_min_length/max_length, sku_min_width/max_width, sku_min_height/max_height\n      * aspect_ratio (max_asr): longest / shortest dimension of any item\n      * spare_capacity: remaining vehicle volume\n      * sku_length_var, sku_width_var, sku_height_var: variance in item sizes\n      * l_to_L_ratio_avg/min/max: SKU length / vehicle length ratio\n      * etc.\n  - Rules should only fire in specific feature ranges, not globally\n  - Do NOT just return 0 or 1 unconditionally\n  - Test your rule mentally on these patterns before writing code:\n      * High fill_ratio + many items → likely infeasible\n      * Low fill_ratio → likely feasible\n      * Very high aspect ratio items → hard to pack\n'''\nimport math\n\ndef apply_rule_patch(svm_prob: float, features: dict) -> int:\n    sc      = features.get('spare_capacity', 0)\n    masr    = features.get('max_asr', 1.0)\n    cnt     = features.get('sku_counts', 0)\n    l_avg   = features.get('l_to_L_ratio_avg', 0)\n    l_var   = features.get('sku_length_var', 0)\n    wl_std  = features.get('wl_to_vehicle_wl_std', 0)\n\n    # ─── FN Correction (SVM says NO, actually YES) ─────────────────────\n    # SVM heavily penalizes sku_counts & sku_average_volume. It underestimates\n    # feasibility when items are geometrically \"friendly\": low aspect ratio,\n    # uniform lengths, and still have meaningful spare volume.\n    # Thresholds: below p25 for ASR, below median for length variance,\n    # above FN-mean for spare capacity.\n    if svm_prob < 0.45:\n        if sc > 8500 and masr < 4.5 and cnt <= 12 and l_var < 44:\n            return 1\n\n    # ─── FP Correction (SVM says YES, actually NO) ─────────────────────\n    # SVM sees positive spare_capacity but misses geometric fragmentation.\n    # Very elongated items (high ASR) or long items with highly variable\n    # floor footprints create dead space that volume metrics ignore.\n    # Thresholds: above p75 for ASR/length-ratio/std, targeting awkward layouts.\n    if svm_prob > 0.55:\n        if (masr > 5.8 or (l_avg > 0.42 and wl_std > 42)) and cnt <= 9:\n            return 0\n\n    # ─── Default: trust SVM ────────────────────────────────────────────\n    return -1",
+    "fn_corr": 4,
+    "fp_corr": 12,
+    "fn_miss": 61,
+    "fp_over": 104,
+    "score": 0.08171027050469434,
+    "fitness_history": [
+      0.0824928677842343
+    ],
+    "island_id": 0,
+    "easy_overrides": 220
+  }
+]
