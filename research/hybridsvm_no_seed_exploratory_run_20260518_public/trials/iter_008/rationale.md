@@ -1,0 +1,1 @@
+- **spare_cap_x_sku_counts** directly tests XGB guidance §3.2: `spare_capacity ×

@@ -1,0 +1,19 @@
+{
+  "new_feature_coefficients": [
+    {
+      "feature": "spare_cap_x_sku_counts",
+      "coef": 7.995501356726352,
+      "abs_coef": 7.995501356726352
+    },
+    {
+      "feature": "n_items_near_vL",
+      "coef": -2.5714656540781284,
+      "abs_coef": 2.5714656540781284
+    },
+    {
+      "feature": "n_tall_items",
+      "coef": -1.9171231084870222,
+      "abs_coef": 1.9171231084870222
+    }
+  ]
+}

@@ -1,0 +1,3 @@
+- Focus on the **width-dimension bottleneck**, which is underrepresented in the active bank (only `n_wide_items` uses original width; no sorted-dimension width threshold exists).
+- Introduce a **smallest-dimension chunkiness** signal (`dim_s`), which is entirely absent from the bank and captures gap-filling flexibility lost when items are thick in every orientation.
+- Add a **spare-capacity × width-bottleneck interaction** to linearize the nonlinear regime where moderate spare capacity is negated by multiple wide items competing for the same floor strip.

@@ -1,0 +1,3 @@
+- height_layer_pressure: Sum of dim_s over vehicle height estimates vertical stacking layers; high values mean items must stack tall, making packing harder. Unlike dim_s_p90_to_vh (rejected iter 4), this captures cumulative pressure from all items, not just the tail.
+- footprint_sum_ratio: Sum of optimal-orientation footprints over vehicle floor area. When >1, items must stack vertically regardless of arrangement. Uses sorted dims (dim_l×dim_m) which gives the minimum possible footprint per item.
+- length_sum_pressure: Total length demand as sum(dim_l)/vL. This is effectively sku_counts × avg(dim_l/vL), creating an interaction the linear SVM cannot build on its own. Captures how many items compete for the length dimension.

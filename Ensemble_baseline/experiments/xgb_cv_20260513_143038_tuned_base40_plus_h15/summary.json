@@ -1,0 +1,81 @@
+{
+  "timestamp": "20260513_143038",
+  "data_path": "FunSearch_test/training_2orientations.csv",
+  "feature_set": "base40_plus_h15",
+  "config_name": "tuned",
+  "config_source": "/Users/zhongxiaochuan/Operation-Research/Ensemble_baseline/experiments/xgb_search_20260511_202925_base40_plus_h15/summary.json",
+  "xgb_cfg": {
+    "objective": "binary:logistic",
+    "eval_metric": "logloss",
+    "n_jobs": -1,
+    "n_estimators": 900,
+    "max_depth": 8,
+    "learning_rate": 0.02,
+    "subsample": 0.7,
+    "colsample_bytree": 0.7,
+    "reg_lambda": 1.0,
+    "min_child_weight": 2,
+    "gamma": 0.5
+  },
+  "n_rows_total": 10000,
+  "n_features": 55,
+  "target_positive": 8083,
+  "target_negative": 1917,
+  "cv_protocol": {
+    "type": "RepeatedStratifiedKFold",
+    "n_splits": 4,
+    "n_repeats": 1,
+    "random_state": 42
+  },
+  "aggregate_metrics": {
+    "accuracy": {
+      "mean": 0.9525,
+      "std": 0.0031728010758108553,
+      "min": 0.9492,
+      "max": 0.9556
+    },
+    "precision": {
+      "mean": 0.9611120441920594,
+      "std": 0.004198671502801008,
+      "min": 0.9548511047070125,
+      "max": 0.9637964774951077
+    },
+    "recall": {
+      "mean": 0.9809469628308699,
+      "std": 0.0038915863347125687,
+      "min": 0.9752475247524752,
+      "max": 0.983671449777338
+    },
+    "auc": {
+      "mean": 0.985280436739136,
+      "std": 0.0003025386616558451,
+      "min": 0.9848298267326734,
+      "max": 0.9854585309366475
+    },
+    "tpr_at_fpr1pct": {
+      "mean": 0.7888139265435697,
+      "std": 0.03289913505967107,
+      "min": 0.7545769421078674,
+      "max": 0.8297872340425532
+    },
+    "threshold_at_fpr1pct": {
+      "mean": 0.988537922501564,
+      "std": 0.0047759176411547016,
+      "min": 0.9817641377449036,
+      "max": 0.9928828477859497
+    },
+    "fpr": {
+      "mean": 0.1674560716771051,
+      "std": 0.01938642816007662,
+      "min": 0.15416666666666667,
+      "max": 0.19624217118997914
+    },
+    "fnr": {
+      "mean": 0.019053037169130073,
+      "std": 0.0038915863347125505,
+      "min": 0.01632855022266205,
+      "max": 0.024752475247524754
+    },
+    "n_folds_total": 4
+  }
+}

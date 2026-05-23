@@ -1,0 +1,3 @@
+- Continue targeting the TPR@FPR=1% gap by linearizing RF's conditional splits on the top features.
+- Iteration 1 covered spare-capacity interactions with `wl_total` and `sku_counts`, a quadratic slack term, cross-dimension tightness, and a volume-based big-piece share.
+- Iteration 2 priorities: (a) the remaining H2 interaction—`spare_capacity × sku_average_volume`—since `sku_average_volume` carries the largest negative SVM weight (-16.4) and RF importance 0.064; (b) an H3 wl-family shape signal capturing single-item footprint dominance; (c) an item-level elongation-threshold share that trees create via binary splits but SVM cannot express.

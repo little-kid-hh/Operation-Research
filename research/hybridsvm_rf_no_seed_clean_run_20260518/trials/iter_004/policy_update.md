@@ -1,0 +1,3 @@
+- Add `spare_cap_x_hH` to close the specific gap where h_to_H_ratio_avg (RF importance 0.030) has no spare_capacity interaction in the active bank, unlike the already-accepted wl_total and wl_max interactions
+- Add `floor_area_pressure` to capture a distinct physical bottleneck (floor-space competition) not represented in volume-based features; short wide items compete for floor area even when total volume fits
+- Add `tall_item_share` as a thresholded count targeting ceiling-effect items that block vertical stacking, complementing the existing `long_item_share` which targets length-axis pressure

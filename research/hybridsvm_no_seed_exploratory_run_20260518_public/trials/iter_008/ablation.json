@@ -1,0 +1,119 @@
+{
+  "feature_names_evaluated": [
+    "spare_cap_x_sku_counts",
+    "n_items_near_vL",
+    "n_tall_items"
+  ],
+  "single_feature": [
+    {
+      "feature": "spare_cap_x_sku_counts",
+      "metrics": {
+        "accuracy": 0.9288,
+        "precision": 0.9444444444444444,
+        "recall": 0.9695181907571289,
+        "auc": 0.9695930975983389,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.03048180924287119,
+        "tpr_at_fpr1pct": 0.671583087512291,
+        "tn": 350,
+        "fp": 116,
+        "fn": 62,
+        "tp": 1972
+      },
+      "delta_auc": 0.004453264461240503,
+      "delta_tpr_at_fpr1pct": 0.0368731563421828
+    },
+    {
+      "feature": "n_items_near_vL",
+      "metrics": {
+        "accuracy": 0.9308,
+        "precision": 0.9445771619684663,
+        "recall": 0.971976401179941,
+        "auc": 0.9721557555884723,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.028023598820058997,
+        "tpr_at_fpr1pct": 0.6922320550639135,
+        "tn": 350,
+        "fp": 116,
+        "fn": 57,
+        "tp": 1977
+      },
+      "delta_auc": 0.007015922451373946,
+      "delta_tpr_at_fpr1pct": 0.05752212389380529
+    },
+    {
+      "feature": "n_tall_items",
+      "metrics": {
+        "accuracy": 0.9328,
+        "precision": 0.9468390804597702,
+        "recall": 0.971976401179941,
+        "auc": 0.9707019298534358,
+        "fpr": 0.23819742489270387,
+        "fnr": 0.028023598820058997,
+        "tpr_at_fpr1pct": 0.6814159292035398,
+        "tn": 355,
+        "fp": 111,
+        "fn": 57,
+        "tp": 1977
+      },
+      "delta_auc": 0.00556209671633745,
+      "delta_tpr_at_fpr1pct": 0.04670599803343156
+    }
+  ],
+  "leave_one_out": [
+    {
+      "dropped_feature": "spare_cap_x_sku_counts",
+      "metrics": {
+        "accuracy": 0.9316,
+        "precision": 0.945480631276901,
+        "recall": 0.971976401179941,
+        "auc": 0.9729797308417841,
+        "fpr": 0.2446351931330472,
+        "fnr": 0.028023598820058997,
+        "tpr_at_fpr1pct": 0.7035398230088495,
+        "tn": 352,
+        "fp": 114,
+        "fn": 57,
+        "tp": 1977
+      },
+      "delta_auc_vs_baseline": 0.007839897704685739,
+      "delta_tpr_at_fpr1pct_vs_baseline": 0.06882989183874133
+    },
+    {
+      "dropped_feature": "n_items_near_vL",
+      "metrics": {
+        "accuracy": 0.9332,
+        "precision": 0.9477218225419665,
+        "recall": 0.9714847590953786,
+        "auc": 0.9706913795941103,
+        "fpr": 0.23390557939914164,
+        "fnr": 0.028515240904621434,
+        "tpr_at_fpr1pct": 0.6966568338249755,
+        "tn": 357,
+        "fp": 109,
+        "fn": 58,
+        "tp": 1976
+      },
+      "delta_auc_vs_baseline": 0.005551546457011947,
+      "delta_tpr_at_fpr1pct_vs_baseline": 0.06194690265486724
+    },
+    {
+      "dropped_feature": "n_tall_items",
+      "metrics": {
+        "accuracy": 0.9312,
+        "precision": 0.9450286806883366,
+        "recall": 0.971976401179941,
+        "auc": 0.9721378201476192,
+        "fpr": 0.24678111587982832,
+        "fnr": 0.028023598820058997,
+        "tpr_at_fpr1pct": 0.7020648967551623,
+        "tn": 351,
+        "fp": 115,
+        "fn": 57,
+        "tp": 1977
+      },
+      "delta_auc_vs_baseline": 0.00699798701052079,
+      "delta_tpr_at_fpr1pct_vs_baseline": 0.06735496558505405
+    }
+  ]
+}

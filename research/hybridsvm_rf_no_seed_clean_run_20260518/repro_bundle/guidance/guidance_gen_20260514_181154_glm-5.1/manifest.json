@@ -1,0 +1,11 @@
+{
+  "timestamp": "20260514_181154",
+  "route_name": "RF base40 -> GLM guidance -> linear SVM feature search",
+  "analysis_dir": "/Users/zhongxiaochuan/Operation-Research/research/rf_guidance_base40_20260514",
+  "summary_path": "/Users/zhongxiaochuan/Operation-Research/research/rf_guidance_base40_20260514/summary.json",
+  "output_path": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/RF_GUIDED_FEATURE_HYPOTHESES_BASE40.md",
+  "llm_model": "glm-5.1",
+  "llm_max_tokens": 4096,
+  "llm_timeout_per_call": 240,
+  "skip_probe": true
+}

@@ -1,0 +1,4 @@
+- Focus on the TPR@FPR=1% gap (0.17 below RF): the SVM misses hard positives because it cannot express nonlinear interactions and threshold effects on the top features.
+- Priority 1: explicit interactions between `spare_capacity` and the next-highest RF features (`wl_to_vehicle_wl_total`, `sku_counts`) to linearize the conditional splits trees make.
+- Priority 2: a threshold-based item-level signal (`big_piece_share`) that trees create naturally via binary splits but SVM cannot.
+- Priority 3: cross-dimension tightness product (`hH × lL`) and a quadratic spare-capacity term to capture curvature near the decision boundary.

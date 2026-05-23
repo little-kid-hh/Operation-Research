@@ -1,0 +1,3 @@
+- Add the missing smallest-dimension percentile signal (`dim_s_p90_to_vh`) to complete the sorted-dimension coverage alongside existing `dim_l_p90_to_vh` and `dim_m_p90_to_vw`.
+- Introduce a cross-dimension pressure feature (`two_dim_large_share`) that counts items large in **both** sorted dim_l and dim_m simultaneously — these are the true packing bottlenecks a linear SVM cannot infer from marginal percentiles alone.
+- Add a shape-heterogeneity signal (`aspect_cv`) measuring the coefficient of variation of item aspect ratios (dim_l/dim_s), capturing whether a dispatch mixes rod-like and cubic items, which makes stacking harder.

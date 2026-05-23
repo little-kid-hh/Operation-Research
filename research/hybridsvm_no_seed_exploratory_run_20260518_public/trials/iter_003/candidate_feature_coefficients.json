@@ -1,0 +1,17 @@
+[
+  {
+    "feature": "spare_cap_x_avg_vol",
+    "coef": 4.969754153718696,
+    "abs_coef": 4.969754153718696
+  },
+  {
+    "feature": "wl_max_residual",
+    "coef": 2.1248102075573243,
+    "abs_coef": 2.1248102075573243
+  },
+  {
+    "feature": "n_long_items",
+    "coef": 0.0,
+    "abs_coef": 0.0
+  }
+]

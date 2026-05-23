@@ -1,0 +1,3 @@
+- Add `spare_cap_x_sku_counts` to capture the nonlinear interaction between slack and item count (XGB guidance §3.2, not yet in active bank despite spare_cap interactions with conc/wl_total/wl_max).
+- Add `n_items_near_vL` as a threshold count of items whose longest sorted dimension exceeds 50% of vehicle length — multiple long items create axis-alignment conflicts that a single max-ratio cannot express.
+- Add `n_tall_items` as a threshold count of items whose original height exceeds 50% of vehicle height — tall items limit vertical stacking; height pressure has high XGB gain (h_to_H_ratio_max rank 8) but no threshold-count representation in the bank.

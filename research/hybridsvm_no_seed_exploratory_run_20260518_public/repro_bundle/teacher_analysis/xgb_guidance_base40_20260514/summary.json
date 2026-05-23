@@ -1,0 +1,178 @@
+{
+  "teacher_scope": "base40_only",
+  "split": {
+    "test_size": 0.25,
+    "random_state": 42
+  },
+  "data_path": "repro_bundle/data/training_2orientations.csv",
+  "feature_set": "base40",
+  "active_bank_used": false,
+  "base40_xgb_cfg_source": "repro_bundle/reference/Ensemble_baseline/experiments/xgb_search_20260511_202834_base40/summary.json",
+  "base40_xgb_cfg": {
+    "n_estimators": 700,
+    "max_depth": 8,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "colsample_bytree": 0.9,
+    "reg_lambda": 0.5,
+    "min_child_weight": 2,
+    "gamma": 0.0
+  },
+  "metrics": {
+    "svm_base40": {
+      "accuracy": 0.9276,
+      "precision": 0.9443645083932853,
+      "recall": 0.9680432645034415,
+      "auc": 0.9651398331370984,
+      "tpr_at_fpr1pct": 0.6347099311701082,
+      "threshold_at_fpr1pct": 0.9344146517873981,
+      "tn": 350,
+      "fp": 116,
+      "fn": 65,
+      "tp": 1969,
+      "fpr": 0.24892703862660945,
+      "fnr": 0.0319567354965585
+    },
+    "xgb_base40": {
+      "accuracy": 0.9532,
+      "precision": 0.9637155297532656,
+      "recall": 0.9793510324483776,
+      "auc": 0.9867931853764965,
+      "tpr_at_fpr1pct": 0.8289085545722714,
+      "threshold_at_fpr1pct": 0.9913399815559387,
+      "tn": 391,
+      "fp": 75,
+      "fn": 42,
+      "tp": 1992,
+      "fpr": 0.1609442060085837,
+      "fnr": 0.02064896755162242
+    }
+  },
+  "recovery_meta_base40": {
+    "n_test_rows": 2500,
+    "n_svm_wrong_xgb_right": 92,
+    "n_svm_right_xgb_wrong": 28
+  },
+  "top_base40_features": [
+    {
+      "feature": "spare_capacity",
+      "gain": 16.896759033203125,
+      "weight": 1860.0,
+      "split_used": 1860
+    },
+    {
+      "feature": "sku_average_volume",
+      "gain": 4.758613109588623,
+      "weight": 1306.0,
+      "split_used": 1306
+    },
+    {
+      "feature": "wl_to_vehicle_wl_total",
+      "gain": 3.1910274028778076,
+      "weight": 1058.0,
+      "split_used": 1058
+    },
+    {
+      "feature": "wl_to_vehicle_wl_max",
+      "gain": 2.4920620918273926,
+      "weight": 816.0,
+      "split_used": 816
+    },
+    {
+      "feature": "sku_counts",
+      "gain": 2.2792465686798096,
+      "weight": 99.0,
+      "split_used": 99
+    },
+    {
+      "feature": "l_to_L_ratio_std",
+      "gain": 2.2692439556121826,
+      "weight": 14.0,
+      "split_used": 14
+    },
+    {
+      "feature": "sku_max_width",
+      "gain": 2.028628349304199,
+      "weight": 184.0,
+      "split_used": 184
+    },
+    {
+      "feature": "h_to_H_ratio_max",
+      "gain": 1.9987821578979492,
+      "weight": 32.0,
+      "split_used": 32
+    },
+    {
+      "feature": "sku_concentration",
+      "gain": 1.9354865550994873,
+      "weight": 1073.0,
+      "split_used": 1073
+    },
+    {
+      "feature": "w_to_W_ratio_avg",
+      "gain": 1.8583167791366577,
+      "weight": 93.0,
+      "split_used": 93
+    },
+    {
+      "feature": "w_to_W_ratio_min",
+      "gain": 1.8066898584365845,
+      "weight": 23.0,
+      "split_used": 23
+    },
+    {
+      "feature": "sku_min_width",
+      "gain": 1.7052764892578125,
+      "weight": 194.0,
+      "split_used": 194
+    },
+    {
+      "feature": "sku_height_avg",
+      "gain": 1.6752283573150635,
+      "weight": 1178.0,
+      "split_used": 1178
+    },
+    {
+      "feature": "sku_length_avg",
+      "gain": 1.672143578529358,
+      "weight": 1377.0,
+      "split_used": 1377
+    },
+    {
+      "feature": "sku_min_height",
+      "gain": 1.6557406187057495,
+      "weight": 216.0,
+      "split_used": 216
+    },
+    {
+      "feature": "sku_width_avg",
+      "gain": 1.5978968143463135,
+      "weight": 1189.0,
+      "split_used": 1189
+    },
+    {
+      "feature": "h_to_H_ratio_std",
+      "gain": 1.5829966068267822,
+      "weight": 10.0,
+      "split_used": 10
+    },
+    {
+      "feature": "sku_std_length",
+      "gain": 1.537347674369812,
+      "weight": 148.0,
+      "split_used": 148
+    },
+    {
+      "feature": "wl_to_vehicle_wl_std",
+      "gain": 1.5119593143463135,
+      "weight": 1228.0,
+      "split_used": 1228
+    },
+    {
+      "feature": "wl_to_vehicle_wl_min",
+      "gain": 1.5020818710327148,
+      "weight": 709.0,
+      "split_used": 709
+    }
+  ]
+}

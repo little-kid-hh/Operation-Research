@@ -1,0 +1,156 @@
+{
+  "feature_names_evaluated": [
+    "dim_l_occupancy_sum",
+    "fragile_vol_share",
+    "needle_frac",
+    "dim_m_tail_ratio"
+  ],
+  "single_feature": [
+    {
+      "feature": "dim_l_occupancy_sum",
+      "metrics": {
+        "accuracy": 0.9284,
+        "precision": 0.9452712433989439,
+        "recall": 0.9680432645034415,
+        "auc": 0.968902055612527,
+        "fpr": 0.2446351931330472,
+        "fnr": 0.0319567354965585,
+        "tpr_at_fpr1pct": 0.6848574237954769,
+        "tn": 352,
+        "fp": 114,
+        "fn": 65,
+        "tp": 1969
+      },
+      "delta_auc": 0.003762222475428567,
+      "delta_tpr_at_fpr1pct": 0.05014749262536866
+    },
+    {
+      "feature": "fragile_vol_share",
+      "metrics": {
+        "accuracy": 0.9284,
+        "precision": 0.9448441247002398,
+        "recall": 0.9685349065880039,
+        "auc": 0.9688398090825072,
+        "fpr": 0.24678111587982832,
+        "fnr": 0.03146509341199607,
+        "tpr_at_fpr1pct": 0.6853490658800393,
+        "tn": 351,
+        "fp": 115,
+        "fn": 64,
+        "tp": 1970
+      },
+      "delta_auc": 0.003699975945408829,
+      "delta_tpr_at_fpr1pct": 0.05063913470993109
+    },
+    {
+      "feature": "needle_frac",
+      "metrics": {
+        "accuracy": 0.9296,
+        "precision": 0.9453499520613614,
+        "recall": 0.9695181907571289,
+        "auc": 0.9679978983883424,
+        "fpr": 0.2446351931330472,
+        "fnr": 0.03048180924287119,
+        "tpr_at_fpr1pct": 0.6691248770894789,
+        "tn": 352,
+        "fp": 114,
+        "fn": 62,
+        "tp": 1972
+      },
+      "delta_auc": 0.002858065251243991,
+      "delta_tpr_at_fpr1pct": 0.034414945919370665
+    },
+    {
+      "feature": "dim_m_tail_ratio",
+      "metrics": {
+        "accuracy": 0.928,
+        "precision": 0.9448176583493282,
+        "recall": 0.9680432645034415,
+        "auc": 0.9685771076253054,
+        "fpr": 0.24678111587982832,
+        "fnr": 0.0319567354965585,
+        "tpr_at_fpr1pct": 0.6779744346116028,
+        "tn": 351,
+        "fp": 115,
+        "fn": 65,
+        "tp": 1969
+      },
+      "delta_auc": 0.003437274488206965,
+      "delta_tpr_at_fpr1pct": 0.04326450344149457
+    }
+  ],
+  "leave_one_out": [
+    {
+      "dropped_feature": "dim_l_occupancy_sum",
+      "metrics": {
+        "accuracy": 0.928,
+        "precision": 0.9456730769230769,
+        "recall": 0.9670599803343166,
+        "auc": 0.9679103312359417,
+        "fpr": 0.24248927038626608,
+        "fnr": 0.032940019665683384,
+        "tpr_at_fpr1pct": 0.6676499508357916,
+        "tn": 353,
+        "fp": 113,
+        "fn": 67,
+        "tp": 1967
+      },
+      "delta_auc_vs_baseline": 0.0027704980988433325,
+      "delta_tpr_at_fpr1pct_vs_baseline": 0.032940019665683384
+    },
+    {
+      "dropped_feature": "fragile_vol_share",
+      "metrics": {
+        "accuracy": 0.9272,
+        "precision": 0.9456207892204043,
+        "recall": 0.9660766961651918,
+        "auc": 0.9680474846071716,
+        "fpr": 0.24248927038626608,
+        "fnr": 0.03392330383480826,
+        "tpr_at_fpr1pct": 0.6607669616519174,
+        "tn": 353,
+        "fp": 113,
+        "fn": 69,
+        "tp": 1965
+      },
+      "delta_auc_vs_baseline": 0.0029076514700732137,
+      "delta_tpr_at_fpr1pct_vs_baseline": 0.026057030481809185
+    },
+    {
+      "dropped_feature": "needle_frac",
+      "metrics": {
+        "accuracy": 0.9276,
+        "precision": 0.9452186448822681,
+        "recall": 0.9670599803343166,
+        "auc": 0.9686361890775275,
+        "fpr": 0.2446351931330472,
+        "fnr": 0.032940019665683384,
+        "tpr_at_fpr1pct": 0.6794493608652901,
+        "tn": 352,
+        "fp": 114,
+        "fn": 67,
+        "tp": 1967
+      },
+      "delta_auc_vs_baseline": 0.0034963559404290745,
+      "delta_tpr_at_fpr1pct_vs_baseline": 0.044739429695181854
+    },
+    {
+      "dropped_feature": "dim_m_tail_ratio",
+      "metrics": {
+        "accuracy": 0.9308,
+        "precision": 0.9467114738358138,
+        "recall": 0.9695181907571289,
+        "auc": 0.9681920231599292,
+        "fpr": 0.23819742489270387,
+        "fnr": 0.03048180924287119,
+        "tpr_at_fpr1pct": 0.6701081612586037,
+        "tn": 355,
+        "fp": 111,
+        "fn": 62,
+        "tp": 1972
+      },
+      "delta_auc_vs_baseline": 0.0030521900228308585,
+      "delta_tpr_at_fpr1pct_vs_baseline": 0.03539823008849552
+    }
+  ]
+}

@@ -37,7 +37,13 @@ from src.svm_train import DROP_COLS, load_raw_data  # noqa: E402
 
 
 DEFAULT_ACTIVE_BANK_PATH = (
-    ROOT / "tmp_glm_probe_v4" / "by_model" / "glm-5.1" / "exp_20260510_181255" / "active_feature_bank.csv"
+    ROOT
+    / "HybridSVM"
+    / "experiments_feature_search"
+    / "by_model"
+    / "glm-5.1"
+    / "exp_20260513_235323"
+    / "active_feature_bank.csv"
 )
 
 

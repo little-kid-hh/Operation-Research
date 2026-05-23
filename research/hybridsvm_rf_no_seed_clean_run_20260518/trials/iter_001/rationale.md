@@ -1,0 +1,5 @@
+- **spare_cap_x_wl_total**: The two highest-importance RF features (31% + 14%) interact conditionally in tree splits; the product lets the linear SVM assign a separate weight to the joint high-pressure regime.
+- **spare_cap_x_sku_counts**: Many SKUs with low spare capacity is nonlinearly harder to pack than either factor alone; this interaction directly encodes that tree-observed pattern.
+- **spare_cap_sq**: RF can partition spare_capacity into step-wise regions; the quadratic term approximates the curvature near the feasibility boundary where the marginal effect of additional slack changes.
+- **hH_x_lL**: A dispatch is hardest to pack when *both* vertical and longitudinal ratios are high simultaneously; the product is large only in that joint-tightness corner, which trees capture via sequential axis splits.
+- **big_piece_share**: Trees naturally threshold individual item dimensions (e.g., "is any item > 50% of vehicle length?"); this per-dispatch share linearizes that binary-split signal for the SVM, directly flagging footprint bottlenecks that averages and variances miss.

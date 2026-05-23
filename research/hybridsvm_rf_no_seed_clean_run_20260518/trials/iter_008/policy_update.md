@@ -1,0 +1,4 @@
+- Shift focus to **bottleneck dimension signals** and **top-RF-feature interactions not yet combined**: the active bank covers spare_capacity interactions with wl_total, sku_counts, and wl_max, but misses the direct interaction of wl_total × sku_counts and the per-item sorted-dimension bottleneck.
+- Add **dim_l_max_to_veh_l** (single worst longitudinal bottleneck from sorted dims) — a threshold-style signal trees capture via depth-1 splits on the largest item's orientation-constrained dimension.
+- Add **wl_total_x_sku_counts** — two of the top-4 RF features not yet directly multiplied; captures the regime where many items compete within high footprint utilization.
+- Add **spare_cap_x_long_item** — recomputes long-item share from sorted dim_l vs vehicle_length and interacts with spare_capacity, linearizing the conditional split trees make on "low slack AND many long items."

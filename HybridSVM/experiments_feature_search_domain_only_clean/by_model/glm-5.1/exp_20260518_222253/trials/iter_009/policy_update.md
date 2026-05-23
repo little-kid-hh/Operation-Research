@@ -1,0 +1,2 @@
+- Add features that capture **average stacking constraint** (complementing the existing max), **volume-weighted fragility** (large fragile items are doubly problematic), and **worst-case vertical orientation bottleneck** (items whose medium dimension approaches vehicle height force a single orientation).
+- These target non-linear interactions and extreme-case signals that the linear SVM cannot derive from existing bank features alone.

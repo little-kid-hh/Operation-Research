@@ -1,0 +1,44 @@
+{
+  "status": "accepted",
+  "best_before_trial": {
+    "accuracy": 0.9328,
+    "precision": 0.9430199430199431,
+    "recall": 0.976401179941003,
+    "auc": 0.9757713294592782,
+    "tn": 346,
+    "fp": 120,
+    "fn": 48,
+    "tp": 1986,
+    "fpr": 0.2575107296137339,
+    "fnr": 0.02359882005899705,
+    "tpr_at_fpr1pct": 0.7463126843657817,
+    "threshold_at_fpr1pct": 0.8538990447055729,
+    "delta_accuracy": 0.005199999999999982,
+    "delta_recall": 0.00835791543756148,
+    "delta_auc": 0.010631496322179856,
+    "delta_tpr_at_fpr1pct": 0.11160275319567348
+  },
+  "candidate_metrics": {
+    "accuracy": 0.9356,
+    "precision": 0.9465903671912256,
+    "recall": 0.9759095378564405,
+    "auc": 0.9757882098741986,
+    "tn": 354,
+    "fp": 112,
+    "fn": 49,
+    "tp": 1985,
+    "fpr": 0.24034334763948498,
+    "fnr": 0.024090462143559487,
+    "tpr_at_fpr1pct": 0.7664700098328416,
+    "threshold_at_fpr1pct": 0.8473529648510338,
+    "delta_accuracy": 0.008000000000000007,
+    "delta_recall": 0.007866273352999054,
+    "delta_auc": 0.010648376737100174,
+    "delta_tpr_at_fpr1pct": 0.13176007866273343
+  },
+  "acceptance_rule": {
+    "auc_margin": 0.0005,
+    "tpr_margin": 0.005,
+    "accuracy_margin": 0.0005
+  }
+}

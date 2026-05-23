@@ -1,0 +1,3 @@
+- Add geometric bottleneck signals that address packing dimensions not yet covered by the active bank: floor-space pressure, length-direction constraints, and item shape difficulty.
+- The active bank covers tall items, volume tails, fragile/flat shares, and height-direction p90. Missing are: 2D floor-area demand vs. vehicle floor, length-direction long-item bottlenecks, and cubic (hard-to-nest) item prevalence.
+- Target the TPR@FPR=1% gap by surfacing dispatches where volume fits but geometry fails.

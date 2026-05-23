@@ -1,0 +1,17 @@
+[
+  {
+    "feature": "pressure_product",
+    "coef": -13.311074505081432,
+    "abs_coef": 13.311074505081432
+  },
+  {
+    "feature": "count_vol_fill_interaction",
+    "coef": -10.81074748954901,
+    "abs_coef": 10.81074748954901
+  },
+  {
+    "feature": "max_dim_l_to_min_floor",
+    "coef": 0.059533478873742496,
+    "abs_coef": 0.059533478873742496
+  }
+]

@@ -1,0 +1,1071 @@
+{
+  "config": {
+    "data_path": "repro_bundle/data/training_2orientations.csv",
+    "items_path": "repro_bundle/data/物品信息和dblf信息.csv",
+    "test_size": 0.25,
+    "random_state": 42,
+    "svm_c": 10.0,
+    "tree_guidance_path": "repro_bundle/guidance/XGB_GUIDED_FEATURE_HYPOTHESES_BASE40.md",
+    "llm_model": "glm-5.1",
+    "llm_max_tokens": 4096,
+    "llm_timeout_per_call": 240,
+    "max_new_features": 6,
+    "skip_llm_probe": true,
+    "acceptance_rule": {
+      "auc_margin": 0.0005,
+      "tpr_margin": 0.005,
+      "accuracy_margin": 0.0005,
+      "policy_update_only_if_accepted": true
+    },
+    "feature_bank_mode": "cumulative_incremental",
+    "active_feature_count": 21
+  },
+  "baseline_metrics": {
+    "accuracy": 0.9276,
+    "precision": 0.9443645083932853,
+    "recall": 0.9680432645034415,
+    "auc": 0.9651398331370984,
+    "fpr": 0.24892703862660945,
+    "fnr": 0.0319567354965585,
+    "tpr_at_fpr1pct": 0.6347099311701082,
+    "tn": 350,
+    "fp": 116,
+    "fn": 65,
+    "tp": 1969
+  },
+  "n_trials_total": 15,
+  "n_trials_successful": 6,
+  "n_trials_accepted": 6,
+  "n_trials_rejected": 5,
+  "n_trials_failed": 4,
+  "best_trial": {
+    "iteration": 14,
+    "status": "accepted",
+    "trial_dir": "trials/iter_014",
+    "feature_names": [
+      "q90_l_to_L",
+      "spare_cap_x_n_wide",
+      "height_tail_share"
+    ],
+    "n_new_features": 3,
+    "metrics": {
+      "accuracy": 0.9372,
+      "precision": 0.9496885481552467,
+      "recall": 0.9744346116027532,
+      "auc": 0.9744915830031102,
+      "fpr": 0.22532188841201717,
+      "fnr": 0.025565388397246803,
+      "tpr_at_fpr1pct": 0.7207472959685349,
+      "tn": 361,
+      "fp": 105,
+      "fn": 52,
+      "tp": 1982
+    },
+    "delta_vs_baseline": {
+      "accuracy": 0.009600000000000053,
+      "recall": 0.006391347099311773,
+      "auc": 0.009351749866011838,
+      "tpr_at_fpr1pct": 0.08603736479842672
+    },
+    "objective_key": [
+      0.9744915830031102,
+      0.7207472959685349,
+      0.9372
+    ],
+    "policy_excerpt": "",
+    "rationale_excerpt": "",
+    "error": null
+  },
+  "best_accepted_trial": {
+    "iteration": 14,
+    "status": "accepted",
+    "trial_dir": "trials/iter_014",
+    "feature_names": [
+      "q90_l_to_L",
+      "spare_cap_x_n_wide",
+      "height_tail_share"
+    ],
+    "n_new_features": 3,
+    "metrics": {
+      "accuracy": 0.9372,
+      "precision": 0.9496885481552467,
+      "recall": 0.9744346116027532,
+      "auc": 0.9744915830031102,
+      "fpr": 0.22532188841201717,
+      "fnr": 0.025565388397246803,
+      "tpr_at_fpr1pct": 0.7207472959685349,
+      "tn": 361,
+      "fp": 105,
+      "fn": 52,
+      "tp": 1982
+    },
+    "delta_vs_baseline": {
+      "accuracy": 0.009600000000000053,
+      "recall": 0.006391347099311773,
+      "auc": 0.009351749866011838,
+      "tpr_at_fpr1pct": 0.08603736479842672
+    },
+    "objective_key": [
+      0.9744915830031102,
+      0.7207472959685349,
+      0.9372
+    ],
+    "policy_excerpt": "",
+    "rationale_excerpt": "",
+    "error": null
+  },
+  "accepted_trials": [
+    {
+      "iteration": 14,
+      "status": "accepted",
+      "trial_dir": "trials/iter_014",
+      "feature_names": [
+        "q90_l_to_L",
+        "spare_cap_x_n_wide",
+        "height_tail_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9372,
+        "precision": 0.9496885481552467,
+        "recall": 0.9744346116027532,
+        "auc": 0.9744915830031102,
+        "fpr": 0.22532188841201717,
+        "fnr": 0.025565388397246803,
+        "tpr_at_fpr1pct": 0.7207472959685349,
+        "tn": 361,
+        "fp": 105,
+        "fn": 52,
+        "tp": 1982
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.009600000000000053,
+        "recall": 0.006391347099311773,
+        "auc": 0.009351749866011838,
+        "tpr_at_fpr1pct": 0.08603736479842672
+      },
+      "objective_key": [
+        0.9744915830031102,
+        0.7207472959685349,
+        0.9372
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 9,
+      "status": "accepted",
+      "trial_dir": "trials/iter_009",
+      "feature_names": [
+        "n_wide_items",
+        "n_multi_dim_stress",
+        "spare_cap_x_n_near_vL"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.936,
+        "precision": 0.949616122840691,
+        "recall": 0.9729596853490659,
+        "auc": 0.9735768755196003,
+        "fpr": 0.22532188841201717,
+        "fnr": 0.02704031465093412,
+        "tpr_at_fpr1pct": 0.700589970501475,
+        "tn": 361,
+        "fp": 105,
+        "fn": 55,
+        "tp": 1979
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.008400000000000074,
+        "recall": 0.004916420845624381,
+        "auc": 0.00843704238250187,
+        "tpr_at_fpr1pct": 0.06588003933136677
+      },
+      "objective_key": [
+        0.9735768755196003,
+        0.700589970501475,
+        0.936
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 8,
+      "status": "accepted",
+      "trial_dir": "trials/iter_008",
+      "feature_names": [
+        "spare_cap_x_sku_counts",
+        "n_items_near_vL",
+        "n_tall_items"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9308,
+        "precision": 0.945428434657731,
+        "recall": 0.9709931170108161,
+        "auc": 0.9730008313604349,
+        "fpr": 0.2446351931330472,
+        "fnr": 0.029006882989183875,
+        "tpr_at_fpr1pct": 0.7025565388397247,
+        "tn": 352,
+        "fp": 114,
+        "fn": 59,
+        "tp": 1975
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0031999999999999806,
+        "recall": 0.002949852507374673,
+        "auc": 0.007860998223336524,
+        "tpr_at_fpr1pct": 0.06784660766961648
+      },
+      "objective_key": [
+        0.9730008313604349,
+        0.7025565388397247,
+        0.9308
+      ],
+      "policy_excerpt": "- Add `spare_cap_x_sku_counts` to capture the nonlinear interaction between slack and item count (XGB guidance §3.2, not yet in active bank despite spare_cap interactions with conc/wl_total/wl_max). - Add `n_items_near_vL` as a threshold co",
+      "rationale_excerpt": "- **spare_cap_x_sku_counts** directly tests XGB guidance §3.2: `spare_capacity ×",
+      "error": null
+    },
+    {
+      "iteration": 6,
+      "status": "accepted",
+      "trial_dir": "trials/iter_006",
+      "feature_names": [
+        "spare_cap_x_wl_max",
+        "wl_total_over_wl_max",
+        "max_dim_l_to_vL"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9292,
+        "precision": 0.9444710387745333,
+        "recall": 0.9700098328416913,
+        "auc": 0.9695013103422082,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.02999016715830875,
+        "tpr_at_fpr1pct": 0.6647000983284169,
+        "tn": 350,
+        "fp": 116,
+        "fn": 61,
+        "tp": 1973
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0016000000000000458,
+        "recall": 0.001966568338249819,
+        "auc": 0.0043614772051098205,
+        "tpr_at_fpr1pct": 0.02999016715830871
+      },
+      "objective_key": [
+        0.9695013103422082,
+        0.6647000983284169,
+        0.9292
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 5,
+      "status": "accepted",
+      "trial_dir": "trials/iter_005",
+      "feature_names": [
+        "spare_cap_log1p",
+        "h_to_H_max_sq",
+        "l_std_x_h_max",
+        "max_fp_ratio"
+      ],
+      "n_new_features": 4,
+      "metrics": {
+        "accuracy": 0.9292,
+        "precision": 0.9427753934191703,
+        "recall": 0.971976401179941,
+        "auc": 0.9688672397567533,
+        "fpr": 0.2575107296137339,
+        "fnr": 0.028023598820058997,
+        "tpr_at_fpr1pct": 0.6592920353982301,
+        "tn": 346,
+        "fp": 120,
+        "fn": 57,
+        "tp": 1977
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0016000000000000458,
+        "recall": 0.003933136676499527,
+        "auc": 0.0037274066196548716,
+        "tpr_at_fpr1pct": 0.024582104228121904
+      },
+      "objective_key": [
+        0.9688672397567533,
+        0.6592920353982301,
+        0.9292
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 1,
+      "status": "accepted",
+      "trial_dir": "trials/iter_001",
+      "feature_names": [
+        "spare_cap_sq",
+        "spare_cap_x_conc",
+        "spare_cap_x_wl_total",
+        "vol_top3_share",
+        "n_high_asr_items"
+      ],
+      "n_new_features": 5,
+      "metrics": {
+        "accuracy": 0.9292,
+        "precision": 0.9444710387745333,
+        "recall": 0.9700098328416913,
+        "auc": 0.9680917956963382,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.02999016715830875,
+        "tpr_at_fpr1pct": 0.6671583087512291,
+        "tn": 350,
+        "fp": 116,
+        "fn": 61,
+        "tp": 1973
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0016000000000000458,
+        "recall": 0.001966568338249819,
+        "auc": 0.0029519625592397958,
+        "tpr_at_fpr1pct": 0.032448377581120846
+      },
+      "objective_key": [
+        0.9680917956963382,
+        0.6671583087512291,
+        0.9292
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    }
+  ],
+  "rejected_trials": [
+    {
+      "iteration": 3,
+      "status": "rejected",
+      "trial_dir": "trials/iter_003",
+      "feature_names": [
+        "spare_cap_x_avg_vol",
+        "wl_max_residual",
+        "n_long_items"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9292,
+        "precision": 0.9440459110473458,
+        "recall": 0.9705014749262537,
+        "auc": 0.9681624824338182,
+        "fpr": 0.2510729613733906,
+        "fnr": 0.029498525073746312,
+        "tpr_at_fpr1pct": 0.6607669616519174,
+        "tn": 349,
+        "fp": 117,
+        "fn": 60,
+        "tp": 1974
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0016000000000000458,
+        "recall": 0.002458210422812246,
+        "auc": 0.0030226492967198038,
+        "tpr_at_fpr1pct": 0.026057030481809185
+      },
+      "objective_key": [
+        0.9681624824338182,
+        0.6607669616519174,
+        0.9292
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 10,
+      "status": "rejected",
+      "trial_dir": "trials/iter_010",
+      "feature_names": [
+        "n_fragile_items",
+        "flat_item_share",
+        "vol_top1_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.936,
+        "precision": 0.949616122840691,
+        "recall": 0.9729596853490659,
+        "auc": 0.9736781580091238,
+        "fpr": 0.22532188841201717,
+        "fnr": 0.02704031465093412,
+        "tpr_at_fpr1pct": 0.6956735496558505,
+        "tn": 361,
+        "fp": 105,
+        "fn": 55,
+        "tp": 1979
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.008400000000000074,
+        "recall": 0.004916420845624381,
+        "auc": 0.008538324872025438,
+        "tpr_at_fpr1pct": 0.06096361848574228
+      },
+      "objective_key": [
+        0.9736781580091238,
+        0.6956735496558505,
+        0.936
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 11,
+      "status": "rejected",
+      "trial_dir": "trials/iter_011",
+      "feature_names": [
+        "spare_cap_x_h_to_H_max",
+        "wl_total_x_h_to_H_max",
+        "dim_s_avg_to_vmin"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9348,
+        "precision": 0.9482510781025395,
+        "recall": 0.9729596853490659,
+        "auc": 0.973723524124223,
+        "fpr": 0.2317596566523605,
+        "fnr": 0.02704031465093412,
+        "tpr_at_fpr1pct": 0.6956735496558505,
+        "tn": 358,
+        "fp": 108,
+        "fn": 55,
+        "tp": 1979
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.007199999999999984,
+        "recall": 0.004916420845624381,
+        "auc": 0.008583690987124637,
+        "tpr_at_fpr1pct": 0.06096361848574228
+      },
+      "objective_key": [
+        0.973723524124223,
+        0.6956735496558505,
+        0.9348
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 12,
+      "status": "rejected",
+      "trial_dir": "trials/iter_012",
+      "feature_names": [
+        "footprint_pressure",
+        "spare_cap_x_n_tall_items",
+        "n_long_tall_items"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9388,
+        "precision": 0.9519461797212878,
+        "recall": 0.9739429695181907,
+        "auc": 0.9740642975004326,
+        "fpr": 0.2145922746781116,
+        "fnr": 0.026057030481809244,
+        "tpr_at_fpr1pct": 0.6897738446411013,
+        "tn": 366,
+        "fp": 100,
+        "fn": 53,
+        "tp": 1981
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.011199999999999988,
+        "recall": 0.005899705014749235,
+        "auc": 0.008924464363334161,
+        "tpr_at_fpr1pct": 0.05506391347099304
+      },
+      "objective_key": [
+        0.9740642975004326,
+        0.6897738446411013,
+        0.9388
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 15,
+      "status": "rejected",
+      "trial_dir": "trials/iter_015",
+      "feature_names": [
+        "q90_w_to_W",
+        "spare_cap_x_height_tail",
+        "n_long_and_wide"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9376,
+        "precision": 0.950143815915628,
+        "recall": 0.9744346116027532,
+        "auc": 0.9745063533661658,
+        "fpr": 0.22317596566523606,
+        "fnr": 0.025565388397246803,
+        "tpr_at_fpr1pct": 0.7192723697148475,
+        "tn": 362,
+        "fp": 104,
+        "fn": 52,
+        "tp": 1982
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.010000000000000009,
+        "recall": 0.006391347099311773,
+        "auc": 0.009366520229067365,
+        "tpr_at_fpr1pct": 0.08456243854473933
+      },
+      "objective_key": [
+        0.9745063533661658,
+        0.7192723697148475,
+        0.9376
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    }
+  ],
+  "failed_trials": [
+    {
+      "iteration": 2,
+      "status": "failed",
+      "trial_dir": "trials/iter_002",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "RateLimitError: Error code: 429 - {'error': {'message': \"No deployments available for selected model, Try again in 5 seconds. Passed model=glm-5.1. pre-call-checks=False, cooldown_list=[('b9ca8bb822ee3f6a483f081af040bbc6769519968ef875dbfcc563db02907968', {'exception_received': 'litellm.RateLimitError: Model rate limit exceeded.', 'status_code': '429', 'timestamp': 1779097037.1183505, 'cooldown_time': 5}), ('ee7f63fe7b5a6e0c0f610a8773fbc7d2b61ec00beadff16b9c535feb3698db62', {'exception_received': 'litellm.InternalServerError: InternalServerError: Hosted_vllmException - Internal Server Error', 'status_code': '500', 'timestamp': 1779097037.671829, 'cooldown_time': 5})]\", 'type': 'None', 'param': 'None', 'code': '429'}}"
+    },
+    {
+      "iteration": 4,
+      "status": "failed",
+      "trial_dir": "trials/iter_004",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "ValueError: Repair response did not include FEATURE_CODE python block"
+    },
+    {
+      "iteration": 7,
+      "status": "failed",
+      "trial_dir": "trials/iter_007",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "RateLimitError: Error code: 429 - {'error': {'message': \"No deployments available for selected model, Try again in 5 seconds. Passed model=glm-5.1. pre-call-checks=False, cooldown_list=[('b9ca8bb822ee3f6a483f081af040bbc6769519968ef875dbfcc563db02907968', {'exception_received': 'litellm.RateLimitError: Model rate limit exceeded.', 'status_code': '429', 'timestamp': 1779097551.7085834, 'cooldown_time': 5}), ('ee7f63fe7b5a6e0c0f610a8773fbc7d2b61ec00beadff16b9c535feb3698db62', {'exception_received': 'litellm.RateLimitError: Model rate limit exceeded.', 'status_code': '429', 'timestamp': 1779097552.2410598, 'cooldown_time': 5})]\", 'type': 'None', 'param': 'None', 'code': '429'}}"
+    },
+    {
+      "iteration": 13,
+      "status": "failed",
+      "trial_dir": "trials/iter_013",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "KeyError: \"Label(s) ['vehicle_height', 'vehicle_length', 'vehicle_width'] do not exist\""
+    }
+  ],
+  "trials": [
+    {
+      "iteration": 1,
+      "status": "accepted",
+      "trial_dir": "trials/iter_001",
+      "feature_names": [
+        "spare_cap_sq",
+        "spare_cap_x_conc",
+        "spare_cap_x_wl_total",
+        "vol_top3_share",
+        "n_high_asr_items"
+      ],
+      "n_new_features": 5,
+      "metrics": {
+        "accuracy": 0.9292,
+        "precision": 0.9444710387745333,
+        "recall": 0.9700098328416913,
+        "auc": 0.9680917956963382,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.02999016715830875,
+        "tpr_at_fpr1pct": 0.6671583087512291,
+        "tn": 350,
+        "fp": 116,
+        "fn": 61,
+        "tp": 1973
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0016000000000000458,
+        "recall": 0.001966568338249819,
+        "auc": 0.0029519625592397958,
+        "tpr_at_fpr1pct": 0.032448377581120846
+      },
+      "objective_key": [
+        0.9680917956963382,
+        0.6671583087512291,
+        0.9292
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 2,
+      "status": "failed",
+      "trial_dir": "trials/iter_002",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "RateLimitError: Error code: 429 - {'error': {'message': \"No deployments available for selected model, Try again in 5 seconds. Passed model=glm-5.1. pre-call-checks=False, cooldown_list=[('b9ca8bb822ee3f6a483f081af040bbc6769519968ef875dbfcc563db02907968', {'exception_received': 'litellm.RateLimitError: Model rate limit exceeded.', 'status_code': '429', 'timestamp': 1779097037.1183505, 'cooldown_time': 5}), ('ee7f63fe7b5a6e0c0f610a8773fbc7d2b61ec00beadff16b9c535feb3698db62', {'exception_received': 'litellm.InternalServerError: InternalServerError: Hosted_vllmException - Internal Server Error', 'status_code': '500', 'timestamp': 1779097037.671829, 'cooldown_time': 5})]\", 'type': 'None', 'param': 'None', 'code': '429'}}"
+    },
+    {
+      "iteration": 3,
+      "status": "rejected",
+      "trial_dir": "trials/iter_003",
+      "feature_names": [
+        "spare_cap_x_avg_vol",
+        "wl_max_residual",
+        "n_long_items"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9292,
+        "precision": 0.9440459110473458,
+        "recall": 0.9705014749262537,
+        "auc": 0.9681624824338182,
+        "fpr": 0.2510729613733906,
+        "fnr": 0.029498525073746312,
+        "tpr_at_fpr1pct": 0.6607669616519174,
+        "tn": 349,
+        "fp": 117,
+        "fn": 60,
+        "tp": 1974
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0016000000000000458,
+        "recall": 0.002458210422812246,
+        "auc": 0.0030226492967198038,
+        "tpr_at_fpr1pct": 0.026057030481809185
+      },
+      "objective_key": [
+        0.9681624824338182,
+        0.6607669616519174,
+        0.9292
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 4,
+      "status": "failed",
+      "trial_dir": "trials/iter_004",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "ValueError: Repair response did not include FEATURE_CODE python block"
+    },
+    {
+      "iteration": 5,
+      "status": "accepted",
+      "trial_dir": "trials/iter_005",
+      "feature_names": [
+        "spare_cap_log1p",
+        "h_to_H_max_sq",
+        "l_std_x_h_max",
+        "max_fp_ratio"
+      ],
+      "n_new_features": 4,
+      "metrics": {
+        "accuracy": 0.9292,
+        "precision": 0.9427753934191703,
+        "recall": 0.971976401179941,
+        "auc": 0.9688672397567533,
+        "fpr": 0.2575107296137339,
+        "fnr": 0.028023598820058997,
+        "tpr_at_fpr1pct": 0.6592920353982301,
+        "tn": 346,
+        "fp": 120,
+        "fn": 57,
+        "tp": 1977
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0016000000000000458,
+        "recall": 0.003933136676499527,
+        "auc": 0.0037274066196548716,
+        "tpr_at_fpr1pct": 0.024582104228121904
+      },
+      "objective_key": [
+        0.9688672397567533,
+        0.6592920353982301,
+        0.9292
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 6,
+      "status": "accepted",
+      "trial_dir": "trials/iter_006",
+      "feature_names": [
+        "spare_cap_x_wl_max",
+        "wl_total_over_wl_max",
+        "max_dim_l_to_vL"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9292,
+        "precision": 0.9444710387745333,
+        "recall": 0.9700098328416913,
+        "auc": 0.9695013103422082,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.02999016715830875,
+        "tpr_at_fpr1pct": 0.6647000983284169,
+        "tn": 350,
+        "fp": 116,
+        "fn": 61,
+        "tp": 1973
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0016000000000000458,
+        "recall": 0.001966568338249819,
+        "auc": 0.0043614772051098205,
+        "tpr_at_fpr1pct": 0.02999016715830871
+      },
+      "objective_key": [
+        0.9695013103422082,
+        0.6647000983284169,
+        0.9292
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 7,
+      "status": "failed",
+      "trial_dir": "trials/iter_007",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "RateLimitError: Error code: 429 - {'error': {'message': \"No deployments available for selected model, Try again in 5 seconds. Passed model=glm-5.1. pre-call-checks=False, cooldown_list=[('b9ca8bb822ee3f6a483f081af040bbc6769519968ef875dbfcc563db02907968', {'exception_received': 'litellm.RateLimitError: Model rate limit exceeded.', 'status_code': '429', 'timestamp': 1779097551.7085834, 'cooldown_time': 5}), ('ee7f63fe7b5a6e0c0f610a8773fbc7d2b61ec00beadff16b9c535feb3698db62', {'exception_received': 'litellm.RateLimitError: Model rate limit exceeded.', 'status_code': '429', 'timestamp': 1779097552.2410598, 'cooldown_time': 5})]\", 'type': 'None', 'param': 'None', 'code': '429'}}"
+    },
+    {
+      "iteration": 8,
+      "status": "accepted",
+      "trial_dir": "trials/iter_008",
+      "feature_names": [
+        "spare_cap_x_sku_counts",
+        "n_items_near_vL",
+        "n_tall_items"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9308,
+        "precision": 0.945428434657731,
+        "recall": 0.9709931170108161,
+        "auc": 0.9730008313604349,
+        "fpr": 0.2446351931330472,
+        "fnr": 0.029006882989183875,
+        "tpr_at_fpr1pct": 0.7025565388397247,
+        "tn": 352,
+        "fp": 114,
+        "fn": 59,
+        "tp": 1975
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0031999999999999806,
+        "recall": 0.002949852507374673,
+        "auc": 0.007860998223336524,
+        "tpr_at_fpr1pct": 0.06784660766961648
+      },
+      "objective_key": [
+        0.9730008313604349,
+        0.7025565388397247,
+        0.9308
+      ],
+      "policy_excerpt": "- Add `spare_cap_x_sku_counts` to capture the nonlinear interaction between slack and item count (XGB guidance §3.2, not yet in active bank despite spare_cap interactions with conc/wl_total/wl_max). - Add `n_items_near_vL` as a threshold co",
+      "rationale_excerpt": "- **spare_cap_x_sku_counts** directly tests XGB guidance §3.2: `spare_capacity ×",
+      "error": null
+    },
+    {
+      "iteration": 9,
+      "status": "accepted",
+      "trial_dir": "trials/iter_009",
+      "feature_names": [
+        "n_wide_items",
+        "n_multi_dim_stress",
+        "spare_cap_x_n_near_vL"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.936,
+        "precision": 0.949616122840691,
+        "recall": 0.9729596853490659,
+        "auc": 0.9735768755196003,
+        "fpr": 0.22532188841201717,
+        "fnr": 0.02704031465093412,
+        "tpr_at_fpr1pct": 0.700589970501475,
+        "tn": 361,
+        "fp": 105,
+        "fn": 55,
+        "tp": 1979
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.008400000000000074,
+        "recall": 0.004916420845624381,
+        "auc": 0.00843704238250187,
+        "tpr_at_fpr1pct": 0.06588003933136677
+      },
+      "objective_key": [
+        0.9735768755196003,
+        0.700589970501475,
+        0.936
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 10,
+      "status": "rejected",
+      "trial_dir": "trials/iter_010",
+      "feature_names": [
+        "n_fragile_items",
+        "flat_item_share",
+        "vol_top1_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.936,
+        "precision": 0.949616122840691,
+        "recall": 0.9729596853490659,
+        "auc": 0.9736781580091238,
+        "fpr": 0.22532188841201717,
+        "fnr": 0.02704031465093412,
+        "tpr_at_fpr1pct": 0.6956735496558505,
+        "tn": 361,
+        "fp": 105,
+        "fn": 55,
+        "tp": 1979
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.008400000000000074,
+        "recall": 0.004916420845624381,
+        "auc": 0.008538324872025438,
+        "tpr_at_fpr1pct": 0.06096361848574228
+      },
+      "objective_key": [
+        0.9736781580091238,
+        0.6956735496558505,
+        0.936
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 11,
+      "status": "rejected",
+      "trial_dir": "trials/iter_011",
+      "feature_names": [
+        "spare_cap_x_h_to_H_max",
+        "wl_total_x_h_to_H_max",
+        "dim_s_avg_to_vmin"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9348,
+        "precision": 0.9482510781025395,
+        "recall": 0.9729596853490659,
+        "auc": 0.973723524124223,
+        "fpr": 0.2317596566523605,
+        "fnr": 0.02704031465093412,
+        "tpr_at_fpr1pct": 0.6956735496558505,
+        "tn": 358,
+        "fp": 108,
+        "fn": 55,
+        "tp": 1979
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.007199999999999984,
+        "recall": 0.004916420845624381,
+        "auc": 0.008583690987124637,
+        "tpr_at_fpr1pct": 0.06096361848574228
+      },
+      "objective_key": [
+        0.973723524124223,
+        0.6956735496558505,
+        0.9348
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 12,
+      "status": "rejected",
+      "trial_dir": "trials/iter_012",
+      "feature_names": [
+        "footprint_pressure",
+        "spare_cap_x_n_tall_items",
+        "n_long_tall_items"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9388,
+        "precision": 0.9519461797212878,
+        "recall": 0.9739429695181907,
+        "auc": 0.9740642975004326,
+        "fpr": 0.2145922746781116,
+        "fnr": 0.026057030481809244,
+        "tpr_at_fpr1pct": 0.6897738446411013,
+        "tn": 366,
+        "fp": 100,
+        "fn": 53,
+        "tp": 1981
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.011199999999999988,
+        "recall": 0.005899705014749235,
+        "auc": 0.008924464363334161,
+        "tpr_at_fpr1pct": 0.05506391347099304
+      },
+      "objective_key": [
+        0.9740642975004326,
+        0.6897738446411013,
+        0.9388
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 13,
+      "status": "failed",
+      "trial_dir": "trials/iter_013",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "KeyError: \"Label(s) ['vehicle_height', 'vehicle_length', 'vehicle_width'] do not exist\""
+    },
+    {
+      "iteration": 14,
+      "status": "accepted",
+      "trial_dir": "trials/iter_014",
+      "feature_names": [
+        "q90_l_to_L",
+        "spare_cap_x_n_wide",
+        "height_tail_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9372,
+        "precision": 0.9496885481552467,
+        "recall": 0.9744346116027532,
+        "auc": 0.9744915830031102,
+        "fpr": 0.22532188841201717,
+        "fnr": 0.025565388397246803,
+        "tpr_at_fpr1pct": 0.7207472959685349,
+        "tn": 361,
+        "fp": 105,
+        "fn": 52,
+        "tp": 1982
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.009600000000000053,
+        "recall": 0.006391347099311773,
+        "auc": 0.009351749866011838,
+        "tpr_at_fpr1pct": 0.08603736479842672
+      },
+      "objective_key": [
+        0.9744915830031102,
+        0.7207472959685349,
+        0.9372
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 15,
+      "status": "rejected",
+      "trial_dir": "trials/iter_015",
+      "feature_names": [
+        "q90_w_to_W",
+        "spare_cap_x_height_tail",
+        "n_long_and_wide"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9376,
+        "precision": 0.950143815915628,
+        "recall": 0.9744346116027532,
+        "auc": 0.9745063533661658,
+        "fpr": 0.22317596566523606,
+        "fnr": 0.025565388397246803,
+        "tpr_at_fpr1pct": 0.7192723697148475,
+        "tn": 362,
+        "fp": 104,
+        "fn": 52,
+        "tp": 1982
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.010000000000000009,
+        "recall": 0.006391347099311773,
+        "auc": 0.009366520229067365,
+        "tpr_at_fpr1pct": 0.08456243854473933
+      },
+      "objective_key": [
+        0.9745063533661658,
+        0.7192723697148475,
+        0.9376
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    }
+  ]
+}

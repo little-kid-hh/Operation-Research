@@ -1,0 +1,4 @@
+- Shift from spare_capacity interactions (already well-covered in active bank) to **dispersion and constraint signals** that trees exploit via sequential splits on wl-family spread and item-level orientation restrictions.
+- Add **wl_cv** (H3) to capture whether weight-length utilization is dominated by a single SKU or uniformly spread — a pattern trees pick up via depth-2 splits on wl_std conditional on wl_avg.
+- Introduce **fragile_share** from items_df as a genuinely new direction: fragile items cannot be reoriented, tightening the effective packing search space in a way not captured by any existing aggregate.
+- Extend the spare_capacity polynomial family with **spare_cap_cubed** (H1): the accepted quadratic term helped, but the TPR@1% gap suggests the feasibility boundary is steeper than quadratic near zero slack.

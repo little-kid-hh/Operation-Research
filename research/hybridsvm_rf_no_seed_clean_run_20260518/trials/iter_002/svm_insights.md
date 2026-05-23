@@ -1,0 +1,19 @@
+{
+  "new_feature_coefficients": [
+    {
+      "feature": "spare_cap_x_sku_avg_vol",
+      "coef": 2.4257186498984282,
+      "abs_coef": 2.4257186498984282
+    },
+    {
+      "feature": "wl_max_residual",
+      "coef": -2.1097123273618017,
+      "abs_coef": 2.1097123273618017
+    },
+    {
+      "feature": "awkward_shape_share",
+      "coef": -0.4182139291330458,
+      "abs_coef": 0.4182139291330458
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="558" viewBox="0 0 1280 558">
+<rect x="0" y="0" width="1280" height="558" fill="#ffffff"/>
+<text x="32" y="42" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#1f2937">HybridSVM Single-Feature Gains</text>
+<text x="32" y="70" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#6b7280">AUC lift when each active-bank feature is added individually on top of the original SVM baseline.</text>
+<line x1="430.0" y1="100" x2="430.0" y2="508" stroke="#e5e7eb" stroke-width="1"/>
+<text x="430.0" y="532" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">-0.000</text>
+<line x1="578.0" y1="100" x2="578.0" y2="508" stroke="#e5e7eb" stroke-width="1"/>
+<text x="578.0" y="532" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">0.001</text>
+<line x1="726.0" y1="100" x2="726.0" y2="508" stroke="#e5e7eb" stroke-width="1"/>
+<text x="726.0" y="532" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">0.002</text>
+<line x1="874.0" y1="100" x2="874.0" y2="508" stroke="#e5e7eb" stroke-width="1"/>
+<text x="874.0" y="532" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">0.003</text>
+<line x1="1022.0" y1="100" x2="1022.0" y2="508" stroke="#e5e7eb" stroke-width="1"/>
+<text x="1022.0" y="532" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">0.004</text>
+<line x1="1170.0" y1="100" x2="1170.0" y2="508" stroke="#e5e7eb" stroke-width="1"/>
+<text x="1170.0" y="532" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">0.005</text>
+<text x="418" y="121" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">tight_bin_large_piece_interaction</text>
+<rect x="430.0" y="106.0" width="740.0" height="20" rx="3" fill="#0f766e"/>
+<text x="1178.0" y="121" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.0054</text>
+<text x="418" y="155" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">volume_tail_ratio</text>
+<rect x="430.0" y="140.0" width="375.7" height="20" rx="3" fill="#0f766e"/>
+<text x="813.7" y="155" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.0027</text>
+<text x="418" y="189" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">p90_long_over_bin_long</text>
+<rect x="430.0" y="174.0" width="167.7" height="20" rx="3" fill="#0f766e"/>
+<text x="605.7" y="189" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.0012</text>
+<text x="418" y="223" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">multi_dim_tight_share</text>
+<rect x="430.0" y="208.0" width="110.1" height="20" rx="3" fill="#0f766e"/>
+<text x="548.1" y="223" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.0008</text>
+<text x="418" y="257" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">p90_mid_over_bin_mid</text>
+<rect x="430.0" y="242.0" width="53.5" height="20" rx="3" fill="#0f766e"/>
+<text x="491.5" y="257" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.0004</text>
+<text x="418" y="291" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">max_2d_pressure</text>
+<rect x="430.0" y="276.0" width="16.7" height="20" rx="3" fill="#0f766e"/>
+<text x="454.7" y="291" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.0001</text>
+<text x="418" y="325" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">p90_short_over_bin_short</text>
+<rect x="430.0" y="310.0" width="10.4" height="20" rx="3" fill="#0f766e"/>
+<text x="448.4" y="325" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.0000</text>
+<text x="418" y="359" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">count_near_long_limit</text>
+<rect x="430.0" y="344.0" width="3.6" height="20" rx="3" fill="#0f766e"/>
+<text x="441.6" y="359" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.0000</text>
+<text x="418" y="393" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">count_near_height_limit</text>
+<rect x="430.0" y="378.0" width="3.6" height="20" rx="3" fill="#0f766e"/>
+<text x="441.6" y="393" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.0000</text>
+<text x="418" y="427" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">count_near_width_limit</text>
+<rect x="430.0" y="412.0" width="3.6" height="20" rx="3" fill="#0f766e"/>
+<text x="441.6" y="427" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.0000</text>
+<text x="418" y="461" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">max_elongation</text>
+<rect x="430.0" y="446.0" width="3.5" height="20" rx="3" fill="#0f766e"/>
+<text x="425.5" y="461" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">-0.0000</text>
+<text x="418" y="495" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">short_dim_sum_ratio</text>
+<rect x="430.0" y="480.0" width="2.0" height="20" rx="3" fill="#0f766e"/>
+<text x="422.0" y="495" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">-0.0000</text>
+</svg>

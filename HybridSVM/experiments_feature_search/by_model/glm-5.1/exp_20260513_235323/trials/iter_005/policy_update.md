@@ -1,0 +1,3 @@
+- Target the two-dimensional coupling gap: current bank has single-dimension pressure (near_limit_long_share, p90_long) but no feature capturing items large in **both** long and mid dimensions simultaneously.
+- Add a spare × p90_long interaction to linearize the nonlinear regime where low slack coincides with extreme long-dimension tail pressure — trees exploit this threshold interaction.
+- Add a cube-item share signal: items with dim_s/dim_l > 0.5 resist nesting and create voids, a shape class not covered by thin_item_share or long_wide_item_share.

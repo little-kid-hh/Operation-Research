@@ -1,0 +1,4 @@
+- Add non-linear interaction features that the linear SVM cannot capture on its own
+- Focus on the multiplicative pressure interaction between vertical stacking and floor coverage
+- Introduce a worst-case single-item bottleneck against the tighter vehicle floor dimension
+- Encode the compounding difficulty of high item count combined with high volume fill

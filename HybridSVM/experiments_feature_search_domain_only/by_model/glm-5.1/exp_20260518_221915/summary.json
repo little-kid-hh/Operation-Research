@@ -1,0 +1,363 @@
+{
+  "config": {
+    "data_path": "/Users/zhongxiaochuan/Operation-Research/FunSearch_test/training_2orientations.csv",
+    "items_path": "/Users/zhongxiaochuan/Operation-Research/FunSearch_test/物品信息和dblf信息.csv",
+    "test_size": 0.25,
+    "random_state": 42,
+    "svm_c": 10.0,
+    "tree_guidance_path": "",
+    "domain_only": true,
+    "llm_model": "glm-5.1",
+    "llm_max_tokens": 4096,
+    "llm_timeout_per_call": 240,
+    "max_new_features": 6,
+    "skip_llm_probe": true,
+    "acceptance_rule": {
+      "auc_margin": 0.0005,
+      "tpr_margin": 0.005,
+      "accuracy_margin": 0.0005,
+      "policy_update_only_if_accepted": true
+    },
+    "feature_bank_mode": "cumulative_incremental",
+    "active_feature_count": 8
+  },
+  "baseline_metrics": {
+    "accuracy": 0.9276,
+    "precision": 0.9443645083932853,
+    "recall": 0.9680432645034415,
+    "auc": 0.9651398331370984,
+    "fpr": 0.24892703862660945,
+    "fnr": 0.0319567354965585,
+    "tpr_at_fpr1pct": 0.6347099311701082,
+    "tn": 350,
+    "fp": 116,
+    "fn": 65,
+    "tp": 1969
+  },
+  "n_trials_total": 3,
+  "n_trials_successful": 2,
+  "n_trials_accepted": 2,
+  "n_trials_rejected": 1,
+  "n_trials_failed": 0,
+  "best_trial": {
+    "iteration": 1,
+    "status": "accepted",
+    "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search_domain_only/by_model/glm-5.1/exp_20260518_221915/trials/iter_001",
+    "feature_names": [
+      "n_large_dim_l",
+      "vol_top2_ratio",
+      "flat_frac",
+      "max_dim_l_vratio",
+      "spare_cap_x_nolarge"
+    ],
+    "n_new_features": 5,
+    "metrics": {
+      "accuracy": 0.9284,
+      "precision": 0.9448441247002398,
+      "recall": 0.9685349065880039,
+      "auc": 0.9688398090825072,
+      "fpr": 0.24678111587982832,
+      "fnr": 0.03146509341199607,
+      "tpr_at_fpr1pct": 0.6853490658800393,
+      "tn": 351,
+      "fp": 115,
+      "fn": 64,
+      "tp": 1970
+    },
+    "delta_vs_baseline": {
+      "accuracy": 0.0008000000000000229,
+      "recall": 0.000491642084562427,
+      "auc": 0.003699975945408829,
+      "tpr_at_fpr1pct": 0.05063913470993109
+    },
+    "objective_key": [
+      0.9688398090825072,
+      0.6853490658800393,
+      0.9284
+    ],
+    "policy_excerpt": "",
+    "rationale_excerpt": "",
+    "error": null
+  },
+  "best_accepted_trial": {
+    "iteration": 1,
+    "status": "accepted",
+    "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search_domain_only/by_model/glm-5.1/exp_20260518_221915/trials/iter_001",
+    "feature_names": [
+      "n_large_dim_l",
+      "vol_top2_ratio",
+      "flat_frac",
+      "max_dim_l_vratio",
+      "spare_cap_x_nolarge"
+    ],
+    "n_new_features": 5,
+    "metrics": {
+      "accuracy": 0.9284,
+      "precision": 0.9448441247002398,
+      "recall": 0.9685349065880039,
+      "auc": 0.9688398090825072,
+      "fpr": 0.24678111587982832,
+      "fnr": 0.03146509341199607,
+      "tpr_at_fpr1pct": 0.6853490658800393,
+      "tn": 351,
+      "fp": 115,
+      "fn": 64,
+      "tp": 1970
+    },
+    "delta_vs_baseline": {
+      "accuracy": 0.0008000000000000229,
+      "recall": 0.000491642084562427,
+      "auc": 0.003699975945408829,
+      "tpr_at_fpr1pct": 0.05063913470993109
+    },
+    "objective_key": [
+      0.9688398090825072,
+      0.6853490658800393,
+      0.9284
+    ],
+    "policy_excerpt": "",
+    "rationale_excerpt": "",
+    "error": null
+  },
+  "accepted_trials": [
+    {
+      "iteration": 1,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search_domain_only/by_model/glm-5.1/exp_20260518_221915/trials/iter_001",
+      "feature_names": [
+        "n_large_dim_l",
+        "vol_top2_ratio",
+        "flat_frac",
+        "max_dim_l_vratio",
+        "spare_cap_x_nolarge"
+      ],
+      "n_new_features": 5,
+      "metrics": {
+        "accuracy": 0.9284,
+        "precision": 0.9448441247002398,
+        "recall": 0.9685349065880039,
+        "auc": 0.9688398090825072,
+        "fpr": 0.24678111587982832,
+        "fnr": 0.03146509341199607,
+        "tpr_at_fpr1pct": 0.6853490658800393,
+        "tn": 351,
+        "fp": 115,
+        "fn": 64,
+        "tp": 1970
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0008000000000000229,
+        "recall": 0.000491642084562427,
+        "auc": 0.003699975945408829,
+        "tpr_at_fpr1pct": 0.05063913470993109
+      },
+      "objective_key": [
+        0.9688398090825072,
+        0.6853490658800393,
+        0.9284
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 3,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search_domain_only/by_model/glm-5.1/exp_20260518_221915/trials/iter_003",
+      "feature_names": [
+        "cross_sect_pressure",
+        "n_half_width",
+        "max_face_vratio"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.928,
+        "precision": 0.9456730769230769,
+        "recall": 0.9670599803343166,
+        "auc": 0.9688165985119914,
+        "fpr": 0.24248927038626608,
+        "fnr": 0.032940019665683384,
+        "tpr_at_fpr1pct": 0.6917404129793511,
+        "tn": 353,
+        "fp": 113,
+        "fn": 67,
+        "tp": 1967
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.00040000000000006697,
+        "recall": -0.000983284169124854,
+        "auc": 0.003676765374893032,
+        "tpr_at_fpr1pct": 0.05703048180924286
+      },
+      "objective_key": [
+        0.9688165985119914,
+        0.6917404129793511,
+        0.928
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    }
+  ],
+  "rejected_trials": [
+    {
+      "iteration": 2,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search_domain_only/by_model/glm-5.1/exp_20260518_221915/trials/iter_002",
+      "feature_names": [
+        "dim_l_occupancy_sum",
+        "fragile_vol_share",
+        "needle_frac",
+        "dim_m_tail_ratio"
+      ],
+      "n_new_features": 4,
+      "metrics": {
+        "accuracy": 0.9272,
+        "precision": 0.9456207892204043,
+        "recall": 0.9660766961651918,
+        "auc": 0.9680474846071716,
+        "fpr": 0.24248927038626608,
+        "fnr": 0.03392330383480826,
+        "tpr_at_fpr1pct": 0.6607669616519174,
+        "tn": 353,
+        "fp": 113,
+        "fn": 69,
+        "tp": 1965
+      },
+      "delta_vs_baseline": {
+        "accuracy": -0.00039999999999995595,
+        "recall": -0.001966568338249708,
+        "auc": 0.0029076514700732137,
+        "tpr_at_fpr1pct": 0.026057030481809185
+      },
+      "objective_key": [
+        0.9680474846071716,
+        0.6607669616519174,
+        0.9272
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    }
+  ],
+  "failed_trials": [],
+  "trials": [
+    {
+      "iteration": 1,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search_domain_only/by_model/glm-5.1/exp_20260518_221915/trials/iter_001",
+      "feature_names": [
+        "n_large_dim_l",
+        "vol_top2_ratio",
+        "flat_frac",
+        "max_dim_l_vratio",
+        "spare_cap_x_nolarge"
+      ],
+      "n_new_features": 5,
+      "metrics": {
+        "accuracy": 0.9284,
+        "precision": 0.9448441247002398,
+        "recall": 0.9685349065880039,
+        "auc": 0.9688398090825072,
+        "fpr": 0.24678111587982832,
+        "fnr": 0.03146509341199607,
+        "tpr_at_fpr1pct": 0.6853490658800393,
+        "tn": 351,
+        "fp": 115,
+        "fn": 64,
+        "tp": 1970
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0008000000000000229,
+        "recall": 0.000491642084562427,
+        "auc": 0.003699975945408829,
+        "tpr_at_fpr1pct": 0.05063913470993109
+      },
+      "objective_key": [
+        0.9688398090825072,
+        0.6853490658800393,
+        0.9284
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 2,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search_domain_only/by_model/glm-5.1/exp_20260518_221915/trials/iter_002",
+      "feature_names": [
+        "dim_l_occupancy_sum",
+        "fragile_vol_share",
+        "needle_frac",
+        "dim_m_tail_ratio"
+      ],
+      "n_new_features": 4,
+      "metrics": {
+        "accuracy": 0.9272,
+        "precision": 0.9456207892204043,
+        "recall": 0.9660766961651918,
+        "auc": 0.9680474846071716,
+        "fpr": 0.24248927038626608,
+        "fnr": 0.03392330383480826,
+        "tpr_at_fpr1pct": 0.6607669616519174,
+        "tn": 353,
+        "fp": 113,
+        "fn": 69,
+        "tp": 1965
+      },
+      "delta_vs_baseline": {
+        "accuracy": -0.00039999999999995595,
+        "recall": -0.001966568338249708,
+        "auc": 0.0029076514700732137,
+        "tpr_at_fpr1pct": 0.026057030481809185
+      },
+      "objective_key": [
+        0.9680474846071716,
+        0.6607669616519174,
+        0.9272
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 3,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search_domain_only/by_model/glm-5.1/exp_20260518_221915/trials/iter_003",
+      "feature_names": [
+        "cross_sect_pressure",
+        "n_half_width",
+        "max_face_vratio"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.928,
+        "precision": 0.9456730769230769,
+        "recall": 0.9670599803343166,
+        "auc": 0.9688165985119914,
+        "fpr": 0.24248927038626608,
+        "fnr": 0.032940019665683384,
+        "tpr_at_fpr1pct": 0.6917404129793511,
+        "tn": 353,
+        "fp": 113,
+        "fn": 67,
+        "tp": 1967
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.00040000000000006697,
+        "recall": -0.000983284169124854,
+        "auc": 0.003676765374893032,
+        "tpr_at_fpr1pct": 0.05703048180924286
+      },
+      "objective_key": [
+        0.9688165985119914,
+        0.6917404129793511,
+        0.928
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    }
+  ]
+}

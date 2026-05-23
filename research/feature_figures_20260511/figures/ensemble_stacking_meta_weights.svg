@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="370" viewBox="0 0 1280 370">
+<rect x="0" y="0" width="1280" height="370" fill="#ffffff"/>
+<text x="32" y="42" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#1f2937">Ensemble Route: Stacking Meta Weights</text>
+<text x="32" y="70" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#6b7280">Logistic meta-model coefficients over base-model probabilities in the full stack.</text>
+<line x1="430.0" y1="100" x2="430.0" y2="320" stroke="#e5e7eb" stroke-width="1"/>
+<text x="430.0" y="344" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">-1.291</text>
+<line x1="578.0" y1="100" x2="578.0" y2="320" stroke="#e5e7eb" stroke-width="1"/>
+<text x="578.0" y="344" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">-0.091</text>
+<line x1="726.0" y1="100" x2="726.0" y2="320" stroke="#e5e7eb" stroke-width="1"/>
+<text x="726.0" y="344" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">1.109</text>
+<line x1="874.0" y1="100" x2="874.0" y2="320" stroke="#e5e7eb" stroke-width="1"/>
+<text x="874.0" y="344" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">2.309</text>
+<line x1="1022.0" y1="100" x2="1022.0" y2="320" stroke="#e5e7eb" stroke-width="1"/>
+<text x="1022.0" y="344" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">3.509</text>
+<line x1="1170.0" y1="100" x2="1170.0" y2="320" stroke="#e5e7eb" stroke-width="1"/>
+<text x="1170.0" y="344" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">4.709</text>
+<line x1="589.2" y1="100" x2="589.2" y2="320" stroke="#1f2937" stroke-width="1.4"/>
+<text x="418" y="121" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">rf</text>
+<rect x="589.2" y="106.0" width="580.8" height="20" rx="3" fill="#2563eb"/>
+<text x="1178.0" y="121" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">4.7091</text>
+<text x="418" y="155" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">lr</text>
+<rect x="589.2" y="140.0" width="351.5" height="20" rx="3" fill="#2563eb"/>
+<text x="948.7" y="155" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">2.8502</text>
+<text x="418" y="189" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">gbdt_fallback</text>
+<rect x="589.2" y="174.0" width="312.5" height="20" rx="3" fill="#2563eb"/>
+<text x="909.7" y="189" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">2.5338</text>
+<text x="418" y="223" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">svm</text>
+<rect x="430.0" y="208.0" width="159.2" height="20" rx="3" fill="#dc2626"/>
+<text x="422.0" y="223" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">-1.2909</text>
+</svg>

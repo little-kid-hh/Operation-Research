@@ -1,0 +1,32 @@
+[
+  {
+    "feature": "tight_bin_large_piece_interaction",
+    "coef": -14.391843595519283,
+    "abs_coef": 14.391843595519283
+  },
+  {
+    "feature": "max_face_area_load_over_floor",
+    "coef": -6.087635345417301,
+    "abs_coef": 6.087635345417301
+  },
+  {
+    "feature": "p90_long_over_bin_long",
+    "coef": 2.7187263867010145,
+    "abs_coef": 2.7187263867010145
+  },
+  {
+    "feature": "thin_item_share",
+    "coef": 0.827843823299169,
+    "abs_coef": 0.827843823299169
+  },
+  {
+    "feature": "p90_mid_over_bin_mid",
+    "coef": -0.509752386040816,
+    "abs_coef": 0.509752386040816
+  },
+  {
+    "feature": "dominant_type_share",
+    "coef": -0.4795121844507446,
+    "abs_coef": 0.4795121844507446
+  }
+]

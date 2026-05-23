@@ -1,0 +1,866 @@
+{
+  "config": {
+    "data_path": "/Users/zhongxiaochuan/Operation-Research/FunSearch_test/training_2orientations.csv",
+    "items_path": "/Users/zhongxiaochuan/Operation-Research/FunSearch_test/物品信息和dblf信息.csv",
+    "test_size": 0.25,
+    "random_state": 42,
+    "svm_c": 10.0,
+    "tree_guidance_path": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/TREE_INSPIRED_FEATURE_HYPOTHESES.md",
+    "llm_model": "glm-5.1",
+    "llm_max_tokens": 4096,
+    "llm_timeout_per_call": 240,
+    "max_new_features": 6,
+    "acceptance_rule": {
+      "auc_margin": 0.0005,
+      "tpr_margin": 0.005,
+      "accuracy_margin": 0.0005,
+      "policy_update_only_if_accepted": true
+    },
+    "feature_bank_mode": "cumulative_incremental",
+    "active_feature_count": 21
+  },
+  "baseline_metrics": {
+    "accuracy": 0.9276,
+    "precision": 0.9443645083932853,
+    "recall": 0.9680432645034415,
+    "auc": 0.9651398331370984,
+    "fpr": 0.24892703862660945,
+    "fnr": 0.0319567354965585,
+    "tpr_at_fpr1pct": 0.6347099311701082,
+    "tn": 350,
+    "fp": 116,
+    "fn": 65,
+    "tp": 1969
+  },
+  "n_trials_total": 11,
+  "n_trials_successful": 6,
+  "n_trials_accepted": 6,
+  "n_trials_rejected": 3,
+  "n_trials_failed": 2,
+  "best_trial": {
+    "iteration": 10,
+    "status": "accepted",
+    "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_010",
+    "feature_names": [
+      "three_dim_near_limit_share",
+      "vol_top3_concentration",
+      "spare_x_wlstd"
+    ],
+    "n_new_features": 3,
+    "metrics": {
+      "accuracy": 0.9364,
+      "precision": 0.9466412577417818,
+      "recall": 0.9768928220255654,
+      "auc": 0.9764655365228878,
+      "fpr": 0.24034334763948498,
+      "fnr": 0.023107177974434612,
+      "tpr_at_fpr1pct": 0.7458210422812193,
+      "tn": 354,
+      "fp": 112,
+      "fn": 47,
+      "tp": 1987
+    },
+    "delta_vs_baseline": {
+      "accuracy": 0.00880000000000003,
+      "recall": 0.008849557522123908,
+      "auc": 0.01132570338578942,
+      "tpr_at_fpr1pct": 0.11111111111111105
+    },
+    "objective_key": [
+      0.9764655365228878,
+      0.7458210422812193,
+      0.9364
+    ],
+    "policy_excerpt": "",
+    "rationale_excerpt": "",
+    "error": null
+  },
+  "best_accepted_trial": {
+    "iteration": 10,
+    "status": "accepted",
+    "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_010",
+    "feature_names": [
+      "three_dim_near_limit_share",
+      "vol_top3_concentration",
+      "spare_x_wlstd"
+    ],
+    "n_new_features": 3,
+    "metrics": {
+      "accuracy": 0.9364,
+      "precision": 0.9466412577417818,
+      "recall": 0.9768928220255654,
+      "auc": 0.9764655365228878,
+      "fpr": 0.24034334763948498,
+      "fnr": 0.023107177974434612,
+      "tpr_at_fpr1pct": 0.7458210422812193,
+      "tn": 354,
+      "fp": 112,
+      "fn": 47,
+      "tp": 1987
+    },
+    "delta_vs_baseline": {
+      "accuracy": 0.00880000000000003,
+      "recall": 0.008849557522123908,
+      "auc": 0.01132570338578942,
+      "tpr_at_fpr1pct": 0.11111111111111105
+    },
+    "objective_key": [
+      0.9764655365228878,
+      0.7458210422812193,
+      0.9364
+    ],
+    "policy_excerpt": "",
+    "rationale_excerpt": "",
+    "error": null
+  },
+  "accepted_trials": [
+    {
+      "iteration": 10,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_010",
+      "feature_names": [
+        "three_dim_near_limit_share",
+        "vol_top3_concentration",
+        "spare_x_wlstd"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9364,
+        "precision": 0.9466412577417818,
+        "recall": 0.9768928220255654,
+        "auc": 0.9764655365228878,
+        "fpr": 0.24034334763948498,
+        "fnr": 0.023107177974434612,
+        "tpr_at_fpr1pct": 0.7458210422812193,
+        "tn": 354,
+        "fp": 112,
+        "fn": 47,
+        "tp": 1987
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.00880000000000003,
+        "recall": 0.008849557522123908,
+        "auc": 0.01132570338578942,
+        "tpr_at_fpr1pct": 0.11111111111111105
+      },
+      "objective_key": [
+        0.9764655365228878,
+        0.7458210422812193,
+        0.9364
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 6,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_006",
+      "feature_names": [
+        "near_limit_mid_share",
+        "spare_x_avgvol",
+        "long_thin_item_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9356,
+        "precision": 0.9465903671912256,
+        "recall": 0.9759095378564405,
+        "auc": 0.9757882098741986,
+        "fpr": 0.24034334763948498,
+        "fnr": 0.024090462143559487,
+        "tpr_at_fpr1pct": 0.7664700098328416,
+        "tn": 354,
+        "fp": 112,
+        "fn": 49,
+        "tp": 1985
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.008000000000000007,
+        "recall": 0.007866273352999054,
+        "auc": 0.010648376737100174,
+        "tpr_at_fpr1pct": 0.13176007866273343
+      },
+      "objective_key": [
+        0.9757882098741986,
+        0.7664700098328416,
+        0.9356
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 5,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_005",
+      "feature_names": [
+        "two_dim_large_share",
+        "spare_x_p90long",
+        "cube_item_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9328,
+        "precision": 0.9430199430199431,
+        "recall": 0.976401179941003,
+        "auc": 0.9757713294592782,
+        "fpr": 0.2575107296137339,
+        "fnr": 0.02359882005899705,
+        "tpr_at_fpr1pct": 0.7463126843657817,
+        "tn": 346,
+        "fp": 120,
+        "fn": 48,
+        "tp": 1986
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.005199999999999982,
+        "recall": 0.00835791543756148,
+        "auc": 0.010631496322179856,
+        "tpr_at_fpr1pct": 0.11160275319567348
+      },
+      "objective_key": [
+        0.9757713294592782,
+        0.7463126843657817,
+        0.9328
+      ],
+      "policy_excerpt": "- Target the two-dimensional coupling gap: current bank has single-dimension pressure (near_limit_long_share, p90_long) but no feature capturing items large in **both** long and mid dimensions simultaneously. - Add a spare × p90_long intera",
+      "rationale_excerpt": "- **two_dim_large_share** captures dimensional coupling at the item level: items large in both long and mid dimensions simultaneously consume floor space in two directions and cannot be nested around each other. This is distinct from near_l",
+      "error": null
+    },
+    {
+      "iteration": 3,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_003",
+      "feature_names": [
+        "height_pressure_share",
+        "long_wide_item_share",
+        "spare_x_volcv"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9324,
+        "precision": 0.9417337754618664,
+        "recall": 0.9773844641101278,
+        "auc": 0.9752860175303109,
+        "fpr": 0.26394849785407726,
+        "fnr": 0.02261553588987217,
+        "tpr_at_fpr1pct": 0.7197640117994101,
+        "tn": 343,
+        "fp": 123,
+        "fn": 46,
+        "tp": 1988
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0048000000000000265,
+        "recall": 0.009341199606686335,
+        "auc": 0.010146184393212465,
+        "tpr_at_fpr1pct": 0.08505408062930186
+      },
+      "objective_key": [
+        0.9752860175303109,
+        0.7197640117994101,
+        0.9324
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 2,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_002",
+      "feature_names": [
+        "spare_x_count",
+        "near_limit_long_share",
+        "vol_cv"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9316,
+        "precision": 0.9425178147268408,
+        "recall": 0.9754178957718781,
+        "auc": 0.9740031059963454,
+        "fpr": 0.259656652360515,
+        "fnr": 0.024582104228121928,
+        "tpr_at_fpr1pct": 0.7079646017699115,
+        "tn": 345,
+        "fp": 121,
+        "fn": 50,
+        "tp": 1984
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0040000000000000036,
+        "recall": 0.007374631268436627,
+        "auc": 0.00886327285924704,
+        "tpr_at_fpr1pct": 0.07325467059980328
+      },
+      "objective_key": [
+        0.9740031059963454,
+        0.7079646017699115,
+        0.9316
+      ],
+      "policy_excerpt": "- Focus on slack-pressure interactions: the two strongest SVM features (spare_capacity +13.6, sku_counts -10.6) suggest a nonlinear interaction when both are in adverse regimes simultaneously. - Add a thresholded near-limit count share for ",
+      "rationale_excerpt": "- **spare_x_count**: The SVM's two strongest features (spare_capacity +13.6, sku_counts -10.6) have opposing directions. Trees can split on their combination (low spare + high count = very infeasible), but a linear SVM needs the explicit in",
+      "error": null
+    },
+    {
+      "iteration": 0,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_000_seed",
+      "feature_names": [
+        "dominant_type_share",
+        "p90_long_over_bin_long",
+        "p90_mid_over_bin_mid",
+        "thin_item_share",
+        "max_face_area_load_over_floor",
+        "tight_bin_large_piece_interaction"
+      ],
+      "n_new_features": 6,
+      "metrics": {
+        "accuracy": 0.9332,
+        "precision": 0.941371158392435,
+        "recall": 0.9788593903638152,
+        "auc": 0.9720935090584528,
+        "fpr": 0.26609442060085836,
+        "fnr": 0.021140609636184856,
+        "tpr_at_fpr1pct": 0.7138643067846607,
+        "tn": 342,
+        "fp": 124,
+        "fn": 43,
+        "tp": 1991
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.005600000000000049,
+        "recall": 0.010816125860373726,
+        "auc": 0.00695367592135443,
+        "tpr_at_fpr1pct": 0.07915437561455252
+      },
+      "objective_key": [
+        0.9720935090584528,
+        0.7138643067846607,
+        0.9332
+      ],
+      "policy_excerpt": "Keep focusing on compact, interpretable item-distribution features with explicit tree-inspired threshold and interaction structure.  Near-term hypothesis: 1. repeated-type concentration matters because many identical pieces can be    easier",
+      "rationale_excerpt": "This seed candidate intentionally uses a small set of explainable item-distribution features:  - `dominant_type_share` captures repetition versus heterogeneity at   dispatch level. - `p90_long_over_bin_long` and `p90_mid_over_bin_mid` empha",
+      "error": null
+    }
+  ],
+  "rejected_trials": [
+    {
+      "iteration": 1,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_001",
+      "feature_names": [
+        "volume_top3_share",
+        "multi_dim_near_limit_share",
+        "side_wall_area_load"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.932,
+        "precision": 0.9417061611374408,
+        "recall": 0.9768928220255654,
+        "auc": 0.9718730086385523,
+        "fpr": 0.26394849785407726,
+        "fnr": 0.023107177974434612,
+        "tpr_at_fpr1pct": 0.7069813176007866,
+        "tn": 343,
+        "fp": 123,
+        "fn": 47,
+        "tp": 1987
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0044000000000000705,
+        "recall": 0.008849557522123908,
+        "auc": 0.006733175501453914,
+        "tpr_at_fpr1pct": 0.07227138643067843
+      },
+      "objective_key": [
+        0.9718730086385523,
+        0.7069813176007866,
+        0.932
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 4,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_004",
+      "feature_names": [
+        "spare_x_wlmax",
+        "total_footprint_ratio",
+        "cross_dim_pressure_count"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9328,
+        "precision": 0.9430199430199431,
+        "recall": 0.976401179941003,
+        "auc": 0.9748692822869585,
+        "fpr": 0.2575107296137339,
+        "fnr": 0.02359882005899705,
+        "tpr_at_fpr1pct": 0.711897738446411,
+        "tn": 346,
+        "fp": 120,
+        "fn": 48,
+        "tp": 1986
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.005199999999999982,
+        "recall": 0.00835791543756148,
+        "auc": 0.00972944914986007,
+        "tpr_at_fpr1pct": 0.07718780727630281
+      },
+      "objective_key": [
+        0.9748692822869585,
+        0.711897738446411,
+        0.9328
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 8,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_008",
+      "feature_names": [
+        "near_limit_short_share",
+        "fragile_share",
+        "spare_x_fragile"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9356,
+        "precision": 0.9465903671912256,
+        "recall": 0.9759095378564405,
+        "auc": 0.9757882098741986,
+        "fpr": 0.24034334763948498,
+        "fnr": 0.024090462143559487,
+        "tpr_at_fpr1pct": 0.7664700098328416,
+        "tn": 354,
+        "fp": 112,
+        "fn": 49,
+        "tp": 1985
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.008000000000000007,
+        "recall": 0.007866273352999054,
+        "auc": 0.010648376737100174,
+        "tpr_at_fpr1pct": 0.13176007866273343
+      },
+      "objective_key": [
+        0.9757882098741986,
+        0.7664700098328416,
+        0.9356
+      ],
+      "policy_excerpt": "- Add short-dimension near-limit share to complete the near_limit_* dimension coverage gap (long and mid exist, short is missing). - Introduce fragile-item share as a novel signal from the completely unused `if_fragile` column — fragile ite",
+      "rationale_excerpt": "- **near_limit_short_share** completes the near-limit dimension trilogy (long, mid, short). The short dimension maps to vertical stacking height; items consuming most of vehicle_height resist efficient layering. This gap is visible in the a",
+      "error": null
+    }
+  ],
+  "failed_trials": [
+    {
+      "iteration": 7,
+      "status": "failed",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_007",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "ValueError: Candidate code must define build_candidate_features"
+    },
+    {
+      "iteration": 9,
+      "status": "failed",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_009",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "KeyError: 'vehicle_length'"
+    }
+  ],
+  "trials": [
+    {
+      "iteration": 0,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_000_seed",
+      "feature_names": [
+        "dominant_type_share",
+        "p90_long_over_bin_long",
+        "p90_mid_over_bin_mid",
+        "thin_item_share",
+        "max_face_area_load_over_floor",
+        "tight_bin_large_piece_interaction"
+      ],
+      "n_new_features": 6,
+      "metrics": {
+        "accuracy": 0.9332,
+        "precision": 0.941371158392435,
+        "recall": 0.9788593903638152,
+        "auc": 0.9720935090584528,
+        "fpr": 0.26609442060085836,
+        "fnr": 0.021140609636184856,
+        "tpr_at_fpr1pct": 0.7138643067846607,
+        "tn": 342,
+        "fp": 124,
+        "fn": 43,
+        "tp": 1991
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.005600000000000049,
+        "recall": 0.010816125860373726,
+        "auc": 0.00695367592135443,
+        "tpr_at_fpr1pct": 0.07915437561455252
+      },
+      "objective_key": [
+        0.9720935090584528,
+        0.7138643067846607,
+        0.9332
+      ],
+      "policy_excerpt": "Keep focusing on compact, interpretable item-distribution features with explicit tree-inspired threshold and interaction structure.  Near-term hypothesis: 1. repeated-type concentration matters because many identical pieces can be    easier",
+      "rationale_excerpt": "This seed candidate intentionally uses a small set of explainable item-distribution features:  - `dominant_type_share` captures repetition versus heterogeneity at   dispatch level. - `p90_long_over_bin_long` and `p90_mid_over_bin_mid` empha",
+      "error": null
+    },
+    {
+      "iteration": 1,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_001",
+      "feature_names": [
+        "volume_top3_share",
+        "multi_dim_near_limit_share",
+        "side_wall_area_load"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.932,
+        "precision": 0.9417061611374408,
+        "recall": 0.9768928220255654,
+        "auc": 0.9718730086385523,
+        "fpr": 0.26394849785407726,
+        "fnr": 0.023107177974434612,
+        "tpr_at_fpr1pct": 0.7069813176007866,
+        "tn": 343,
+        "fp": 123,
+        "fn": 47,
+        "tp": 1987
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0044000000000000705,
+        "recall": 0.008849557522123908,
+        "auc": 0.006733175501453914,
+        "tpr_at_fpr1pct": 0.07227138643067843
+      },
+      "objective_key": [
+        0.9718730086385523,
+        0.7069813176007866,
+        0.932
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 2,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_002",
+      "feature_names": [
+        "spare_x_count",
+        "near_limit_long_share",
+        "vol_cv"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9316,
+        "precision": 0.9425178147268408,
+        "recall": 0.9754178957718781,
+        "auc": 0.9740031059963454,
+        "fpr": 0.259656652360515,
+        "fnr": 0.024582104228121928,
+        "tpr_at_fpr1pct": 0.7079646017699115,
+        "tn": 345,
+        "fp": 121,
+        "fn": 50,
+        "tp": 1984
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0040000000000000036,
+        "recall": 0.007374631268436627,
+        "auc": 0.00886327285924704,
+        "tpr_at_fpr1pct": 0.07325467059980328
+      },
+      "objective_key": [
+        0.9740031059963454,
+        0.7079646017699115,
+        0.9316
+      ],
+      "policy_excerpt": "- Focus on slack-pressure interactions: the two strongest SVM features (spare_capacity +13.6, sku_counts -10.6) suggest a nonlinear interaction when both are in adverse regimes simultaneously. - Add a thresholded near-limit count share for ",
+      "rationale_excerpt": "- **spare_x_count**: The SVM's two strongest features (spare_capacity +13.6, sku_counts -10.6) have opposing directions. Trees can split on their combination (low spare + high count = very infeasible), but a linear SVM needs the explicit in",
+      "error": null
+    },
+    {
+      "iteration": 3,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_003",
+      "feature_names": [
+        "height_pressure_share",
+        "long_wide_item_share",
+        "spare_x_volcv"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9324,
+        "precision": 0.9417337754618664,
+        "recall": 0.9773844641101278,
+        "auc": 0.9752860175303109,
+        "fpr": 0.26394849785407726,
+        "fnr": 0.02261553588987217,
+        "tpr_at_fpr1pct": 0.7197640117994101,
+        "tn": 343,
+        "fp": 123,
+        "fn": 46,
+        "tp": 1988
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0048000000000000265,
+        "recall": 0.009341199606686335,
+        "auc": 0.010146184393212465,
+        "tpr_at_fpr1pct": 0.08505408062930186
+      },
+      "objective_key": [
+        0.9752860175303109,
+        0.7197640117994101,
+        0.9324
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 4,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_004",
+      "feature_names": [
+        "spare_x_wlmax",
+        "total_footprint_ratio",
+        "cross_dim_pressure_count"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9328,
+        "precision": 0.9430199430199431,
+        "recall": 0.976401179941003,
+        "auc": 0.9748692822869585,
+        "fpr": 0.2575107296137339,
+        "fnr": 0.02359882005899705,
+        "tpr_at_fpr1pct": 0.711897738446411,
+        "tn": 346,
+        "fp": 120,
+        "fn": 48,
+        "tp": 1986
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.005199999999999982,
+        "recall": 0.00835791543756148,
+        "auc": 0.00972944914986007,
+        "tpr_at_fpr1pct": 0.07718780727630281
+      },
+      "objective_key": [
+        0.9748692822869585,
+        0.711897738446411,
+        0.9328
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 5,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_005",
+      "feature_names": [
+        "two_dim_large_share",
+        "spare_x_p90long",
+        "cube_item_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9328,
+        "precision": 0.9430199430199431,
+        "recall": 0.976401179941003,
+        "auc": 0.9757713294592782,
+        "fpr": 0.2575107296137339,
+        "fnr": 0.02359882005899705,
+        "tpr_at_fpr1pct": 0.7463126843657817,
+        "tn": 346,
+        "fp": 120,
+        "fn": 48,
+        "tp": 1986
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.005199999999999982,
+        "recall": 0.00835791543756148,
+        "auc": 0.010631496322179856,
+        "tpr_at_fpr1pct": 0.11160275319567348
+      },
+      "objective_key": [
+        0.9757713294592782,
+        0.7463126843657817,
+        0.9328
+      ],
+      "policy_excerpt": "- Target the two-dimensional coupling gap: current bank has single-dimension pressure (near_limit_long_share, p90_long) but no feature capturing items large in **both** long and mid dimensions simultaneously. - Add a spare × p90_long intera",
+      "rationale_excerpt": "- **two_dim_large_share** captures dimensional coupling at the item level: items large in both long and mid dimensions simultaneously consume floor space in two directions and cannot be nested around each other. This is distinct from near_l",
+      "error": null
+    },
+    {
+      "iteration": 6,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_006",
+      "feature_names": [
+        "near_limit_mid_share",
+        "spare_x_avgvol",
+        "long_thin_item_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9356,
+        "precision": 0.9465903671912256,
+        "recall": 0.9759095378564405,
+        "auc": 0.9757882098741986,
+        "fpr": 0.24034334763948498,
+        "fnr": 0.024090462143559487,
+        "tpr_at_fpr1pct": 0.7664700098328416,
+        "tn": 354,
+        "fp": 112,
+        "fn": 49,
+        "tp": 1985
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.008000000000000007,
+        "recall": 0.007866273352999054,
+        "auc": 0.010648376737100174,
+        "tpr_at_fpr1pct": 0.13176007866273343
+      },
+      "objective_key": [
+        0.9757882098741986,
+        0.7664700098328416,
+        0.9356
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 7,
+      "status": "failed",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_007",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "ValueError: Candidate code must define build_candidate_features"
+    },
+    {
+      "iteration": 8,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_008",
+      "feature_names": [
+        "near_limit_short_share",
+        "fragile_share",
+        "spare_x_fragile"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9356,
+        "precision": 0.9465903671912256,
+        "recall": 0.9759095378564405,
+        "auc": 0.9757882098741986,
+        "fpr": 0.24034334763948498,
+        "fnr": 0.024090462143559487,
+        "tpr_at_fpr1pct": 0.7664700098328416,
+        "tn": 354,
+        "fp": 112,
+        "fn": 49,
+        "tp": 1985
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.008000000000000007,
+        "recall": 0.007866273352999054,
+        "auc": 0.010648376737100174,
+        "tpr_at_fpr1pct": 0.13176007866273343
+      },
+      "objective_key": [
+        0.9757882098741986,
+        0.7664700098328416,
+        0.9356
+      ],
+      "policy_excerpt": "- Add short-dimension near-limit share to complete the near_limit_* dimension coverage gap (long and mid exist, short is missing). - Introduce fragile-item share as a novel signal from the completely unused `if_fragile` column — fragile ite",
+      "rationale_excerpt": "- **near_limit_short_share** completes the near-limit dimension trilogy (long, mid, short). The short dimension maps to vertical stacking height; items consuming most of vehicle_height resist efficient layering. This gap is visible in the a",
+      "error": null
+    },
+    {
+      "iteration": 9,
+      "status": "failed",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_009",
+      "feature_names": [],
+      "n_new_features": 0,
+      "metrics": {},
+      "delta_vs_baseline": null,
+      "objective_key": null,
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": "KeyError: 'vehicle_length'"
+    },
+    {
+      "iteration": 10,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/trials/iter_010",
+      "feature_names": [
+        "three_dim_near_limit_share",
+        "vol_top3_concentration",
+        "spare_x_wlstd"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9364,
+        "precision": 0.9466412577417818,
+        "recall": 0.9768928220255654,
+        "auc": 0.9764655365228878,
+        "fpr": 0.24034334763948498,
+        "fnr": 0.023107177974434612,
+        "tpr_at_fpr1pct": 0.7458210422812193,
+        "tn": 354,
+        "fp": 112,
+        "fn": 47,
+        "tp": 1987
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.00880000000000003,
+        "recall": 0.008849557522123908,
+        "auc": 0.01132570338578942,
+        "tpr_at_fpr1pct": 0.11111111111111105
+      },
+      "objective_key": [
+        0.9764655365228878,
+        0.7458210422812193,
+        0.9364
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    }
+  ]
+}

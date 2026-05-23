@@ -1,0 +1,5 @@
+- Add dimensional pressure features capturing stacking difficulty and floor competition
+- Focus on sum-based pressure signals rather than percentile/average ratios already in the bank
+- height_layer_pressure captures vertical stacking demand via smallest dimensions
+- footprint_sum_ratio captures floor-area bottleneck using sorted dims (best-case orientation)
+- length_sum_pressure captures total length competition as a count×avg interaction

@@ -1,0 +1,19 @@
+{
+  "new_feature_coefficients": [
+    {
+      "feature": "spare_cap_x_height_tail",
+      "coef": -0.9966123452060718,
+      "abs_coef": 0.9966123452060718
+    },
+    {
+      "feature": "q90_w_to_W",
+      "coef": 0.3613121823938563,
+      "abs_coef": 0.3613121823938563
+    },
+    {
+      "feature": "n_long_and_wide",
+      "coef": -0.3310485827685312,
+      "abs_coef": 0.3310485827685312
+    }
+  ]
+}

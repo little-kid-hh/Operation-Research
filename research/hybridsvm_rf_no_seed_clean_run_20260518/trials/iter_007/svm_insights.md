@@ -1,0 +1,19 @@
+{
+  "new_feature_coefficients": [
+    {
+      "feature": "flat_item_mean",
+      "coef": -3.7756297950837947,
+      "abs_coef": 3.7756297950837947
+    },
+    {
+      "feature": "sku_counts_x_hH",
+      "coef": 1.961296007417216,
+      "abs_coef": 1.961296007417216
+    },
+    {
+      "feature": "near_limit_share",
+      "coef": 0.0,
+      "abs_coef": 0.0
+    }
+  ]
+}

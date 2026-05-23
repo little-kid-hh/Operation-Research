@@ -1,0 +1,3 @@
+- Pivot from pure spatial-constraint features to **weight-capacity pressure**, an entirely orthogonal constraint axis not yet represented in the active bank.
+- Add a **per-item multi-dimensional tightness** threshold count: trees naturally isolate cases where a single item stresses 2+ vehicle axes simultaneously, which no existing feature captures.
+- Introduce a **dim_l upper-tail ratio** (p90/p50) to capture long-item heterogeneity within a dispatch — distinct from the smooth `sku_std_length` and the binary `long_item_share` already in the bank.

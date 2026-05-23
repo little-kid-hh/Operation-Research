@@ -1,0 +1,3 @@
+- `sku_counts_x_hH` targets the H5 hypothesis (sku_counts × height ratio interaction) not yet in the active bank; it captures vertical crowding pressure that trees model via sequential splits on count then height ratio.
+- `flat_item_mean` is a genuinely new item-level signal — flatness enables stable stacking and reduces effective height consumption, a packing-ease factor absent from all existing aggregates.
+- `near_limit_share` linearizes the threshold effect trees exploit when splitting on long-item prevalence: a high share of items approaching the vehicle length limit creates a longitudinal bottleneck that smooth averages of `l_to_L_ratio` underweight.

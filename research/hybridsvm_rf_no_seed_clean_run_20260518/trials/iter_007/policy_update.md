@@ -1,0 +1,3 @@
+- Add **sku_counts × h_to_H** (H5, untried): isolates "many items competing for vertical space" regardless of overall slack — distinct from the rejected `spare_cap × hH` which captured slack-conditional vertical tightness.
+- Introduce **mean item flatness** from `items_df`: flat items stack more easily, easing packing in a way no existing aggregate captures.
+- Add **near_limit_share**: fraction of items whose longest sorted dimension exceeds 75% of vehicle length — a threshold-based length-bottleneck signal that linearizes the kind of depth-1 split trees make on long-item prevalence.

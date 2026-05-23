@@ -1,0 +1,4 @@
+- Target the stubborn TPR@FPR=1% gap by adding features that linearize the conditional structure trees exploit via depth-2 splits on wl-family dispersion conditional on spare capacity.
+- Introduce a **spare_capacity × wl_cv** interaction: trees split first on spare_capacity then on wl spread; this product lets the linear SVM approximate that conditional regime.
+- Add a **thresholded vertical bottleneck** signal (near_h_limit_share) from items_df: fraction of items whose largest sorted dimension exceeds 70% of vehicle height. This is a count-based signal distinct from the smooth h_to_H_ratio_avg already in the base.
+- Add **wl_total_sq**: a quadratic term on the #2 RF-importance feature (wl_to_vehicle_wl_total), mirroring how spare_cap_sq already captured curvature on the #1 feature. Feasibility drops sharply as wl_total approaches 1.0.

@@ -1,0 +1,19 @@
+{
+  "new_feature_coefficients": [
+    {
+      "feature": "total_footprint_ratio",
+      "coef": -3.4537162606346445,
+      "abs_coef": 3.4537162606346445
+    },
+    {
+      "feature": "spare_x_wlmax",
+      "coef": 2.709498665589205,
+      "abs_coef": 2.709498665589205
+    },
+    {
+      "feature": "cross_dim_pressure_count",
+      "coef": 0.0,
+      "abs_coef": 0.0
+    }
+  ]
+}

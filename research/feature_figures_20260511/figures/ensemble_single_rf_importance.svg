@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="660" viewBox="0 0 1280 660">
+<rect x="0" y="0" width="1280" height="660" fill="#ffffff"/>
+<text x="32" y="42" font-family="Arial, Helvetica, sans-serif" font-size="28" font-weight="700" fill="#1f2937">Ensemble Route: RF Feature Importance</text>
+<text x="32" y="70" font-family="Arial, Helvetica, sans-serif" font-size="15" fill="#6b7280">Random forest feature importance on the fixed 40 aggregate features.</text>
+<line x1="430.0" y1="100" x2="430.0" y2="610" stroke="#e5e7eb" stroke-width="1"/>
+<text x="430.0" y="634" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">0.013</text>
+<line x1="578.0" y1="100" x2="578.0" y2="610" stroke="#e5e7eb" stroke-width="1"/>
+<text x="578.0" y="634" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">0.073</text>
+<line x1="726.0" y1="100" x2="726.0" y2="610" stroke="#e5e7eb" stroke-width="1"/>
+<text x="726.0" y="634" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">0.133</text>
+<line x1="874.0" y1="100" x2="874.0" y2="610" stroke="#e5e7eb" stroke-width="1"/>
+<text x="874.0" y="634" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">0.192</text>
+<line x1="1022.0" y1="100" x2="1022.0" y2="610" stroke="#e5e7eb" stroke-width="1"/>
+<text x="1022.0" y="634" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">0.252</text>
+<line x1="1170.0" y1="100" x2="1170.0" y2="610" stroke="#e5e7eb" stroke-width="1"/>
+<text x="1170.0" y="634" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#6b7280">0.312</text>
+<text x="418" y="121" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">spare_capacity</text>
+<rect x="430.0" y="106.0" width="740.0" height="20" rx="3" fill="#0f766e"/>
+<text x="1178.0" y="121" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.31170</text>
+<text x="418" y="155" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">wl_to_vehicle_wl_total</text>
+<rect x="430.0" y="140.0" width="316.3" height="20" rx="3" fill="#0f766e"/>
+<text x="754.3" y="155" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.14090</text>
+<text x="418" y="189" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">sku_counts</text>
+<rect x="430.0" y="174.0" width="128.7" height="20" rx="3" fill="#0f766e"/>
+<text x="566.7" y="189" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.06526</text>
+<text x="418" y="223" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">sku_average_volume</text>
+<rect x="430.0" y="208.0" width="125.1" height="20" rx="3" fill="#0f766e"/>
+<text x="563.1" y="223" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.06381</text>
+<text x="418" y="257" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">wl_to_vehicle_wl_max</text>
+<rect x="430.0" y="242.0" width="52.3" height="20" rx="3" fill="#0f766e"/>
+<text x="490.3" y="257" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.03449</text>
+<text x="418" y="291" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">h_to_H_ratio_avg</text>
+<rect x="430.0" y="276.0" width="41.3" height="20" rx="3" fill="#0f766e"/>
+<text x="479.3" y="291" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.03004</text>
+<text x="418" y="325" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">sku_height_avg</text>
+<rect x="430.0" y="310.0" width="35.0" height="20" rx="3" fill="#0f766e"/>
+<text x="473.0" y="325" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.02750</text>
+<text x="418" y="359" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">wl_to_vehicle_wl_std</text>
+<rect x="430.0" y="344.0" width="28.0" height="20" rx="3" fill="#0f766e"/>
+<text x="466.0" y="359" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.02466</text>
+<text x="418" y="393" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">wl_to_vehicle_wl_avg</text>
+<rect x="430.0" y="378.0" width="24.2" height="20" rx="3" fill="#0f766e"/>
+<text x="462.2" y="393" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.02315</text>
+<text x="418" y="427" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">sku_length_avg</text>
+<rect x="430.0" y="412.0" width="13.9" height="20" rx="3" fill="#0f766e"/>
+<text x="451.9" y="427" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.01899</text>
+<text x="418" y="461" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">l_to_L_ratio_avg</text>
+<rect x="430.0" y="446.0" width="10.8" height="20" rx="3" fill="#0f766e"/>
+<text x="448.8" y="461" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.01774</text>
+<text x="418" y="495" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">sku_concentration</text>
+<rect x="430.0" y="480.0" width="2.7" height="20" rx="3" fill="#0f766e"/>
+<text x="440.7" y="495" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.01449</text>
+<text x="418" y="529" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">w_to_W_ratio_avg</text>
+<rect x="430.0" y="514.0" width="2.1" height="20" rx="3" fill="#0f766e"/>
+<text x="440.1" y="529" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.01422</text>
+<text x="418" y="563" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">sku_width_avg</text>
+<rect x="430.0" y="548.0" width="2.0" height="20" rx="3" fill="#0f766e"/>
+<text x="439.7" y="563" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.01406</text>
+<text x="418" y="597" text-anchor="end" font-family="Arial, Helvetica, sans-serif" font-size="14" fill="#1f2937">sku_height_var</text>
+<rect x="430.0" y="582.0" width="2.0" height="20" rx="3" fill="#0f766e"/>
+<text x="438.0" y="597" text-anchor="start" font-family="Arial, Helvetica, sans-serif" font-size="13" fill="#1f2937">0.01339</text>
+</svg>

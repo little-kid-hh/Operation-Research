@@ -1,0 +1,19 @@
+{
+  "new_feature_coefficients": [
+    {
+      "feature": "vol_top3_concentration",
+      "coef": -6.391155808540484,
+      "abs_coef": 6.391155808540484
+    },
+    {
+      "feature": "spare_x_wlstd",
+      "coef": -0.4854637032706268,
+      "abs_coef": 0.4854637032706268
+    },
+    {
+      "feature": "three_dim_near_limit_share",
+      "coef": 0.0,
+      "abs_coef": 0.0
+    }
+  ]
+}

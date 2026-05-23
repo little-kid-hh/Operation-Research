@@ -1,0 +1,3 @@
+- Add short-dimension near-limit share to complete the near_limit_* dimension coverage gap (long and mid exist, short is missing).
+- Introduce fragile-item share as a novel signal from the completely unused `if_fragile` column — fragile items resist stacking, creating vertical voids.
+- Add a spare × fragile interaction to capture the nonlinear regime where low slack coincides with stacking-constrained items, a threshold effect trees exploit.

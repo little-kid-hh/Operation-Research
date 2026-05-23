@@ -1,0 +1,27 @@
+[
+  {
+    "feature": "vol_top2_ratio",
+    "coef": -9.785614559201647,
+    "abs_coef": 9.785614559201647
+  },
+  {
+    "feature": "spare_cap_x_nolarge",
+    "coef": 8.116588482667247,
+    "abs_coef": 8.116588482667247
+  },
+  {
+    "feature": "max_dim_l_vratio",
+    "coef": 0.24525845723407347,
+    "abs_coef": 0.24525845723407347
+  },
+  {
+    "feature": "n_large_dim_l",
+    "coef": 0.0,
+    "abs_coef": 0.0
+  },
+  {
+    "feature": "flat_frac",
+    "coef": 0.0,
+    "abs_coef": 0.0
+  }
+]

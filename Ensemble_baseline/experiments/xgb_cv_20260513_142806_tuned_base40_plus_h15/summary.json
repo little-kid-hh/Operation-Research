@@ -1,0 +1,81 @@
+{
+  "timestamp": "20260513_142806",
+  "data_path": "FunSearch_test/training_2orientations.csv",
+  "feature_set": "base40_plus_h15",
+  "config_name": "tuned",
+  "config_source": "/Users/zhongxiaochuan/Operation-Research/Ensemble_baseline/experiments/xgb_search_20260511_202925_base40_plus_h15/summary.json",
+  "xgb_cfg": {
+    "objective": "binary:logistic",
+    "eval_metric": "logloss",
+    "n_jobs": -1,
+    "n_estimators": 900,
+    "max_depth": 8,
+    "learning_rate": 0.02,
+    "subsample": 0.7,
+    "colsample_bytree": 0.7,
+    "reg_lambda": 1.0,
+    "min_child_weight": 2,
+    "gamma": 0.5
+  },
+  "n_rows_total": 10000,
+  "n_features": 55,
+  "target_positive": 8083,
+  "target_negative": 1917,
+  "cv_protocol": {
+    "type": "RepeatedStratifiedKFold",
+    "n_splits": 5,
+    "n_repeats": 3,
+    "random_state": 42
+  },
+  "aggregate_metrics": {
+    "accuracy": {
+      "mean": 0.9512,
+      "std": 0.005140177873520386,
+      "min": 0.9395,
+      "max": 0.9575
+    },
+    "precision": {
+      "mean": 0.9605309214103737,
+      "std": 0.004716113888920001,
+      "min": 0.9538834951456311,
+      "max": 0.9699386503067484
+    },
+    "recall": {
+      "mean": 0.979916486546614,
+      "std": 0.004442298562116828,
+      "min": 0.9721706864564007,
+      "max": 0.9888682745825603
+    },
+    "auc": {
+      "mean": 0.9860197745138308,
+      "std": 0.0025908603620560457,
+      "min": 0.9806155550280876,
+      "max": 0.9892288056930694
+    },
+    "tpr_at_fpr1pct": {
+      "mean": 0.816288261479209,
+      "std": 0.037804974241266845,
+      "min": 0.7637600494743352,
+      "max": 0.879950495049505
+    },
+    "threshold_at_fpr1pct": {
+      "mean": 0.9827247699101765,
+      "std": 0.007974476420968631,
+      "min": 0.9677379727363586,
+      "max": 0.9923170804977417
+    },
+    "fpr": {
+      "mean": 0.16989229765013053,
+      "std": 0.021205162984894634,
+      "min": 0.1279373368146214,
+      "max": 0.19843342036553524
+    },
+    "fnr": {
+      "mean": 0.020083513453386156,
+      "std": 0.004442298562116814,
+      "min": 0.011131725417439703,
+      "max": 0.027829313543599257
+    },
+    "n_folds_total": 15
+  }
+}

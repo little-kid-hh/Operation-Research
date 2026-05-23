@@ -1,0 +1,11 @@
+{
+  "timestamp": "20260514_164953",
+  "route_name": "xgb_guided_hybridsvm_base40",
+  "analysis_dir": "repro_bundle/teacher_analysis/xgb_guidance_base40_20260514",
+  "summary_path": "repro_bundle/teacher_analysis/xgb_guidance_base40_20260514/summary.json",
+  "output_path": "repro_bundle/guidance/XGB_GUIDED_FEATURE_HYPOTHESES_BASE40.md",
+  "llm_model": "glm-5.1",
+  "llm_max_tokens": 4096,
+  "llm_timeout_per_call": 240,
+  "skip_probe": true
+}

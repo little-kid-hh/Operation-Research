@@ -1,0 +1,19 @@
+{
+  "new_feature_coefficients": [
+    {
+      "feature": "spare_cap_x_h_to_H_max",
+      "coef": 3.964774310651584,
+      "abs_coef": 3.964774310651584
+    },
+    {
+      "feature": "dim_s_avg_to_vmin",
+      "coef": 2.8286287830201715,
+      "abs_coef": 2.8286287830201715
+    },
+    {
+      "feature": "wl_total_x_h_to_H_max",
+      "coef": 0.9673032360544909,
+      "abs_coef": 0.9673032360544909
+    }
+  ]
+}

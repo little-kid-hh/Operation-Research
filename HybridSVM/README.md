@@ -8,7 +8,12 @@
 - `src/hard_cases.py`    — FN/FP hard case mining & summarization
 - `src/evolution.py`     — FunSearch + ReEvo evolutionary rule generation
 - `src/evaluate.py`      — SVM vs Hybrid comparison harness
+- `src/feature_search.py` — LLM-guided feature-engineering utilities for the linear-SVM route
 - `run_experiment.py`    — Main entry point
+- `scripts/analyze_svm_boundary.py` — SVM signed-margin error analysis for boundary-gated Hybrid
+- `scripts/run_boundary_heuristic_agent.py` — one-shot/multi-shot API harness for boundary heuristic generation and scoring
+- `scripts/run_feature_search_agent.py` — iterative LLM feature search on top of the linear-SVM baseline
+- `scripts/run_manual_feature_trial.py` — manual incremental feature trial on top of an accepted feature bank
 
 ## Documentation map (where is the island model?)
 
@@ -31,6 +36,31 @@ pip install python-docx
 pip install -r requirements.txt
 ```
 
+## Feature-search route
+
+For the current `HybridSVM = LLM + SVM feature engineering` route, use:
+
+- workflow doc: `FEATURE_SEARCH_WORKFLOW.md`
+- tree-guidance note: `TREE_INSPIRED_FEATURE_HYPOTHESES.md`
+- main search entry: `scripts/run_feature_search_agent.py`
+- manual follow-up entry: `scripts/run_manual_feature_trial.py`
+
+Recommended starting command:
+
+```bash
+python scripts/run_feature_search_agent.py \
+  --llm-model glm-5.1 \
+  --seed-trial \
+  --n-iters 10 \
+  --tree-guidance-path TREE_INSPIRED_FEATURE_HYPOTHESES.md
+```
+
+Current canonical cumulative GLM run:
+
+```text
+HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260513_235323/
+```
+
 ## Run
 
 ```bash
@@ -45,6 +75,32 @@ python run_experiment.py --baseline-mode tabtreeformer_rf --skip-evolution
 
 # Full pipeline (default LLM: qwen3-max-2026-01-23; output under experiments_v2/by_model/<model>/exp_<time>/)
 python run_experiment.py --n-evolution-iters 10
+
+# Analyze whether SVM errors cluster near the decision boundary
+python scripts/analyze_svm_boundary.py
+
+# SVM-first boundary-gated Hybrid:
+# only rows near the signed SVM hyperplane are sent through LLM heuristic rules
+python run_experiment.py --baseline-mode svm --hybrid-boundary-margin 1.0 --evolve-boundary-only --n-evolution-iters 10
+
+# Asymmetric gate: rescue negative-side FN near margin 1.0, veto positive-side FP up to margin 1.5
+python run_experiment.py --baseline-mode svm --hybrid-fn-margin 1.0 --hybrid-fp-margin 1.5 --evolve-boundary-only --n-evolution-iters 10
+
+# Recommended protocol: search/select rules on validation, report final Hybrid once on outer test
+python run_experiment.py --baseline-mode svm --hybrid-fn-margin 1.0 --hybrid-fp-margin 1.5 --evolve-boundary-only --rule-selection-split val --rule-val-size 0.2 --n-evolution-iters 10
+
+# Recommended (new) scoring mechanism for boundary-gated evolution:
+# net_gain_v1 = (corrected_errors - harm_weight * harmed_correct) / n_hard, with hard-guard
+python run_experiment.py --baseline-mode svm --hybrid-fn-margin 1.0 --hybrid-fp-margin 1.5 --evolve-boundary-only --rule-selection-split val --rule-val-size 0.2 --evolution-score-mode net_gain_v1 --evolution-harm-weight 3.0 --n-evolution-iters 10
+
+# Legacy scoring replay (for A/B comparison with old runs)
+python run_experiment.py --baseline-mode svm --hybrid-fn-margin 1.0 --hybrid-fp-margin 1.5 --evolve-boundary-only --rule-selection-split val --rule-val-size 0.2 --evolution-score-mode legacy_f1 --n-evolution-iters 10
+
+# Build the boundary-agent prompt without calling an API
+python scripts/run_boundary_heuristic_agent.py --dry-run --model-path models/linear_svm_20260413_165559.json
+
+# Call the configured API once, extract apply_rule_patch, evaluate, and save artifacts
+python scripts/run_boundary_heuristic_agent.py --model-path models/linear_svm_20260413_165559.json --n-calls 1
 
 # Another DashScope-compatible model (each model gets its own subfolder)
 python run_experiment.py --llm-model qwen3.6-plus --n-evolution-iters 10
@@ -71,6 +127,187 @@ python run_experiment.py --rule-placement round_robin --island-reset-mode trim_t
 python run_experiment.py --baseline-mode ensemble --ensemble-base-models "svm,lr,rf,xgb" --ensemble-meta-model logreg --ensemble-cv-folds 5
 ```
 
+For API calls, configure `.env` under `HybridSVM/`. If you are changing both URL and model, use the generic OpenAI-compatible form:
+
+```bash
+LLM_API_KEY=your_api_key_here
+LLM_BASE_URL=https://your-openai-compatible-endpoint/v1
+LLM_MODEL=your-model-id
+```
+
+Provider aliases are also supported: `BAILIAN_API_KEY` / `BAILIAN_BASE_URL` / `BAILIAN_MODEL`, `OPENAI_API_KEY` / `OPENAI_BASE_URL` / `OPENAI_MODEL`, and `DEEPSEEK_API_KEY` / `DEEPSEEK_BASE_URL` / `DEEPSEEK_MODEL`.
+
+### Boundary heuristic agent workflow
+
+This is the recommended flow for the SVM-first Hybrid path:
+
+1. **Configure the API model** in `HybridSVM/.env`.
+
+   For the current code-generation heuristic path, `qwen3coder` is the recommended first model:
+
+   ```bash
+   LLM_API_KEY=your_api_key_here
+   LLM_BASE_URL=https://models.sjtu.edu.cn/api/v1
+   LLM_MODEL=qwen3coder
+   ```
+
+2. **Analyze the SVM decision boundary**.
+
+   ```bash
+   python scripts/analyze_svm_boundary.py
+   ```
+
+   On the reference split, the useful gate is asymmetric:
+
+   - `--hybrid-fn-margin 1.0`: rescue negative-side samples close to the SVM boundary.
+   - `--hybrid-fp-margin 1.5`: veto positive-side samples close to the SVM boundary.
+
+   This selects `605 / 2500` rows and covers `155 / 181` SVM errors. The corresponding **oracle accuracy** is a theoretical upper bound: if a perfect rule fixed every selected error and did not harm any correct row, Accuracy would reach `0.9896`. It is not a real model score.
+
+3. **Dry-run the heuristic-agent prompt**.
+
+   ```bash
+   python scripts/run_boundary_heuristic_agent.py \
+     --dry-run \
+     --model-path models/linear_svm_20260413_165559.json \
+     --hybrid-fn-margin 1.0 \
+     --hybrid-fp-margin 1.5
+   ```
+
+   Output goes to `experiments_boundary_agent/boundary_agent_<timestamp>/` and includes:
+
+   - `prompt.md`: the exact prompt sent to the model.
+   - `metadata.json`: baseline accuracy, gate size, FN/FP counts, and split info.
+
+4. **Generate heuristic candidates through the API**.
+
+   ```bash
+   python scripts/run_boundary_heuristic_agent.py \
+     --model-path models/linear_svm_20260413_165559.json \
+     --hybrid-fn-margin 1.0 \
+     --hybrid-fp-margin 1.5 \
+     --n-calls 3
+   ```
+
+   The harness extracts Python code blocks defining `apply_rule_patch(svm_prob, features) -> int`, scores each candidate, and writes:
+
+   - `raw_response_*.md`: raw LLM replies.
+   - `call*_cand*.py`: extracted candidate rules.
+   - `candidate_reports.json`: candidate metrics, corrected errors, harmed correct rows, and override counts.
+   - `candidate_rules.json`: serialized candidate pool.
+   - `best_rule.py`: best candidate under the harness ranking.
+
+5. **Interpret candidate metrics carefully**.
+
+   The first harness run is diagnostic: the prompt and evaluation use the same boundary rows. A higher Accuracy there tells us the heuristic found a plausible pattern, but it is not a final holdout claim. For a reportable result, generate rules on a validation split, freeze the best rule, then evaluate once on a separate holdout split.
+
+6. **Use the rule in the full Hybrid pipeline**.
+
+   The main experiment entrypoint supports the same gate:
+
+   ```bash
+   python run_experiment.py \
+     --baseline-mode svm \
+     --hybrid-fn-margin 1.0 \
+     --hybrid-fp-margin 1.5 \
+     --evolve-boundary-only \
+     --n-evolution-iters 10
+   ```
+
+   This route uses the FunSearch/ReEvo loop; the one-shot `run_boundary_heuristic_agent.py` harness is faster for testing prompt and model choices.
+
+### Boundary-gated implementation walkthrough
+
+This section maps the **SVM-first, boundary-gated Hybrid** path to the current code, so you can trace one sample from Stage 1 through rule override.
+
+**1. Stage 1 still starts with a normal SVM forward pass**
+
+- Entry: `run_experiment.py`
+- The baseline SVM produces:
+  - `svm_probs_test`: `P(y=1)` used for the base hard prediction.
+  - `baseline_decision_test`: the signed linear decision score.
+- The signed score is the key boundary signal:
+  - `decision < 0`: SVM predicts class `0`; this is the side where an FN-rescue rule may flip to `1`.
+  - `decision >= 0`: SVM predicts class `1`; this is the side where an FP-veto rule may flip to `0`.
+
+**2. The boundary gate is defined on signed SVM margin, not only on probability**
+
+- Code: `src/evolution.py` → `boundary_candidate_mask(...)`
+- Supported gate forms:
+  - `--hybrid-boundary-margin m`: symmetric gate, equivalent to `abs(decision_score) <= m`
+  - `--hybrid-fn-margin m_fn`: negative side only, `-m_fn <= decision_score < 0`
+  - `--hybrid-fp-margin m_fp`: positive side only, `0 <= decision_score <= m_fp`
+- In the main experiment loop, the gate is applied right after SVM inference and logged as:
+  - candidate row count,
+  - covered SVM errors,
+  - covered FN / FP counts.
+
+**3. Boundary metadata is injected into the rule feature space**
+
+- Code: `run_experiment.py`
+- After SVM inference, the rule-side feature frame gets three synthetic fields:
+  - `svm_decision_score`
+  - `svm_abs_decision_score`
+  - `svm_near_boundary`
+- This means LLM-generated rules can use raw packing features together with the SVM's signed margin as a guardrail, for example "only rescue when `svm_decision_score` is slightly negative and geometry is favorable".
+
+**4. `--evolve-boundary-only` changes the optimization set, not just final inference**
+
+- Without `--evolve-boundary-only`:
+  - evolution sees all mined FN / FP / easy TN / easy TP rows,
+  - but the final Hybrid override can still be boundary-gated.
+- With `--evolve-boundary-only`:
+  - the mined FN / FP / easy TN / easy TP lists are filtered to gate-selected rows before prompt construction and rule scoring,
+  - so the LLM is optimized only on the part of the test split that is actually eligible for rule intervention.
+
+**5. The one-shot harness and the main evolution loop use the same boundary idea in two different ways**
+
+- `scripts/analyze_svm_boundary.py`
+  - diagnostic analysis only,
+  - prints how many rows and errors are captured by candidate margin settings,
+  - reports an **oracle accuracy** upper bound for each gate.
+- `scripts/run_boundary_heuristic_agent.py`
+  - builds one focused prompt for boundary rows,
+  - asks the API for candidate `apply_rule_patch(...)` implementations,
+  - scores candidates on the same boundary subset,
+  - useful for prompt/model iteration, but its metric is diagnostic.
+- `run_experiment.py`
+  - runs the full FunSearch/ReEvo-style multi-iteration rule search,
+  - uses the same signed-margin gate during final rule application.
+
+**6. The boundary prompt is more than a hard-case dump**
+
+- In `scripts/run_boundary_heuristic_agent.py`, the prompt includes:
+  - boundary FN / FP examples,
+  - boundary TP / TN contrast rows,
+  - feature-scale tables inside the gate,
+  - linear SVM coefficient summaries,
+  - explicit instructions to abstain aggressively with `return -1`.
+- The intent is to make the rule behave like a **narrow second review module**, not a global replacement classifier.
+
+**7. Final Hybrid inference is "SVM first, rules second, boundary-only if configured"**
+
+- Code: `src/evolution.py` → `apply_rules(...)`
+- Inference order:
+  1. Start from SVM hard predictions.
+  2. If a boundary gate is active, skip every sample outside the gate.
+  3. For each eligible sample, try the global top-k evolved rules in score order.
+  4. The first rule that returns `0` or `1` wins; `-1` means "trust SVM and continue to the next rule".
+  5. If no rule fires, keep the SVM prediction unchanged.
+
+**8. Current evaluation caveat**
+
+- The boundary-gated path is already implemented as a proper selective override mechanism.
+- However, in the current main experiment flow, the same held-out split is often reused for:
+  - mining boundary hard cases,
+  - evolving / selecting rules,
+  - reporting final Hybrid metrics.
+- This is fine for exploratory development, but it is not the cleanest protocol for a reportable result.
+- For a stricter experiment:
+  - freeze the SVM first,
+  - evolve rules on a validation split,
+  - then evaluate the frozen rule set exactly once on a separate holdout split.
+
 ### Baseline modes (Stage 1)
 
 - `--baseline-mode svm` (default): existing linear SVM baseline path.
@@ -80,6 +317,22 @@ python run_experiment.py --baseline-mode ensemble --ensemble-base-models "svm,lr
   - base learners: `svm,lr,rf,xgb` (configurable),
   - OOF stacking (`StratifiedKFold`) to avoid leakage,
   - linear meta-combiner (`--ensemble-meta-model logreg` by default).
+
+Boundary-gated Hybrid flags (SVM mode only):
+
+- `--hybrid-boundary-margin`: symmetric signed-margin gate, equivalent to `abs(decision_score) <= margin`.
+- `--hybrid-fn-margin`: negative-side gate for FN rescue, `-margin <= decision_score < 0`.
+- `--hybrid-fp-margin`: positive-side gate for FP veto, `0 <= decision_score <= margin`.
+- `--evolve-boundary-only`: the LLM evolution prompt and rule scoring use only rows inside the configured gate. Without this flag, only final rule application is gated.
+- `--rule-selection-split test`: legacy behavior, where the same held-out split is used both for rule search and final Hybrid reporting.
+- `--rule-selection-split val`: recommended behavior, where the outer train portion is split again; rules are searched/selected on validation, and the outer test split is kept for final reporting.
+- `--rule-val-size`: when `--rule-selection-split val`, controls how much of the outer-train portion becomes rule-selection validation.
+- `--llm-timeout-per-call`: timeout seconds for each OpenAI-compatible LLM call (default `180`).
+- `--evolution-score-mode net_gain_v1` (default): optimize net gain with explicit harm penalty; `legacy_f1` keeps the previous rule ranking logic.
+- `--evolution-harm-weight`: harm multiplier for `net_gain_v1` (default `3.0`).
+- `--evolution-score-hard-guard` / `--no-evolution-score-hard-guard`: whether to clip candidates with `harmed_correct >= corrected_errors` to non-positive score.
+- Boundary-gated rule features include `svm_decision_score`, `svm_abs_decision_score`, and `svm_near_boundary`.
+- Rule prompts use raw physical features for the rule-search rows, including `total_skuvolume`, `vehicle_capacity`, and derived `fill_ratio`, even though the SVM itself may drop some of these columns before training.
 
 Ensemble-specific flags:
 
@@ -104,7 +357,7 @@ When resuming with ensemble mode, the same consistency warnings apply for baseli
 - `results.json`/checkpoint include baseline metadata (`baseline_mode`, base models, meta model, fallback markers).
 - On same split, `ensemble` should improve at least one target metric (commonly AUC or `TPR@FPR=1%`) over `svm`.
 
-**LLM HTTP timeout** (`EvolutionConfig.timeout_per_call`, default 60s) is applied to **OpenAI-compatible** clients (Bailian, OpenAI, DeepSeek). The DashScope native `Generation.call` path does not use it; prefer the compatible API if you need a strict timeout.
+**LLM HTTP timeout** (`EvolutionConfig.timeout_per_call`, default 180s) is applied to **OpenAI-compatible** clients (Bailian, OpenAI, DeepSeek). The DashScope native `Generation.call` path does not use it; prefer the compatible API if you need a strict timeout. You can override with `--llm-timeout-per-call`.
 
 **Code extraction** accepts common Markdown Python fences such as `` ```python `` and `` ```py `` (and unclosed/truncated fences per `src/evolution.extract_code_from_response`).
 
@@ -118,7 +371,21 @@ Use `--experiments-root experiments` to write under the original `experiments/` 
 
 Each model’s runs stay grouped. `results.json` records `llm_model` and `n_evolution_iters`.
 
+To prevent mixing old/new scoring experiments, new runs are bucketed by mechanism tag:
+
+`experiments_v2/by_model/<llm_model_slug>/by_mechanism/<mechanism_tag>/exp_<timestamp>/`
+
+Examples:
+
+- `net_gain_v1_hw3_guard`
+- `legacy_f1`
+
 **Evolution prompt:** `hard_case_summary.md` includes FN/FP plus **easy TN/TP** (borderline-correct rows) and optional **§5** contrastive rows (easy TP near the FN feature cloud, easy TN near the FP cloud). Tune with `--n-easy-typical` and `--n-near-hard-easy` (set the latter to `0` to disable §5).
+
+When `--rule-selection-split val` is used, `results.json` distinguishes the two roles:
+
+- `n_rule_search_cases_total`: hard/easy case counts on the rule-search split (validation).
+- `n_hard_cases`: hard/easy case counts on the final evaluation split (outer test).
 
 ## Architecture
 
@@ -128,6 +395,9 @@ Raw CSV (10k dispatches, 41 features)
    Linear SVM (C=10, kernel=linear)
         │
    P(y=1) — soft probabilities
+        │
+   Optional signed-margin gate
+   (only near-boundary rows go to rules)
         │
    ┌────┴────┐
    │ Hard case mining (FN / FP / EasyTN / EasyTP)
@@ -250,6 +520,7 @@ Population
 - **Linear SVM** gives a strong, interpretable baseline with well-calibrated probabilities
 - **Hard case mining** finds where the linear boundary breaks down
 - **Rule patches** target only the specific feature ranges where SVM fails — they don't retrain the SVM
+- **Boundary-gated Hybrid** optionally invokes rules only near the SVM signed margin, which is safer than letting LLM rules override high-confidence easy rows
 - **Islands model** (FunSearch) keeps diversity, avoids local optima
 - **Best-shot prompting** + **ReEvo reflection** guides LLM toward incrementally better rules
 - **Easy case protection** — rules that override TN/TP cases are penalized in scoring

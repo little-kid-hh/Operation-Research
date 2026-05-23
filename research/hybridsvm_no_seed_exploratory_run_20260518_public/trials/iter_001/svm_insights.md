@@ -1,0 +1,29 @@
+{
+  "new_feature_coefficients": [
+    {
+      "feature": "spare_cap_x_wl_total",
+      "coef": 13.188226250734973,
+      "abs_coef": 13.188226250734973
+    },
+    {
+      "feature": "vol_top3_share",
+      "coef": -6.293739932013263,
+      "abs_coef": 6.293739932013263
+    },
+    {
+      "feature": "spare_cap_sq",
+      "coef": 3.5294579912853656,
+      "abs_coef": 3.5294579912853656
+    },
+    {
+      "feature": "spare_cap_x_conc",
+      "coef": -2.355932716915259,
+      "abs_coef": 2.355932716915259
+    },
+    {
+      "feature": "n_high_asr_items",
+      "coef": 0.7488970747475783,
+      "abs_coef": 0.7488970747475783
+    }
+  ]
+}

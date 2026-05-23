@@ -1,0 +1,888 @@
+{
+  "config": {
+    "data_path": "/Users/zhongxiaochuan/Operation-Research/FunSearch_test/training_2orientations.csv",
+    "items_path": "/Users/zhongxiaochuan/Operation-Research/FunSearch_test/物品信息和dblf信息.csv",
+    "test_size": 0.25,
+    "random_state": 42,
+    "svm_c": 10.0,
+    "tree_guidance_path": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/RF_GUIDED_FEATURE_HYPOTHESES_BASE40.md",
+    "llm_model": "glm-5.1",
+    "llm_max_tokens": 8192,
+    "llm_timeout_per_call": 240,
+    "max_new_features": 6,
+    "skip_llm_probe": true,
+    "acceptance_rule": {
+      "auc_margin": 0.0005,
+      "tpr_margin": 0.005,
+      "accuracy_margin": 0.0005,
+      "policy_update_only_if_accepted": true
+    },
+    "feature_bank_mode": "cumulative_incremental",
+    "active_feature_count": 20
+  },
+  "baseline_metrics": {
+    "accuracy": 0.9276,
+    "precision": 0.9443645083932853,
+    "recall": 0.9680432645034415,
+    "auc": 0.9651398331370984,
+    "fpr": 0.24892703862660945,
+    "fnr": 0.0319567354965585,
+    "tpr_at_fpr1pct": 0.6347099311701082,
+    "tn": 350,
+    "fp": 116,
+    "fn": 65,
+    "tp": 1969
+  },
+  "n_trials_total": 10,
+  "n_trials_successful": 6,
+  "n_trials_accepted": 6,
+  "n_trials_rejected": 4,
+  "n_trials_failed": 0,
+  "best_trial": {
+    "iteration": 10,
+    "status": "accepted",
+    "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_010",
+    "feature_names": [
+      "load_util_ratio",
+      "multi_dim_tight_share",
+      "dim_l_tail_ratio"
+    ],
+    "n_new_features": 3,
+    "metrics": {
+      "accuracy": 0.9312,
+      "precision": 0.9467370441458733,
+      "recall": 0.9700098328416913,
+      "auc": 0.9733088989327359,
+      "fpr": 0.23819742489270387,
+      "fnr": 0.02999016715830875,
+      "tpr_at_fpr1pct": 0.6902654867256637,
+      "tn": 355,
+      "fp": 111,
+      "fn": 61,
+      "tp": 1973
+    },
+    "delta_vs_baseline": {
+      "accuracy": 0.0036000000000000476,
+      "recall": 0.001966568338249819,
+      "auc": 0.008169065795637476,
+      "tpr_at_fpr1pct": 0.05555555555555547
+    },
+    "objective_key": [
+      0.9733088989327359,
+      0.6902654867256637,
+      0.9312
+    ],
+    "policy_excerpt": "- Pivot from pure spatial-constraint features to **weight-capacity pressure**, an entirely orthogonal constraint axis not yet represented in the active bank. - Add a **per-item multi-dimensional tightness** threshold count: trees naturally ",
+    "rationale_excerpt": "- **load_util_ratio** opens a genuinely new constraint axis (weight vs. spatial). All 17 active-bank features are purely dimensional; weight pressure is orthogonal and directly affects feasibility, especially for dispatches that appear spat",
+    "error": null
+  },
+  "best_accepted_trial": {
+    "iteration": 10,
+    "status": "accepted",
+    "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_010",
+    "feature_names": [
+      "load_util_ratio",
+      "multi_dim_tight_share",
+      "dim_l_tail_ratio"
+    ],
+    "n_new_features": 3,
+    "metrics": {
+      "accuracy": 0.9312,
+      "precision": 0.9467370441458733,
+      "recall": 0.9700098328416913,
+      "auc": 0.9733088989327359,
+      "fpr": 0.23819742489270387,
+      "fnr": 0.02999016715830875,
+      "tpr_at_fpr1pct": 0.6902654867256637,
+      "tn": 355,
+      "fp": 111,
+      "fn": 61,
+      "tp": 1973
+    },
+    "delta_vs_baseline": {
+      "accuracy": 0.0036000000000000476,
+      "recall": 0.001966568338249819,
+      "auc": 0.008169065795637476,
+      "tpr_at_fpr1pct": 0.05555555555555547
+    },
+    "objective_key": [
+      0.9733088989327359,
+      0.6902654867256637,
+      0.9312
+    ],
+    "policy_excerpt": "- Pivot from pure spatial-constraint features to **weight-capacity pressure**, an entirely orthogonal constraint axis not yet represented in the active bank. - Add a **per-item multi-dimensional tightness** threshold count: trees naturally ",
+    "rationale_excerpt": "- **load_util_ratio** opens a genuinely new constraint axis (weight vs. spatial). All 17 active-bank features are purely dimensional; weight pressure is orthogonal and directly affects feasibility, especially for dispatches that appear spat",
+    "error": null
+  },
+  "accepted_trials": [
+    {
+      "iteration": 10,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_010",
+      "feature_names": [
+        "load_util_ratio",
+        "multi_dim_tight_share",
+        "dim_l_tail_ratio"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9312,
+        "precision": 0.9467370441458733,
+        "recall": 0.9700098328416913,
+        "auc": 0.9733088989327359,
+        "fpr": 0.23819742489270387,
+        "fnr": 0.02999016715830875,
+        "tpr_at_fpr1pct": 0.6902654867256637,
+        "tn": 355,
+        "fp": 111,
+        "fn": 61,
+        "tp": 1973
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0036000000000000476,
+        "recall": 0.001966568338249819,
+        "auc": 0.008169065795637476,
+        "tpr_at_fpr1pct": 0.05555555555555547
+      },
+      "objective_key": [
+        0.9733088989327359,
+        0.6902654867256637,
+        0.9312
+      ],
+      "policy_excerpt": "- Pivot from pure spatial-constraint features to **weight-capacity pressure**, an entirely orthogonal constraint axis not yet represented in the active bank. - Add a **per-item multi-dimensional tightness** threshold count: trees naturally ",
+      "rationale_excerpt": "- **load_util_ratio** opens a genuinely new constraint axis (weight vs. spatial). All 17 active-bank features are purely dimensional; weight pressure is orthogonal and directly affects feasibility, especially for dispatches that appear spat",
+      "error": null
+    },
+    {
+      "iteration": 9,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_009",
+      "feature_names": [
+        "spare_cap_x_wl_cv",
+        "near_h_limit_share",
+        "wl_total_sq"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9304,
+        "precision": 0.9454022988505747,
+        "recall": 0.9705014749262537,
+        "auc": 0.9722992391152974,
+        "fpr": 0.2446351931330472,
+        "fnr": 0.029498525073746312,
+        "tpr_at_fpr1pct": 0.6853490658800393,
+        "tn": 352,
+        "fp": 114,
+        "fn": 60,
+        "tp": 1974
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0028000000000000247,
+        "recall": 0.002458210422812246,
+        "auc": 0.007159405978198974,
+        "tpr_at_fpr1pct": 0.05063913470993109
+      },
+      "objective_key": [
+        0.9722992391152974,
+        0.6853490658800393,
+        0.9304
+      ],
+      "policy_excerpt": "- Target the stubborn TPR@FPR=1% gap by adding features that linearize the conditional structure trees exploit via depth-2 splits on wl-family dispersion conditional on spare capacity. - Introduce a **spare_capacity × wl_cv** interaction: t",
+      "rationale_excerpt": "- **spare_cap_x_wl_cv** targets the conditional interaction where trees first split on spare_capacity then on wl dispersion: when slack is scarce AND utilization is uneven (high cv), some SKUs dominate the length-width footprint while other",
+      "error": null
+    },
+    {
+      "iteration": 6,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_006",
+      "feature_names": [
+        "wl_max_to_avg",
+        "tight_x_high_wl",
+        "sku_counts_x_lL"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9288,
+        "precision": 0.9448705656759347,
+        "recall": 0.9690265486725663,
+        "auc": 0.9713613210612717,
+        "fpr": 0.24678111587982832,
+        "fnr": 0.030973451327433628,
+        "tpr_at_fpr1pct": 0.704031465093412,
+        "tn": 351,
+        "fp": 115,
+        "fn": 63,
+        "tp": 1971
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0011999999999999789,
+        "recall": 0.000983284169124854,
+        "auc": 0.006221487924173319,
+        "tpr_at_fpr1pct": 0.06932153392330376
+      },
+      "objective_key": [
+        0.9713613210612717,
+        0.704031465093412,
+        0.9288
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 5,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_005",
+      "feature_names": [
+        "wl_cv",
+        "fragile_share",
+        "spare_cap_cubed"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9296,
+        "precision": 0.9444976076555024,
+        "recall": 0.9705014749262537,
+        "auc": 0.9710574735927009,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.029498525073746312,
+        "tpr_at_fpr1pct": 0.6956735496558505,
+        "tn": 350,
+        "fp": 116,
+        "fn": 60,
+        "tp": 1974
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0020000000000000018,
+        "recall": 0.002458210422812246,
+        "auc": 0.005917640455602502,
+        "tpr_at_fpr1pct": 0.06096361848574228
+      },
+      "objective_key": [
+        0.9710574735927009,
+        0.6956735496558505,
+        0.9296
+      ],
+      "policy_excerpt": "- Shift from spare_capacity interactions (already well-covered in active bank) to **dispersion and constraint signals** that trees exploit via sequential splits on wl-family spread and item-level orientation restrictions. - Add **wl_cv** (H",
+      "rationale_excerpt": "- **wl_cv** linearizes the tree pattern where RF splits on wl_std conditional on wl_avg: a high CV means one or few SKUs dominate the wl footprint (potential bottleneck), while low CV means uniform spread (easier packing). This is a pure ra",
+      "error": null
+    },
+    {
+      "iteration": 3,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_003",
+      "feature_names": [
+        "spare_cap_x_wl_max",
+        "item_vol_cv",
+        "long_item_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9284,
+        "precision": 0.9439923408329344,
+        "recall": 0.9695181907571289,
+        "auc": 0.9703970273589324,
+        "fpr": 0.2510729613733906,
+        "fnr": 0.03048180924287119,
+        "tpr_at_fpr1pct": 0.7069813176007866,
+        "tn": 349,
+        "fp": 117,
+        "fn": 62,
+        "tp": 1972
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0008000000000000229,
+        "recall": 0.001474926253687392,
+        "auc": 0.005257194221834016,
+        "tpr_at_fpr1pct": 0.07227138643067843
+      },
+      "objective_key": [
+        0.9703970273589324,
+        0.7069813176007866,
+        0.9284
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 1,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_001",
+      "feature_names": [
+        "spare_cap_x_wl_total",
+        "spare_cap_x_sku_counts",
+        "spare_cap_sq",
+        "hH_x_lL",
+        "big_piece_share"
+      ],
+      "n_new_features": 5,
+      "metrics": {
+        "accuracy": 0.9288,
+        "precision": 0.9435946462715105,
+        "recall": 0.9705014749262537,
+        "auc": 0.9686003181958213,
+        "fpr": 0.2532188841201717,
+        "fnr": 0.029498525073746312,
+        "tpr_at_fpr1pct": 0.6691248770894789,
+        "tn": 348,
+        "fp": 118,
+        "fn": 60,
+        "tp": 1974
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0011999999999999789,
+        "recall": 0.002458210422812246,
+        "auc": 0.003460485058722873,
+        "tpr_at_fpr1pct": 0.034414945919370665
+      },
+      "objective_key": [
+        0.9686003181958213,
+        0.6691248770894789,
+        0.9288
+      ],
+      "policy_excerpt": "- Focus on the TPR@FPR=1% gap (0.17 below RF): the SVM misses hard positives because it cannot express nonlinear interactions and threshold effects on the top features. - Priority 1: explicit interactions between `spare_capacity` and the ne",
+      "rationale_excerpt": "- **spare_cap_x_wl_total**: The two highest-importance RF features (31% + 14%) interact conditionally in tree splits; the product lets the linear SVM assign a separate weight to the joint high-pressure regime. - **spare_cap_x_sku_counts**: ",
+      "error": null
+    }
+  ],
+  "rejected_trials": [
+    {
+      "iteration": 2,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_002",
+      "feature_names": [
+        "spare_cap_x_sku_avg_vol",
+        "wl_max_residual",
+        "awkward_shape_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9292,
+        "precision": 0.9440459110473458,
+        "recall": 0.9705014749262537,
+        "auc": 0.9686583446221109,
+        "fpr": 0.2510729613733906,
+        "fnr": 0.029498525073746312,
+        "tpr_at_fpr1pct": 0.6666666666666666,
+        "tn": 349,
+        "fp": 117,
+        "fn": 60,
+        "tp": 1974
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0016000000000000458,
+        "recall": 0.002458210422812246,
+        "auc": 0.0035185114850124766,
+        "tpr_at_fpr1pct": 0.03195673549655842
+      },
+      "objective_key": [
+        0.9686583446221109,
+        0.6666666666666666,
+        0.9292
+      ],
+      "policy_excerpt": "- Continue targeting the TPR@FPR=1% gap by linearizing RF's conditional splits on the top features. - Iteration 1 covered spare-capacity interactions with `wl_total` and `sku_counts`, a quadratic slack term, cross-dimension tightness, and a",
+      "rationale_excerpt": "- **`spare_cap_x_sku_avg_vol`**: `sku_average_volume` has the single largest SVM weight (−16.4) and RF importance 0.064. Iteration 1 interacted spare capacity with `wl_total` and `sku_counts`; the remaining top interaction with average volu",
+      "error": null
+    },
+    {
+      "iteration": 4,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_004",
+      "feature_names": [
+        "spare_cap_x_hH",
+        "floor_area_pressure",
+        "tall_item_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9284,
+        "precision": 0.9444178246286535,
+        "recall": 0.9690265486725663,
+        "auc": 0.9704476686036942,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.030973451327433628,
+        "tpr_at_fpr1pct": 0.7059980334316618,
+        "tn": 350,
+        "fp": 116,
+        "fn": 63,
+        "tp": 1971
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0008000000000000229,
+        "recall": 0.000983284169124854,
+        "auc": 0.005307835466595856,
+        "tpr_at_fpr1pct": 0.07128810226155358
+      },
+      "objective_key": [
+        0.9704476686036942,
+        0.7059980334316618,
+        0.9284
+      ],
+      "policy_excerpt": "- Add `spare_cap_x_hH` to close the specific gap where h_to_H_ratio_avg (RF importance 0.030) has no spare_capacity interaction in the active bank, unlike the already-accepted wl_total and wl_max interactions - Add `floor_area_pressure` to ",
+      "rationale_excerpt": "- `spare_cap_x_h",
+      "error": null
+    },
+    {
+      "iteration": 7,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_007",
+      "feature_names": [
+        "sku_counts_x_hH",
+        "flat_item_mean",
+        "near_limit_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9288,
+        "precision": 0.9444444444444444,
+        "recall": 0.9695181907571289,
+        "auc": 0.9715870966108346,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.03048180924287119,
+        "tpr_at_fpr1pct": 0.7050147492625368,
+        "tn": 350,
+        "fp": 116,
+        "fn": 62,
+        "tp": 1972
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0011999999999999789,
+        "recall": 0.001474926253687392,
+        "auc": 0.006447263473736253,
+        "tpr_at_fpr1pct": 0.07030481809242861
+      },
+      "objective_key": [
+        0.9715870966108346,
+        0.7050147492625368,
+        0.9288
+      ],
+      "policy_excerpt": "- Add **sku_counts × h_to_H** (H5, untried): isolates \"many items competing for vertical space\" regardless of overall slack — distinct from the rejected `spare_cap × hH` which captured slack-conditional vertical tightness. - Introduce **mea",
+      "rationale_excerpt": "- `sku_counts_x_hH` targets the H5 hypothesis (sku_counts × height ratio interaction) not yet in the active bank; it captures vertical crowding pressure that trees model via sequential splits on count then height ratio. - `flat_item_mean` i",
+      "error": null
+    },
+    {
+      "iteration": 8,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_008",
+      "feature_names": [
+        "spare_cap_x_long_item",
+        "dim_l_max_to_veh_l",
+        "wl_total_x_sku_counts"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9304,
+        "precision": 0.9458293384467881,
+        "recall": 0.9700098328416913,
+        "auc": 0.9718054869788699,
+        "fpr": 0.24248927038626608,
+        "fnr": 0.02999016715830875,
+        "tpr_at_fpr1pct": 0.6927236971484759,
+        "tn": 353,
+        "fp": 113,
+        "fn": 61,
+        "tp": 1973
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0028000000000000247,
+        "recall": 0.001966568338249819,
+        "auc": 0.006665653841771535,
+        "tpr_at_fpr1pct": 0.058013765978367715
+      },
+      "objective_key": [
+        0.9718054869788699,
+        0.6927236971484759,
+        0.9304
+      ],
+      "policy_excerpt": "- Shift focus to **bottleneck dimension signals** and **top-RF-feature interactions not yet combined**: the active bank covers spare_capacity interactions with wl_total, sku_counts, and wl_max, but misses the direct interaction of wl_total ",
+      "rationale_excerpt": "- **spare_cap_x_long_item** linearizes the tree pattern where a split on low spare_capacity is followed by a split on long-item prevalence; the active bank has spare_cap × sku_counts but not the specific interaction with orientation-constra",
+      "error": null
+    }
+  ],
+  "failed_trials": [],
+  "trials": [
+    {
+      "iteration": 1,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_001",
+      "feature_names": [
+        "spare_cap_x_wl_total",
+        "spare_cap_x_sku_counts",
+        "spare_cap_sq",
+        "hH_x_lL",
+        "big_piece_share"
+      ],
+      "n_new_features": 5,
+      "metrics": {
+        "accuracy": 0.9288,
+        "precision": 0.9435946462715105,
+        "recall": 0.9705014749262537,
+        "auc": 0.9686003181958213,
+        "fpr": 0.2532188841201717,
+        "fnr": 0.029498525073746312,
+        "tpr_at_fpr1pct": 0.6691248770894789,
+        "tn": 348,
+        "fp": 118,
+        "fn": 60,
+        "tp": 1974
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0011999999999999789,
+        "recall": 0.002458210422812246,
+        "auc": 0.003460485058722873,
+        "tpr_at_fpr1pct": 0.034414945919370665
+      },
+      "objective_key": [
+        0.9686003181958213,
+        0.6691248770894789,
+        0.9288
+      ],
+      "policy_excerpt": "- Focus on the TPR@FPR=1% gap (0.17 below RF): the SVM misses hard positives because it cannot express nonlinear interactions and threshold effects on the top features. - Priority 1: explicit interactions between `spare_capacity` and the ne",
+      "rationale_excerpt": "- **spare_cap_x_wl_total**: The two highest-importance RF features (31% + 14%) interact conditionally in tree splits; the product lets the linear SVM assign a separate weight to the joint high-pressure regime. - **spare_cap_x_sku_counts**: ",
+      "error": null
+    },
+    {
+      "iteration": 2,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_002",
+      "feature_names": [
+        "spare_cap_x_sku_avg_vol",
+        "wl_max_residual",
+        "awkward_shape_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9292,
+        "precision": 0.9440459110473458,
+        "recall": 0.9705014749262537,
+        "auc": 0.9686583446221109,
+        "fpr": 0.2510729613733906,
+        "fnr": 0.029498525073746312,
+        "tpr_at_fpr1pct": 0.6666666666666666,
+        "tn": 349,
+        "fp": 117,
+        "fn": 60,
+        "tp": 1974
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0016000000000000458,
+        "recall": 0.002458210422812246,
+        "auc": 0.0035185114850124766,
+        "tpr_at_fpr1pct": 0.03195673549655842
+      },
+      "objective_key": [
+        0.9686583446221109,
+        0.6666666666666666,
+        0.9292
+      ],
+      "policy_excerpt": "- Continue targeting the TPR@FPR=1% gap by linearizing RF's conditional splits on the top features. - Iteration 1 covered spare-capacity interactions with `wl_total` and `sku_counts`, a quadratic slack term, cross-dimension tightness, and a",
+      "rationale_excerpt": "- **`spare_cap_x_sku_avg_vol`**: `sku_average_volume` has the single largest SVM weight (−16.4) and RF importance 0.064. Iteration 1 interacted spare capacity with `wl_total` and `sku_counts`; the remaining top interaction with average volu",
+      "error": null
+    },
+    {
+      "iteration": 3,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_003",
+      "feature_names": [
+        "spare_cap_x_wl_max",
+        "item_vol_cv",
+        "long_item_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9284,
+        "precision": 0.9439923408329344,
+        "recall": 0.9695181907571289,
+        "auc": 0.9703970273589324,
+        "fpr": 0.2510729613733906,
+        "fnr": 0.03048180924287119,
+        "tpr_at_fpr1pct": 0.7069813176007866,
+        "tn": 349,
+        "fp": 117,
+        "fn": 62,
+        "tp": 1972
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0008000000000000229,
+        "recall": 0.001474926253687392,
+        "auc": 0.005257194221834016,
+        "tpr_at_fpr1pct": 0.07227138643067843
+      },
+      "objective_key": [
+        0.9703970273589324,
+        0.7069813176007866,
+        0.9284
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 4,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_004",
+      "feature_names": [
+        "spare_cap_x_hH",
+        "floor_area_pressure",
+        "tall_item_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9284,
+        "precision": 0.9444178246286535,
+        "recall": 0.9690265486725663,
+        "auc": 0.9704476686036942,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.030973451327433628,
+        "tpr_at_fpr1pct": 0.7059980334316618,
+        "tn": 350,
+        "fp": 116,
+        "fn": 63,
+        "tp": 1971
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0008000000000000229,
+        "recall": 0.000983284169124854,
+        "auc": 0.005307835466595856,
+        "tpr_at_fpr1pct": 0.07128810226155358
+      },
+      "objective_key": [
+        0.9704476686036942,
+        0.7059980334316618,
+        0.9284
+      ],
+      "policy_excerpt": "- Add `spare_cap_x_hH` to close the specific gap where h_to_H_ratio_avg (RF importance 0.030) has no spare_capacity interaction in the active bank, unlike the already-accepted wl_total and wl_max interactions - Add `floor_area_pressure` to ",
+      "rationale_excerpt": "- `spare_cap_x_h",
+      "error": null
+    },
+    {
+      "iteration": 5,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_005",
+      "feature_names": [
+        "wl_cv",
+        "fragile_share",
+        "spare_cap_cubed"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9296,
+        "precision": 0.9444976076555024,
+        "recall": 0.9705014749262537,
+        "auc": 0.9710574735927009,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.029498525073746312,
+        "tpr_at_fpr1pct": 0.6956735496558505,
+        "tn": 350,
+        "fp": 116,
+        "fn": 60,
+        "tp": 1974
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0020000000000000018,
+        "recall": 0.002458210422812246,
+        "auc": 0.005917640455602502,
+        "tpr_at_fpr1pct": 0.06096361848574228
+      },
+      "objective_key": [
+        0.9710574735927009,
+        0.6956735496558505,
+        0.9296
+      ],
+      "policy_excerpt": "- Shift from spare_capacity interactions (already well-covered in active bank) to **dispersion and constraint signals** that trees exploit via sequential splits on wl-family spread and item-level orientation restrictions. - Add **wl_cv** (H",
+      "rationale_excerpt": "- **wl_cv** linearizes the tree pattern where RF splits on wl_std conditional on wl_avg: a high CV means one or few SKUs dominate the wl footprint (potential bottleneck), while low CV means uniform spread (easier packing). This is a pure ra",
+      "error": null
+    },
+    {
+      "iteration": 6,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_006",
+      "feature_names": [
+        "wl_max_to_avg",
+        "tight_x_high_wl",
+        "sku_counts_x_lL"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9288,
+        "precision": 0.9448705656759347,
+        "recall": 0.9690265486725663,
+        "auc": 0.9713613210612717,
+        "fpr": 0.24678111587982832,
+        "fnr": 0.030973451327433628,
+        "tpr_at_fpr1pct": 0.704031465093412,
+        "tn": 351,
+        "fp": 115,
+        "fn": 63,
+        "tp": 1971
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0011999999999999789,
+        "recall": 0.000983284169124854,
+        "auc": 0.006221487924173319,
+        "tpr_at_fpr1pct": 0.06932153392330376
+      },
+      "objective_key": [
+        0.9713613210612717,
+        0.704031465093412,
+        0.9288
+      ],
+      "policy_excerpt": "",
+      "rationale_excerpt": "",
+      "error": null
+    },
+    {
+      "iteration": 7,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_007",
+      "feature_names": [
+        "sku_counts_x_hH",
+        "flat_item_mean",
+        "near_limit_share"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9288,
+        "precision": 0.9444444444444444,
+        "recall": 0.9695181907571289,
+        "auc": 0.9715870966108346,
+        "fpr": 0.24892703862660945,
+        "fnr": 0.03048180924287119,
+        "tpr_at_fpr1pct": 0.7050147492625368,
+        "tn": 350,
+        "fp": 116,
+        "fn": 62,
+        "tp": 1972
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0011999999999999789,
+        "recall": 0.001474926253687392,
+        "auc": 0.006447263473736253,
+        "tpr_at_fpr1pct": 0.07030481809242861
+      },
+      "objective_key": [
+        0.9715870966108346,
+        0.7050147492625368,
+        0.9288
+      ],
+      "policy_excerpt": "- Add **sku_counts × h_to_H** (H5, untried): isolates \"many items competing for vertical space\" regardless of overall slack — distinct from the rejected `spare_cap × hH` which captured slack-conditional vertical tightness. - Introduce **mea",
+      "rationale_excerpt": "- `sku_counts_x_hH` targets the H5 hypothesis (sku_counts × height ratio interaction) not yet in the active bank; it captures vertical crowding pressure that trees model via sequential splits on count then height ratio. - `flat_item_mean` i",
+      "error": null
+    },
+    {
+      "iteration": 8,
+      "status": "rejected",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_008",
+      "feature_names": [
+        "spare_cap_x_long_item",
+        "dim_l_max_to_veh_l",
+        "wl_total_x_sku_counts"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9304,
+        "precision": 0.9458293384467881,
+        "recall": 0.9700098328416913,
+        "auc": 0.9718054869788699,
+        "fpr": 0.24248927038626608,
+        "fnr": 0.02999016715830875,
+        "tpr_at_fpr1pct": 0.6927236971484759,
+        "tn": 353,
+        "fp": 113,
+        "fn": 61,
+        "tp": 1973
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0028000000000000247,
+        "recall": 0.001966568338249819,
+        "auc": 0.006665653841771535,
+        "tpr_at_fpr1pct": 0.058013765978367715
+      },
+      "objective_key": [
+        0.9718054869788699,
+        0.6927236971484759,
+        0.9304
+      ],
+      "policy_excerpt": "- Shift focus to **bottleneck dimension signals** and **top-RF-feature interactions not yet combined**: the active bank covers spare_capacity interactions with wl_total, sku_counts, and wl_max, but misses the direct interaction of wl_total ",
+      "rationale_excerpt": "- **spare_cap_x_long_item** linearizes the tree pattern where a split on low spare_capacity is followed by a split on long-item prevalence; the active bank has spare_cap × sku_counts but not the specific interaction with orientation-constra",
+      "error": null
+    },
+    {
+      "iteration": 9,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_009",
+      "feature_names": [
+        "spare_cap_x_wl_cv",
+        "near_h_limit_share",
+        "wl_total_sq"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9304,
+        "precision": 0.9454022988505747,
+        "recall": 0.9705014749262537,
+        "auc": 0.9722992391152974,
+        "fpr": 0.2446351931330472,
+        "fnr": 0.029498525073746312,
+        "tpr_at_fpr1pct": 0.6853490658800393,
+        "tn": 352,
+        "fp": 114,
+        "fn": 60,
+        "tp": 1974
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0028000000000000247,
+        "recall": 0.002458210422812246,
+        "auc": 0.007159405978198974,
+        "tpr_at_fpr1pct": 0.05063913470993109
+      },
+      "objective_key": [
+        0.9722992391152974,
+        0.6853490658800393,
+        0.9304
+      ],
+      "policy_excerpt": "- Target the stubborn TPR@FPR=1% gap by adding features that linearize the conditional structure trees exploit via depth-2 splits on wl-family dispersion conditional on spare capacity. - Introduce a **spare_capacity × wl_cv** interaction: t",
+      "rationale_excerpt": "- **spare_cap_x_wl_cv** targets the conditional interaction where trees first split on spare_capacity then on wl dispersion: when slack is scarce AND utilization is uneven (high cv), some SKUs dominate the length-width footprint while other",
+      "error": null
+    },
+    {
+      "iteration": 10,
+      "status": "accepted",
+      "trial_dir": "/Users/zhongxiaochuan/Operation-Research/HybridSVM/experiments_feature_search/by_model/glm-5.1/exp_20260518_194131/trials/iter_010",
+      "feature_names": [
+        "load_util_ratio",
+        "multi_dim_tight_share",
+        "dim_l_tail_ratio"
+      ],
+      "n_new_features": 3,
+      "metrics": {
+        "accuracy": 0.9312,
+        "precision": 0.9467370441458733,
+        "recall": 0.9700098328416913,
+        "auc": 0.9733088989327359,
+        "fpr": 0.23819742489270387,
+        "fnr": 0.02999016715830875,
+        "tpr_at_fpr1pct": 0.6902654867256637,
+        "tn": 355,
+        "fp": 111,
+        "fn": 61,
+        "tp": 1973
+      },
+      "delta_vs_baseline": {
+        "accuracy": 0.0036000000000000476,
+        "recall": 0.001966568338249819,
+        "auc": 0.008169065795637476,
+        "tpr_at_fpr1pct": 0.05555555555555547
+      },
+      "objective_key": [
+        0.9733088989327359,
+        0.6902654867256637,
+        0.9312
+      ],
+      "policy_excerpt": "- Pivot from pure spatial-constraint features to **weight-capacity pressure**, an entirely orthogonal constraint axis not yet represented in the active bank. - Add a **per-item multi-dimensional tightness** threshold count: trees naturally ",
+      "rationale_excerpt": "- **load_util_ratio** opens a genuinely new constraint axis (weight vs. spatial). All 17 active-bank features are purely dimensional; weight pressure is orthogonal and directly affects feasibility, especially for dispatches that appear spat",
+      "error": null
+    }
+  ]
+}

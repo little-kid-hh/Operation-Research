@@ -1,0 +1,17 @@
+[
+  {
+    "feature": "footprint_sum_ratio",
+    "coef": -10.07881200715452,
+    "abs_coef": 10.07881200715452
+  },
+  {
+    "feature": "height_layer_pressure",
+    "coef": -3.933460931558386,
+    "abs_coef": 3.933460931558386
+  },
+  {
+    "feature": "length_sum_pressure",
+    "coef": -0.3315460230848828,
+    "abs_coef": 0.3315460230848828
+  }
+]
