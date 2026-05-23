@@ -1,0 +1,1049 @@
+{
+  "timestamp": "20260509_170335",
+  "input_summary": {
+    "data_path": "FunSearch_test/training_2orientations.csv",
+    "n_rows_total": 10000,
+    "n_rows_train": 7500,
+    "n_rows_test": 2500,
+    "n_features": 40,
+    "feature_names": [
+      "sku_counts",
+      "sku_average_volume",
+      "sku_length_var",
+      "sku_width_var",
+      "sku_height_var",
+      "sku_length_avg",
+      "sku_width_avg",
+      "sku_height_avg",
+      "max_asr",
+      "vehicle_length",
+      "vehicle_width",
+      "vehicle_height",
+      "spare_capacity",
+      "sku_concentration",
+      "sku_min_length",
+      "sku_max_length",
+      "sku_std_length",
+      "sku_min_width",
+      "sku_max_width",
+      "sku_std_width",
+      "sku_min_height",
+      "sku_max_height",
+      "sku_std_height",
+      "l_to_L_ratio_avg",
+      "l_to_L_ratio_min",
+      "l_to_L_ratio_max",
+      "l_to_L_ratio_std",
+      "h_to_H_ratio_avg",
+      "h_to_H_ratio_min",
+      "h_to_H_ratio_max",
+      "h_to_H_ratio_std",
+      "w_to_W_ratio_avg",
+      "w_to_W_ratio_min",
+      "w_to_W_ratio_max",
+      "w_to_W_ratio_std",
+      "wl_to_vehicle_wl_avg",
+      "wl_to_vehicle_wl_min",
+      "wl_to_vehicle_wl_max",
+      "wl_to_vehicle_wl_std",
+      "wl_to_vehicle_wl_total"
+    ],
+    "positive_rate_total": 0.8083,
+    "positive_rate_train": 0.8065333333333333,
+    "positive_rate_test": 0.8136,
+    "drop_cols": [
+      "if_loaded",
+      "orderid",
+      "发车号",
+      "aspect_ratio_var",
+      "sku_max_volume",
+      "sku_min_volume",
+      "total_skuvolume",
+      "vehicle_capacity",
+      "sku_std_volume",
+      "min_asr",
+      "std_asr",
+      "h_dev_l_avg",
+      "h_dev_l_min",
+      "h_dev_l_max",
+      "h_dev_l_std",
+      "w_dev_h_avg",
+      "w_dev_h_min",
+      "w_dev_h_max",
+      "w_dev_h_std",
+      "w_dev_l_avg",
+      "w_dev_l_min",
+      "w_dev_l_max",
+      "w_dev_l_std",
+      "lh_to_vehicle_lh_avg",
+      "lh_to_vehicle_lh_min",
+      "lh_to_vehicle_lh_max",
+      "lh_to_vehicle_lh_std",
+      "wh_to_vehicle_wh_avg",
+      "wh_to_vehicle_wh_min",
+      "wh_to_vehicle_wh_max",
+      "wh_to_vehicle_wh_std",
+      "lh_to_vehicle_lh_total",
+      "wh_to_vehicle_wh_total"
+    ],
+    "split": {
+      "test_size": 0.25,
+      "random_state": 42,
+      "cv_folds": 5
+    }
+  },
+  "config": {
+    "data_path": "FunSearch_test/training_2orientations.csv",
+    "test_size": 0.25,
+    "random_state": 42,
+    "cv_folds": 5,
+    "base_models": [
+      "svm",
+      "lr",
+      "rf",
+      "xgb"
+    ],
+    "meta_models": [
+      "logreg"
+    ],
+    "best_local_config": {
+      "svm_C": 1.9124740037393821,
+      "lr_C": 4.736286181285866,
+      "rf_n_estimators": 200,
+      "rf_max_depth": 20,
+      "rf_min_samples_leaf": 2,
+      "meta_C": 1.5688869685092588,
+      "hgb_max_iter": 400,
+      "hgb_max_depth": 6,
+      "hgb_learning_rate": 0.1
+    }
+  },
+  "model_catalog": {
+    "svm": {
+      "requested_name": "svm",
+      "resolved_name": "svm",
+      "class_name": "SVC",
+      "params": {
+        "C": 1.9124740037393821,
+        "break_ties": false,
+        "cache_size": 200,
+        "class_weight": {
+          "1": 1
+        },
+        "coef0": 0.0,
+        "decision_function_shape": "ovr",
+        "degree": 3,
+        "gamma": "scale",
+        "kernel": "linear",
+        "max_iter": -1,
+        "probability": true,
+        "random_state": 42,
+        "shrinking": true,
+        "tol": 0.001,
+        "verbose": false
+      },
+      "training_rounds_hint": -1
+    },
+    "lr": {
+      "requested_name": "lr",
+      "resolved_name": "lr",
+      "class_name": "LogisticRegression",
+      "params": {
+        "C": 4.736286181285866,
+        "class_weight": null,
+        "dual": false,
+        "fit_intercept": true,
+        "intercept_scaling": 1,
+        "l1_ratio": 0.0,
+        "max_iter": 3000,
+        "n_jobs": null,
+        "penalty": "deprecated",
+        "random_state": 42,
+        "solver": "lbfgs",
+        "tol": 0.0001,
+        "verbose": 0,
+        "warm_start": false
+      },
+      "training_rounds_hint": 3000
+    },
+    "rf": {
+      "requested_name": "rf",
+      "resolved_name": "rf",
+      "class_name": "RandomForestClassifier",
+      "params": {
+        "bootstrap": true,
+        "ccp_alpha": 0.0,
+        "class_weight": null,
+        "criterion": "gini",
+        "max_depth": 20,
+        "max_features": "sqrt",
+        "max_leaf_nodes": null,
+        "max_samples": null,
+        "min_impurity_decrease": 0.0,
+        "min_samples_leaf": 2,
+        "min_samples_split": 2,
+        "min_weight_fraction_leaf": 0.0,
+        "monotonic_cst": null,
+        "n_estimators": 200,
+        "n_jobs": -1,
+        "oob_score": false,
+        "random_state": 42,
+        "verbose": 0,
+        "warm_start": false
+      },
+      "training_rounds_hint": 200
+    },
+    "xgb": {
+      "requested_name": "xgb",
+      "resolved_name": "gbdt_fallback",
+      "class_name": "HistGradientBoostingClassifier",
+      "params": {
+        "categorical_features": "from_dtype",
+        "class_weight": null,
+        "early_stopping": "auto",
+        "interaction_cst": null,
+        "l2_regularization": 0.0,
+        "learning_rate": 0.1,
+        "loss": "log_loss",
+        "max_bins": 255,
+        "max_depth": 6,
+        "max_features": 1.0,
+        "max_iter": 400,
+        "max_leaf_nodes": 31,
+        "min_samples_leaf": 20,
+        "monotonic_cst": null,
+        "n_iter_no_change": 10,
+        "random_state": 42,
+        "scoring": "loss",
+        "tol": 1e-07,
+        "validation_fraction": 0.1,
+        "verbose": 0,
+        "warm_start": false
+      },
+      "training_rounds_hint": 400
+    }
+  },
+  "single_models": {
+    "svm": {
+      "accuracy": 0.9276,
+      "precision": 0.9460760712566201,
+      "recall": 0.9660766961651918,
+      "auc": 0.9644192504251754,
+      "tpr_at_fpr1pct": 0.6057030481809242,
+      "tn": 354,
+      "fp": 112,
+      "fn": 69,
+      "tp": 1965,
+      "fpr": 0.24034334763948498,
+      "fnr": 0.03392330383480826,
+      "model_spec": {
+        "requested_name": "svm",
+        "resolved_name": "svm",
+        "class_name": "SVC",
+        "params": {
+          "C": 1.9124740037393821,
+          "break_ties": false,
+          "cache_size": 200,
+          "class_weight": {
+            "1": 1
+          },
+          "coef0": 0.0,
+          "decision_function_shape": "ovr",
+          "degree": 3,
+          "gamma": "scale",
+          "kernel": "linear",
+          "max_iter": -1,
+          "probability": true,
+          "random_state": 42,
+          "shrinking": true,
+          "tol": 0.001,
+          "verbose": false
+        },
+        "training_rounds_hint": -1
+      }
+    },
+    "lr": {
+      "accuracy": 0.922,
+      "precision": 0.93974175035868,
+      "recall": 0.9660766961651918,
+      "auc": 0.9648824068095593,
+      "tpr_at_fpr1pct": 0.6283185840707964,
+      "tn": 340,
+      "fp": 126,
+      "fn": 69,
+      "tp": 1965,
+      "fpr": 0.2703862660944206,
+      "fnr": 0.03392330383480826,
+      "model_spec": {
+        "requested_name": "lr",
+        "resolved_name": "lr",
+        "class_name": "LogisticRegression",
+        "params": {
+          "C": 4.736286181285866,
+          "class_weight": null,
+          "dual": false,
+          "fit_intercept": true,
+          "intercept_scaling": 1,
+          "l1_ratio": 0.0,
+          "max_iter": 3000,
+          "n_jobs": null,
+          "penalty": "deprecated",
+          "random_state": 42,
+          "solver": "lbfgs",
+          "tol": 0.0001,
+          "verbose": 0,
+          "warm_start": false
+        },
+        "training_rounds_hint": 3000
+      }
+    },
+    "rf": {
+      "accuracy": 0.9436,
+      "precision": 0.9504997620180866,
+      "recall": 0.9818092428711898,
+      "auc": 0.9822660690999785,
+      "tpr_at_fpr1pct": 0.8058013765978368,
+      "tn": 362,
+      "fp": 104,
+      "fn": 37,
+      "tp": 1997,
+      "fpr": 0.22317596566523606,
+      "fnr": 0.018190757128810225,
+      "model_spec": {
+        "requested_name": "rf",
+        "resolved_name": "rf",
+        "class_name": "RandomForestClassifier",
+        "params": {
+          "bootstrap": true,
+          "ccp_alpha": 0.0,
+          "class_weight": null,
+          "criterion": "gini",
+          "max_depth": 20,
+          "max_features": "sqrt",
+          "max_leaf_nodes": null,
+          "max_samples": null,
+          "min_impurity_decrease": 0.0,
+          "min_samples_leaf": 2,
+          "min_samples_split": 2,
+          "min_weight_fraction_leaf": 0.0,
+          "monotonic_cst": null,
+          "n_estimators": 200,
+          "n_jobs": -1,
+          "oob_score": false,
+          "random_state": 42,
+          "verbose": 0,
+          "warm_start": false
+        },
+        "training_rounds_hint": 200
+      }
+    },
+    "gbdt_fallback": {
+      "accuracy": 0.9468,
+      "precision": 0.9554384283660757,
+      "recall": 0.9803343166175025,
+      "auc": 0.9845111642844182,
+      "tpr_at_fpr1pct": 0.8131760078662733,
+      "tn": 373,
+      "fp": 93,
+      "fn": 40,
+      "tp": 1994,
+      "fpr": 0.19957081545064378,
+      "fnr": 0.01966568338249754,
+      "model_spec": {
+        "requested_name": "xgb",
+        "resolved_name": "gbdt_fallback",
+        "class_name": "HistGradientBoostingClassifier",
+        "params": {
+          "categorical_features": "from_dtype",
+          "class_weight": null,
+          "early_stopping": "auto",
+          "interaction_cst": null,
+          "l2_regularization": 0.0,
+          "learning_rate": 0.1,
+          "loss": "log_loss",
+          "max_bins": 255,
+          "max_depth": 6,
+          "max_features": 1.0,
+          "max_iter": 400,
+          "max_leaf_nodes": 31,
+          "min_samples_leaf": 20,
+          "monotonic_cst": null,
+          "n_iter_no_change": 10,
+          "random_state": 42,
+          "scoring": "loss",
+          "tol": 1e-07,
+          "validation_fraction": 0.1,
+          "verbose": 0,
+          "warm_start": false
+        },
+        "training_rounds_hint": 400
+      }
+    }
+  },
+  "stacking_subsets": {
+    "svm,lr": {
+      "logreg": {
+        "accuracy": 0.9248,
+        "precision": 0.9433237271853987,
+        "recall": 0.9655850540806293,
+        "auc": 0.9648328205907302,
+        "tpr_at_fpr1pct": 0.6219272369714848,
+        "tn": 348,
+        "fp": 118,
+        "fn": 70,
+        "tp": 1964,
+        "fpr": 0.2532188841201717,
+        "fnr": 0.0344149459193707,
+        "resolved_base_models": [
+          "svm",
+          "lr"
+        ],
+        "xgb_fallback_used": false,
+        "pipeline_spec": {
+          "base_models_requested": [
+            "svm",
+            "lr"
+          ],
+          "base_models_resolved": [
+            "svm",
+            "lr"
+          ],
+          "meta_model": "logreg",
+          "cv_folds": 5,
+          "random_state": 42,
+          "xgb_fallback_used": false,
+          "meta_model_class": "LogisticRegression",
+          "meta_model_params": {
+            "C": 1.5688869685092588,
+            "class_weight": null,
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 2000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "training_rounds_hint": {
+            "n_base_fits_total": 12,
+            "n_meta_fits_total": 1
+          }
+        }
+      }
+    },
+    "svm,rf": {
+      "logreg": {
+        "accuracy": 0.9408,
+        "precision": 0.9538017324350336,
+        "recall": 0.9744346116027532,
+        "auc": 0.9819221306459712,
+        "tpr_at_fpr1pct": 0.8200589970501475,
+        "tn": 370,
+        "fp": 96,
+        "fn": 52,
+        "tp": 1982,
+        "fpr": 0.20600858369098712,
+        "fnr": 0.025565388397246803,
+        "resolved_base_models": [
+          "svm",
+          "rf"
+        ],
+        "xgb_fallback_used": false,
+        "pipeline_spec": {
+          "base_models_requested": [
+            "svm",
+            "rf"
+          ],
+          "base_models_resolved": [
+            "svm",
+            "rf"
+          ],
+          "meta_model": "logreg",
+          "cv_folds": 5,
+          "random_state": 42,
+          "xgb_fallback_used": false,
+          "meta_model_class": "LogisticRegression",
+          "meta_model_params": {
+            "C": 1.5688869685092588,
+            "class_weight": null,
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 2000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "training_rounds_hint": {
+            "n_base_fits_total": 12,
+            "n_meta_fits_total": 1
+          }
+        }
+      }
+    },
+    "svm,xgb": {
+      "logreg": {
+        "accuracy": 0.9476,
+        "precision": 0.9567930868939031,
+        "recall": 0.97984267453294,
+        "auc": 0.9808048581834142,
+        "tpr_at_fpr1pct": 0.7531956735496559,
+        "tn": 376,
+        "fp": 90,
+        "fn": 41,
+        "tp": 1993,
+        "fpr": 0.19313304721030042,
+        "fnr": 0.02015732546705998,
+        "resolved_base_models": [
+          "svm",
+          "gbdt_fallback"
+        ],
+        "xgb_fallback_used": true,
+        "pipeline_spec": {
+          "base_models_requested": [
+            "svm",
+            "xgb"
+          ],
+          "base_models_resolved": [
+            "svm",
+            "gbdt_fallback"
+          ],
+          "meta_model": "logreg",
+          "cv_folds": 5,
+          "random_state": 42,
+          "xgb_fallback_used": true,
+          "meta_model_class": "LogisticRegression",
+          "meta_model_params": {
+            "C": 1.5688869685092588,
+            "class_weight": null,
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 2000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "training_rounds_hint": {
+            "n_base_fits_total": 12,
+            "n_meta_fits_total": 1
+          }
+        }
+      }
+    },
+    "lr,rf": {
+      "logreg": {
+        "accuracy": 0.9404,
+        "precision": 0.9533429533429534,
+        "recall": 0.9744346116027532,
+        "auc": 0.9818419486750984,
+        "tpr_at_fpr1pct": 0.8156342182890856,
+        "tn": 369,
+        "fp": 97,
+        "fn": 52,
+        "tp": 1982,
+        "fpr": 0.20815450643776823,
+        "fnr": 0.025565388397246803,
+        "resolved_base_models": [
+          "lr",
+          "rf"
+        ],
+        "xgb_fallback_used": false,
+        "pipeline_spec": {
+          "base_models_requested": [
+            "lr",
+            "rf"
+          ],
+          "base_models_resolved": [
+            "lr",
+            "rf"
+          ],
+          "meta_model": "logreg",
+          "cv_folds": 5,
+          "random_state": 42,
+          "xgb_fallback_used": false,
+          "meta_model_class": "LogisticRegression",
+          "meta_model_params": {
+            "C": 1.5688869685092588,
+            "class_weight": null,
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 2000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "training_rounds_hint": {
+            "n_base_fits_total": 12,
+            "n_meta_fits_total": 1
+          }
+        }
+      }
+    },
+    "lr,xgb": {
+      "logreg": {
+        "accuracy": 0.9484,
+        "precision": 0.9581529581529582,
+        "recall": 0.9793510324483776,
+        "auc": 0.9807447217052596,
+        "tpr_at_fpr1pct": 0.7586037364798427,
+        "tn": 379,
+        "fp": 87,
+        "fn": 42,
+        "tp": 1992,
+        "fpr": 0.18669527896995708,
+        "fnr": 0.02064896755162242,
+        "resolved_base_models": [
+          "lr",
+          "gbdt_fallback"
+        ],
+        "xgb_fallback_used": true,
+        "pipeline_spec": {
+          "base_models_requested": [
+            "lr",
+            "xgb"
+          ],
+          "base_models_resolved": [
+            "lr",
+            "gbdt_fallback"
+          ],
+          "meta_model": "logreg",
+          "cv_folds": 5,
+          "random_state": 42,
+          "xgb_fallback_used": true,
+          "meta_model_class": "LogisticRegression",
+          "meta_model_params": {
+            "C": 1.5688869685092588,
+            "class_weight": null,
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 2000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "training_rounds_hint": {
+            "n_base_fits_total": 12,
+            "n_meta_fits_total": 1
+          }
+        }
+      }
+    },
+    "rf,xgb": {
+      "logreg": {
+        "accuracy": 0.9452,
+        "precision": 0.9553528564570332,
+        "recall": 0.9783677482792527,
+        "auc": 0.9843508003426725,
+        "tpr_at_fpr1pct": 0.8102261553588987,
+        "tn": 373,
+        "fp": 93,
+        "fn": 44,
+        "tp": 1990,
+        "fpr": 0.19957081545064378,
+        "fnr": 0.021632251720747297,
+        "resolved_base_models": [
+          "rf",
+          "gbdt_fallback"
+        ],
+        "xgb_fallback_used": true,
+        "pipeline_spec": {
+          "base_models_requested": [
+            "rf",
+            "xgb"
+          ],
+          "base_models_resolved": [
+            "rf",
+            "gbdt_fallback"
+          ],
+          "meta_model": "logreg",
+          "cv_folds": 5,
+          "random_state": 42,
+          "xgb_fallback_used": true,
+          "meta_model_class": "LogisticRegression",
+          "meta_model_params": {
+            "C": 1.5688869685092588,
+            "class_weight": null,
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 2000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "training_rounds_hint": {
+            "n_base_fits_total": 12,
+            "n_meta_fits_total": 1
+          }
+        }
+      }
+    },
+    "svm,lr,rf": {
+      "logreg": {
+        "accuracy": 0.9412,
+        "precision": 0.954260953298026,
+        "recall": 0.9744346116027532,
+        "auc": 0.9820487337578758,
+        "tpr_at_fpr1pct": 0.8126843657817109,
+        "tn": 371,
+        "fp": 95,
+        "fn": 52,
+        "tp": 1982,
+        "fpr": 0.20386266094420602,
+        "fnr": 0.025565388397246803,
+        "resolved_base_models": [
+          "svm",
+          "lr",
+          "rf"
+        ],
+        "xgb_fallback_used": false,
+        "pipeline_spec": {
+          "base_models_requested": [
+            "svm",
+            "lr",
+            "rf"
+          ],
+          "base_models_resolved": [
+            "svm",
+            "lr",
+            "rf"
+          ],
+          "meta_model": "logreg",
+          "cv_folds": 5,
+          "random_state": 42,
+          "xgb_fallback_used": false,
+          "meta_model_class": "LogisticRegression",
+          "meta_model_params": {
+            "C": 1.5688869685092588,
+            "class_weight": null,
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 2000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "training_rounds_hint": {
+            "n_base_fits_total": 18,
+            "n_meta_fits_total": 1
+          }
+        }
+      }
+    },
+    "svm,lr,xgb": {
+      "logreg": {
+        "accuracy": 0.948,
+        "precision": 0.9576923076923077,
+        "recall": 0.9793510324483776,
+        "auc": 0.9807341714459341,
+        "tpr_at_fpr1pct": 0.7581120943952803,
+        "tn": 378,
+        "fp": 88,
+        "fn": 42,
+        "tp": 1992,
+        "fpr": 0.1888412017167382,
+        "fnr": 0.02064896755162242,
+        "resolved_base_models": [
+          "svm",
+          "lr",
+          "gbdt_fallback"
+        ],
+        "xgb_fallback_used": true,
+        "pipeline_spec": {
+          "base_models_requested": [
+            "svm",
+            "lr",
+            "xgb"
+          ],
+          "base_models_resolved": [
+            "svm",
+            "lr",
+            "gbdt_fallback"
+          ],
+          "meta_model": "logreg",
+          "cv_folds": 5,
+          "random_state": 42,
+          "xgb_fallback_used": true,
+          "meta_model_class": "LogisticRegression",
+          "meta_model_params": {
+            "C": 1.5688869685092588,
+            "class_weight": null,
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 2000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "training_rounds_hint": {
+            "n_base_fits_total": 18,
+            "n_meta_fits_total": 1
+          }
+        }
+      }
+    },
+    "svm,rf,xgb": {
+      "logreg": {
+        "accuracy": 0.9472,
+        "precision": 0.9576515880654476,
+        "recall": 0.9783677482792527,
+        "auc": 0.9841155295597166,
+        "tpr_at_fpr1pct": 0.827433628318584,
+        "tn": 378,
+        "fp": 88,
+        "fn": 44,
+        "tp": 1990,
+        "fpr": 0.1888412017167382,
+        "fnr": 0.021632251720747297,
+        "resolved_base_models": [
+          "svm",
+          "rf",
+          "gbdt_fallback"
+        ],
+        "xgb_fallback_used": true,
+        "pipeline_spec": {
+          "base_models_requested": [
+            "svm",
+            "rf",
+            "xgb"
+          ],
+          "base_models_resolved": [
+            "svm",
+            "rf",
+            "gbdt_fallback"
+          ],
+          "meta_model": "logreg",
+          "cv_folds": 5,
+          "random_state": 42,
+          "xgb_fallback_used": true,
+          "meta_model_class": "LogisticRegression",
+          "meta_model_params": {
+            "C": 1.5688869685092588,
+            "class_weight": null,
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 2000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "training_rounds_hint": {
+            "n_base_fits_total": 18,
+            "n_meta_fits_total": 1
+          }
+        }
+      }
+    },
+    "lr,rf,xgb": {
+      "logreg": {
+        "accuracy": 0.9472,
+        "precision": 0.9572115384615385,
+        "recall": 0.9788593903638152,
+        "auc": 0.98407121847055,
+        "tpr_at_fpr1pct": 0.8195673549655851,
+        "tn": 377,
+        "fp": 89,
+        "fn": 43,
+        "tp": 1991,
+        "fpr": 0.19098712446351931,
+        "fnr": 0.021140609636184856,
+        "resolved_base_models": [
+          "lr",
+          "rf",
+          "gbdt_fallback"
+        ],
+        "xgb_fallback_used": true,
+        "pipeline_spec": {
+          "base_models_requested": [
+            "lr",
+            "rf",
+            "xgb"
+          ],
+          "base_models_resolved": [
+            "lr",
+            "rf",
+            "gbdt_fallback"
+          ],
+          "meta_model": "logreg",
+          "cv_folds": 5,
+          "random_state": 42,
+          "xgb_fallback_used": true,
+          "meta_model_class": "LogisticRegression",
+          "meta_model_params": {
+            "C": 1.5688869685092588,
+            "class_weight": null,
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 2000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "training_rounds_hint": {
+            "n_base_fits_total": 18,
+            "n_meta_fits_total": 1
+          }
+        }
+      }
+    },
+    "svm,lr,rf,xgb": {
+      "logreg": {
+        "accuracy": 0.9476,
+        "precision": 0.9576719576719577,
+        "recall": 0.9788593903638152,
+        "auc": 0.9841851612712641,
+        "tpr_at_fpr1pct": 0.8171091445427728,
+        "tn": 378,
+        "fp": 88,
+        "fn": 43,
+        "tp": 1991,
+        "fpr": 0.1888412017167382,
+        "fnr": 0.021140609636184856,
+        "resolved_base_models": [
+          "svm",
+          "lr",
+          "rf",
+          "gbdt_fallback"
+        ],
+        "xgb_fallback_used": true,
+        "pipeline_spec": {
+          "base_models_requested": [
+            "svm",
+            "lr",
+            "rf",
+            "xgb"
+          ],
+          "base_models_resolved": [
+            "svm",
+            "lr",
+            "rf",
+            "gbdt_fallback"
+          ],
+          "meta_model": "logreg",
+          "cv_folds": 5,
+          "random_state": 42,
+          "xgb_fallback_used": true,
+          "meta_model_class": "LogisticRegression",
+          "meta_model_params": {
+            "C": 1.5688869685092588,
+            "class_weight": null,
+            "dual": false,
+            "fit_intercept": true,
+            "intercept_scaling": 1,
+            "l1_ratio": 0.0,
+            "max_iter": 2000,
+            "n_jobs": null,
+            "penalty": "deprecated",
+            "random_state": 42,
+            "solver": "lbfgs",
+            "tol": 0.0001,
+            "verbose": 0,
+            "warm_start": false
+          },
+          "training_rounds_hint": {
+            "n_base_fits_total": 24,
+            "n_meta_fits_total": 1
+          }
+        }
+      }
+    }
+  },
+  "best_stacking": {
+    "kind": "stacking",
+    "name": "rf,xgb",
+    "meta_model": "logreg",
+    "accuracy": 0.9452,
+    "precision": 0.9553528564570332,
+    "recall": 0.9783677482792527,
+    "auc": 0.9843508003426725,
+    "tpr_at_fpr1pct": 0.8102261553588987,
+    "tn": 373,
+    "fp": 93,
+    "fn": 44,
+    "tp": 1990,
+    "fpr": 0.19957081545064378,
+    "fnr": 0.021632251720747297
+  },
+  "best_single": {
+    "kind": "single",
+    "name": "gbdt_fallback",
+    "meta_model": "",
+    "accuracy": 0.9468,
+    "precision": 0.9554384283660757,
+    "recall": 0.9803343166175025,
+    "auc": 0.9845111642844182,
+    "tpr_at_fpr1pct": 0.8131760078662733,
+    "tn": 373,
+    "fp": 93,
+    "fn": 40,
+    "tp": 1994,
+    "fpr": 0.19957081545064378,
+    "fnr": 0.01966568338249754
+  },
+  "outputs": {
+    "run_dir": "/Users/zhongxiaochuan/Operation-Research/Ensemble_baseline/experiments/ablation_20260509_170335",
+    "files": [
+      "README.md",
+      "summary.json",
+      "single_model_ablation.csv",
+      "stacking_ablation.csv"
+    ]
+  }
+}

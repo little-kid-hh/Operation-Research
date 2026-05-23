@@ -37,9 +37,24 @@ Desktop.ini
 # Keep small json checkpoints if needed — uncomment to ignore all models:
 # HybridSVM/models/
 
-# Experiments & generated outputs (optional: track selectively)
+# Experiments & generated outputs
+HybridSVM/experiments_boundary_agent/
+HybridSVM/experiments_feature_search/by_model/
+HybridSVM/experiments_ensemble_ablation/
+HybridSVM/experiments_ensemble_eval/hparam_search/
+HybridSVM/experiments_ensemble_eval_logreg/
+HybridSVM/experiments_ensemble_eval_mlp/
+HybridSVM/experiments_ensemble_eval_mlp2/
+HybridSVM/experiments_ensemble_eval_tuned/
+HybridSVM/experiments_tabtree_benchmark/
+HybridSVM/experiments_tabtree_enhanced_smoke/
+HybridSVM/experiments_tabtree_tokenizer_only_smoke/
+HybridSVM/experiments_v2/
+# Root-level ensemble research artifacts
+Ensemble_baseline/experiments/*
+!Ensemble_baseline/experiments/README.md
+# Legacy experiment tree, keep commented unless you want to ignore all old records too.
 # HybridSVM/experiments*/
-# HybridSVM/experiments_*/
 
 # Cursor local
 .cursor/

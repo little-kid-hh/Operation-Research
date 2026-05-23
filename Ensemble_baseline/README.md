@@ -1,136 +1,135 @@
-# Ensemble Baseline 工作流 README
+# Ensemble Baseline
 
-## 目标
+This directory is the standalone `ensemble` route. It is separate from
+`HybridSVM/`, which is reserved for the LLM+SVM line.
 
-在当前 HybridSVM 体系中新增“强分类器集成基线”路线：
+## Scope
 
-- 基学习器：`SVM + LR + RF + XGBoost(或GBDT回退)`
-- 顶层融合：**可学习线性组合**（默认 logistic regression 作为 meta combiner）
-- 目的：抬升 baseline，同时保持后续 hard-case mining / evolution 可复用
+Current code and records here answer two questions:
 
+1. does stacking improve over the linear SVM baseline?
+2. if it does, where does the gain actually come from?
 
-## 固定工作流（后续按此执行）
+The ablation runner is:
 
-1. **先改 README / 设计文档**  
-   - 先写清设计、接口、参数、评估口径、兼容策略。  
-   - 未更新文档前，不进入代码实现。
+- `Ensemble_baseline/run_ensemble_ablation.py`
 
-2. **再按 README 写代码**  
-   - 先实现最小可运行版本（MVP），再补全参数与持久化。  
-   - 保持 `svm` 旧路径可用，不破坏现有流程。
+Generated run records live under:
 
-3. **最后跑实验验证**  
-   - 同一数据切分下对比 `svm` vs `ensemble`。  
-   - 输出可追溯结果与配置（results/checkpoint）。
+- `Ensemble_baseline/experiments/`
 
+## Canonical setup
 
-## 当前代码锚点
+Data:
 
-- 训练与特征：`HybridSVM/src/svm_train.py`
-- 实验主流程：`HybridSVM/run_experiment.py`
-- 评估比较：`HybridSVM/src/evaluate.py`
-- hard-case / evolution 依赖 Stage 1 的概率与硬预测输出
+- aggregate table: `FunSearch_test/training_2orientations.csv`
 
+Split:
 
-## 方案总览
+- fixed holdout split
+- `test_size=0.25`
+- `random_state=42`
 
-- 保留当前 `svm` baseline 作为默认路径（向后兼容）。
-- 新增 `ensemble` baseline 路径：
-  - 训练基学习器
-  - 通过 OOF 生成 meta 特征（防泄漏）
-  - 训练线性融合器
-  - 产出测试集 `P(y=1)` 与硬标签
-- 下游 Stage 2/3/4 统一消费 baseline 输出，不绑定 SVM。
+Base feature set:
 
+- 40 aggregate features
 
-## 分阶段实施计划
+Default base learners:
 
-### 阶段 1：新增集成模块（设计与实现）
+- `svm`
+- `lr`
+- `rf`
+- `xgb` if available, otherwise sklearn `HistGradientBoostingClassifier` fallback
 
-建议新增：`HybridSVM/src/ensemble_train.py`
+Default meta learner:
 
-职责：
+- `logreg`
 
-- 基学习器构建与训练（SVM/LR/RF/XGB）
-- OOF 概率矩阵构建（`StratifiedKFold`）
-- 线性融合器训练（默认 `logreg`）
-- 推理接口：`predict_proba` / `predict`
-- 工件保存与加载（模型、特征名、融合器、配置）
+Cross-validation for stacking:
 
-输出应与现有 SVM 产物风格一致，便于接入 `run_experiment.py`。
+- `cv_folds=5`
 
+## What is already recorded
 
-### 阶段 2：接入 run_experiment Stage 1
+Root-level experiment folders currently include:
 
-在 `HybridSVM/run_experiment.py` 中增加 baseline 模式分支：
+- `ablation_20260509_164504`: full ablation with `svm,lr,rf,xgb` and meta `{logreg, mlp}`
+- `ablation_20260509_170103`: focused ablation with only `svm,lr`
+- `ablation_20260509_170335`: clean full ablation with `svm,lr,rf,xgb` and meta `logreg`
 
-- `svm`：保持现有逻辑不变
-- `ensemble`：走新模块，生成通用变量
-  - `baseline_probs_test`
-  - `baseline_pred_test`
+Each run folder records:
 
-并将 Stage 2/3/4 从 `svm_*` 变量逐步统一到 `baseline_*`（必要时保留别名保证兼容）。
+- input data path
+- train/test row counts
+- feature names
+- base-model and meta-model configuration
+- model class names
+- model parameters
+- training-round hints
+- single-model metrics
+- stacking metrics
+- CSV summaries and structured `summary.json`
 
+## Main results
 
-### 阶段 3：参数与可复现性
+On the fixed split:
 
-新增 CLI 参数（建议）：
+- single `svm`: AUC `0.9644`, TPR@1% `0.6057`, ACC `0.9276`
+- single `lr`: AUC `0.9649`, TPR@1% `0.6283`, ACC `0.9220`
+- single `rf`: AUC `0.9823`, TPR@1% `0.8058`, ACC `0.9436`
+- single `xgb` fallback (`gbdt_fallback`): AUC `0.9845`, TPR@1% `0.8132`, ACC `0.9468`
 
-- `--baseline-mode {svm,ensemble}`
-- `--ensemble-base-models svm,lr,rf,xgb`
-- `--ensemble-meta-model logreg`
-- `--ensemble-cv-folds`
-- `--ensemble-random-state`
+Best stacking variants observed:
 
-同步写入 checkpoint，支持 resume 一致性检查。
+- `svm,rf,xgb | logreg`: TPR@1% `0.8274`
+- `svm,lr,rf,xgb | logreg`: AUC `0.9842`, TPR@1% `0.8171`, ACC `0.9476`
+- `rf,xgb | mlp`: AUC `0.9847`
 
+Focused non-tree check:
 
-### 阶段 4：结果与报告扩展
+- `svm+lr | logreg`: AUC `0.9648`, TPR@1% `0.6219`, ACC `0.9248`
+- `svm+lr | mlp`: AUC `0.9647`, TPR@1% `0.6150`, ACC `0.9276`
 
-`results.json` 增加 baseline 元信息：
+## Conclusion
 
-- baseline 类型
-- 基学习器列表
-- 融合器类型（及可选系数）
+The ensemble improvement is real, but it does **not** come from “stacking more
+linear classifiers together”.
 
-评估沿用 `evaluate.py`，重点对比：
+The gain comes mainly from the tree models:
 
-- Accuracy
-- Recall
-- AUC
-- `TPR@FPR=1%`
-- hard-case 规模与修正表现
+- `rf`
+- `xgb` / `gbdt_fallback`
 
+Why ensemble keeps helping here:
 
-### 阶段 5：依赖策略
+1. tree models capture thresholded and interaction-heavy structure that linear
+   `svm` / `lr` cannot express directly;
+2. stacking combines complementary error patterns through out-of-fold
+   probabilities rather than naive averaging;
+3. the linear meta learner is useful mainly because the base learners are
+   heterogeneous, not because the meta learner itself is complex.
 
-- `xgboost` 作为可选依赖
-- 若未安装，自动回退 sklearn GBDT，并在日志中明确提示
+What the `svm+lr` ablation shows:
 
+- removing `rf` and `xgb` collapses performance back to the linear-model range;
+- non-tree classifiers alone do not assemble into a much stronger classifier on
+  this feature space.
 
-## 防泄漏与实验规范
+## Implication for the SVM+LLM route
 
-1. 融合器训练只能用训练集 OOF 预测，不能直接用测试集训练。  
-2. 对比实验必须固定相同切分（同一 `test_size/random_state`）。  
-3. 所有关键参数需写入 checkpoint 和结果文件。  
-4. 新路径不能影响既有 `svm` 模式结果。
+This is the useful takeaway for `HybridSVM`, not that we should copy the
+ensemble route forever.
 
+If tree models are the source of the gain, then the SVM+LLM feature-engineering
+route should try to manufacture the kinds of signals that trees exploit well,
+such as:
 
-## 验收标准
+- upper-tail and extreme-piece pressure
+- slack / spare-capacity interactions
+- local bottleneck counts
+- heterogeneous-vs-repeated item structure
+- thresholded “bad pattern” indicators
 
-- `svm` 模式行为与当前版本一致（回归通过）。
-- `ensemble` 模式可完整跑通 Stage 1~4 并产出完整工件。
-- 在至少一个核心指标上（推荐 AUC 或 `TPR@FPR=1%`）相对 SVM 有可观提升。
-
-
-## 里程碑建议
-
-- M1：`ensemble_train.py` 最小可运行（仅 SVM+LR）  
-- M2：加入 RF/XGB + OOF + meta 训练  
-- M3：接入 run_experiment + checkpoint/results 扩展  
-- M4：完整对比实验与文档沉淀
-
-
-## 后续（第二条路线）
-
-在本路线稳定后，再开展 `tableformer` 路线（单独文档与实验目录，不与本 README 混写）。
+That is the bridge back to the linear SVM line: use LLM-guided feature
+engineering to linearize some of the nonlinear structure currently captured by
+the tree learners.
