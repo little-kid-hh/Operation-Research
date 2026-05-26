@@ -1,0 +1,19 @@
+Folder performanceTest contains the artificially generated data sets used in Section 5.
+Folder caseStudy contains the data sets based on the MSOM instances (Guo et al., 2024) used in Section 6.
+
+For each instance a basic file exists (e.g., BSP_100_O6_0). This file just contains the orders without demand
+Then different variants exist for each file. For example, BSP_100_O6_0_2_4 is the instance with 4 stages and 2 Scenarios in each node of the decision tree.
+In these files also the demand is shown in each Scenario and stage. Moreover, it is stated if a Scenario is connected in a specific stage, i.e. the same decisions have to be taken.
+
+The folder results includes two Excel files, showing the individual results for each instance.
+This implies an Excel file for the case study and the solution files of the performance analysis.
+
+
+Programming language: C++ 
+Solver: Gurobi API (version 11.0) 
+PC: AMD Ryzen 9 3950X 16-Core Processor, 3.493 GHz with 128 Gb RAM.
+
+
+
+Reference:
+Guo, X., Yu, Y., Allon, G., Wang, M., Zhang, Z., 2024. Ririshun logistics: Home appliance delivery data for the 2021 manufacturing & service operations management data-driven research challenge. Manufacturing & Service Operations Management 26 (4), 1358–1371.
