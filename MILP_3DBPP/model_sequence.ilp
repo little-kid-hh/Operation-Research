@@ -1,0 +1,20 @@
+\ Model (null)_copy
+\ LP format - for model browsing. Use MPS format to capture full model detail.
+\ Signature: 0xf85a7e2cc26665b1
+Minimize
+ 
+Subject To
+ c4_4: - 0.8 t_4_2_0 - 0.01 t_4_2_1 - 0.8 t_4_2_2 - z_4 + zr_4 = 0
+ c7_4: - s_4_0 + zr_4 <= 0
+ c_31_4: t_4_2_2 = 1
+ c_32_2_4_4: uzp_4_4 + z_4 - zr_4 >= 0
+ c_32_4_4: uzp_4_4 + 200 mzp_4_4 + z_4 - zr_4 <= 200
+ c_33_4_4: uzp_4_4 - 200 mzp_4_4 - z_4 + zr_4 <= 0
+ c_34_4_4: - Azp_4_4 - uzp_4_4 <= -1
+ c_35_4_4: - 100 Azp_4_4 - uzp_4_4 >= -100
+Bounds
+ uzp_4_4 free
+ zr_4 free
+Binaries
+ s_4_0 t_4_2_0 t_4_2_1 t_4_2_2 Azp_4_4 mzp_4_4
+End

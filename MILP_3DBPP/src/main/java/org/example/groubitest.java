@@ -1,0 +1,325 @@
+package org.example;
+
+import com.gurobi.gurobi.*;
+
+import java.util.ArrayList;
+import java.util.List;
+
+
+public class groubitest {
+    public static int MILP_single_box(List<Double> L_Packages,
+                                       List<Double> parcel_p,
+                                       List<Double> parcel_q,
+                                       List<Double> parcel_r,
+                                       List<List<Double>> myPackages,
+                                       int boxNumbers){
+
+        try {
+            // 定义模型
+            GRBEnv env = new GRBEnv(true);
+            env.set("OutputFlag", "0"); // 设置输出参数为0，禁止输出详细信息
+            env.start();
+            GRBModel model = new GRBModel(env);
+            // 设置时间上限为 60 秒
+            model.set(GRB.DoubleParam.TimeLimit, 60.0);
+            // 获取包裹和箱子的数量
+            int numParcels = parcel_p.size();
+            int numPackages = myPackages.size();
+
+            // 定义最大长度、宽度、高度
+            double L_max = 0.0, W_max = 0.0, H_max = 0.0;
+            for (List<Double> pkg : myPackages) {
+                L_max = Math.max(L_max, pkg.get(2));
+                W_max = Math.max(W_max, pkg.get(3));
+                H_max = Math.max(H_max, pkg.get(4));
+            }
+
+            // 使用 List 来定义变量
+            List<List<GRBVar>> s = new ArrayList<>();
+            for (int i = 0; i < numParcels; ++i) {
+                List<GRBVar> sRow = new ArrayList<>();
+                for (int j = 0; j < numPackages; ++j) {
+                    sRow.add(model.addVar(0, 1, 0, GRB.BINARY, "s_" + i + "_" + j));
+                }
+                s.add(sRow);
+            }
+
+            List<List<List<GRBVar>>> t = new ArrayList<>();
+            for (int i = 0; i < numParcels; ++i) {
+                List<List<GRBVar>> tRow = new ArrayList<>();
+                for (int o1 = 0; o1 < 3; ++o1) {
+                    List<GRBVar> tCol = new ArrayList<>();
+                    for (int o2 = 0; o2 < 3; ++o2) {
+                        tCol.add(model.addVar(0, 1, 0, GRB.BINARY, "t_" + i + "_" + o1 + "_" + o2));
+                    }
+                    tRow.add(tCol);
+                }
+                t.add(tRow);
+            }
+
+            List<List<GRBVar>> axp = new ArrayList<>();
+            List<List<GRBVar>> ayp = new ArrayList<>();
+            List<List<GRBVar>> azp = new ArrayList<>();
+            for (int i = 0; i < numParcels; ++i) {
+                List<GRBVar> axpRow = new ArrayList<>();
+                List<GRBVar> aypRow = new ArrayList<>();
+                List<GRBVar> azpRow = new ArrayList<>();
+                for (int k = 0; k < numParcels; ++k) {
+                    axpRow.add(model.addVar(0, 1, 0, GRB.BINARY, "xp_" + i + "_" + k));
+                    aypRow.add(model.addVar(0, 1, 0, GRB.BINARY, "yp_" + i + "_" + k));
+                    azpRow.add(model.addVar(0, 1, 0, GRB.BINARY, "zp_" + i + "_" + k));
+                }
+                axp.add(axpRow);
+                ayp.add(aypRow);
+                azp.add(azpRow);
+            }
+
+            List<GRBVar> x = new ArrayList<>();
+            List<GRBVar> y = new ArrayList<>();
+            List<GRBVar> z = new ArrayList<>();
+            List<GRBVar> xr = new ArrayList<>();
+            List<GRBVar> yr = new ArrayList<>();
+            List<GRBVar> zr = new ArrayList<>();
+            for (int i = 0; i < numParcels; ++i) {
+                x.add(model.addVar(0, GRB.INFINITY, 0, GRB.CONTINUOUS, "x_" + i));
+                y.add(model.addVar(0, GRB.INFINITY, 0, GRB.CONTINUOUS, "y_" + i));
+                z.add(model.addVar(0, GRB.INFINITY, 0, GRB.CONTINUOUS, "z_" + i));
+                xr.add(model.addVar(0, GRB.INFINITY, 0, GRB.CONTINUOUS, "xr_" + i));
+                yr.add(model.addVar(0, GRB.INFINITY, 0, GRB.CONTINUOUS, "yr_" + i));
+                zr.add(model.addVar(0, GRB.INFINITY, 0, GRB.CONTINUOUS, "zr_" + i));
+            }
+
+            List<GRBVar> n = new ArrayList<>();
+            for (int j = 0; j < numPackages; ++j) {
+                n.add(model.addVar(0, 1, 0, GRB.BINARY, "n_" + j));
+            }
+
+            // 添加约束
+            for (int i = 0; i < numParcels; ++i) {
+                GRBLinExpr expr1 = new GRBLinExpr();
+                expr1.addTerm(1.0, xr.get(i));
+                expr1.addTerm(-1.0, x.get(i));
+                expr1.addTerm(-parcel_p.get(i) / L_max,t.get(i).get(0).get(0));
+                expr1.addTerm(-parcel_q.get(i) / L_max,t.get(i).get(0).get(1));
+                expr1.addTerm(-parcel_r.get(i) / L_max,t.get(i).get(0).get(2));
+                model.addConstr(expr1, GRB.EQUAL, 0, "c2_" + i);
+
+                GRBLinExpr expr2 = new GRBLinExpr();
+                expr2.addTerm(1.0, yr.get(i));
+                expr2.addTerm(-1.0, y.get(i));
+                expr2.addTerm(-parcel_p.get(i) / W_max,t.get(i).get(1).get(0));
+                expr2.addTerm(-parcel_q.get(i) / W_max,t.get(i).get(1).get(1));
+                expr2.addTerm(-parcel_r.get(i) / W_max,t.get(i).get(1).get(2));
+                model.addConstr(expr2, GRB.EQUAL, 0, "c3_" + i);
+
+                GRBLinExpr expr3 = new GRBLinExpr();
+                expr3.addTerm(1.0, zr.get(i));
+                expr3.addTerm(-1.0, z.get(i));
+                expr3.addTerm(-parcel_p.get(i) / H_max,t.get(i).get(2).get(0));
+                expr3.addTerm(-parcel_q.get(i) / H_max,t.get(i).get(2).get(1));
+                expr3.addTerm(-parcel_r.get(i) / H_max,t.get(i).get(2).get(2));
+                model.addConstr(expr3, GRB.EQUAL, 0, "c4_" + i);
+
+
+                GRBLinExpr sumXR = new GRBLinExpr();
+                GRBLinExpr sumYR = new GRBLinExpr();
+                GRBLinExpr sumZR = new GRBLinExpr();
+                for (int j = 0; j < numPackages; ++j) {
+                    sumXR.addTerm(myPackages.get(j).get(2) / L_max, s.get(i).get(j));
+                    sumYR.addTerm(myPackages.get(j).get(3) / W_max, s.get(i).get(j));
+                    sumZR.addTerm(myPackages.get(j).get(4) / H_max, s.get(i).get(j));
+                }
+                model.addConstr(xr.get(i), GRB.LESS_EQUAL, sumXR, "c5_" + i);
+                model.addConstr(yr.get(i), GRB.LESS_EQUAL, sumYR, "c6_" + i);
+                model.addConstr(zr.get(i), GRB.LESS_EQUAL, sumZR, "c7_" + i);
+            }
+
+            for (int i = 0; i < numParcels; ++i) {
+                for (int k = 0; k < numParcels; ++k) {
+                    for (int j = 0; j < numPackages; ++j) {
+                        if (i < k) {
+                            // 创建 GRBLinExpr 对象
+                            GRBLinExpr leftExpr = new GRBLinExpr();
+                            leftExpr.addTerm(1.0, axp.get(i).get(k)); // xp.get(i).get(k)
+                            leftExpr.addTerm(1.0, axp.get(k).get(i)); // xp.get(k).get(i)
+                            leftExpr.addTerm(1.0, ayp.get(i).get(k)); // yp.get(i).get(k)
+                            leftExpr.addTerm(1.0, ayp.get(k).get(i)); // yp.get(k).get(i)
+                            leftExpr.addTerm(1.0, azp.get(i).get(k)); // zp.get(i).get(k)
+                            leftExpr.addTerm(1.0, azp.get(k).get(i)); // zp.get(k).get(i)
+
+                            GRBLinExpr rightExpr = new GRBLinExpr();
+                            rightExpr.addTerm(1.0, s.get(i).get(j)); // s.get(i).get(j)
+                            rightExpr.addTerm(1.0, s.get(k).get(j)); // s.get(k).get(j)
+                            rightExpr.addConstant(-1.0); // -1
+
+                            model.addConstr(leftExpr, GRB.GREATER_EQUAL, rightExpr, "c8_"+i + "_" + k + "_" + j);                        }
+                    }
+                }
+            }
+
+            // Pack all items
+            for (int i = 0; i < numParcels; ++i) {
+                GRBLinExpr sumS = new GRBLinExpr();
+                for (int j = 0; j < numPackages; ++j) {
+                    sumS.addTerm(1.0, s.get(i).get(j));
+                }
+                model.addConstr(sumS,GRB.EQUAL,1,"c9_"+i);
+            }
+
+            for (int i = 0; i < numParcels; ++i) {
+                for (int j = 0; j < numPackages; ++j) {
+                    model.addConstr(s.get(i).get(j), GRB.LESS_EQUAL, n.get(j), "c10_" + i + "_" + j);
+                }
+            }
+
+            // Select one orientation
+            for (int i = 0; i < numParcels; ++i) {
+                for (int d = 0; d < 3; ++d) {
+                    GRBLinExpr sumT1 = new GRBLinExpr();
+                    GRBLinExpr sumT2 = new GRBLinExpr();
+                    for (int c = 0; c < 3; ++c) {
+                        sumT1.addTerm(1.0, t.get(i).get(c).get(d));
+                        sumT2.addTerm(1.0, t.get(i).get(d).get(c));
+                    }
+                    model.addConstr(sumT1, GRB.EQUAL, 1, "c11_" + i + "_" + d);
+                    model.addConstr(sumT2, GRB.EQUAL, 1, "c12_" + i + "_" + d);
+                }
+            }
+
+            // Logic constraints
+            for (int i = 0; i < numParcels; ++i) {
+                for (int k = 0; k < numParcels; ++k) {
+                    GRBLinExpr expr1 = new GRBLinExpr();
+                    expr1.addTerm(1.0, x.get(i)); // x.get(i)
+                    expr1.addConstant(1.0); // +1
+                    expr1.addTerm(-1.0, axp.get(i).get(k)); // -xp.get(i).get(k)
+                    model.addConstr(xr.get(k), GRB.LESS_EQUAL, expr1, "c_13_"+i+"_"+k);
+
+                    GRBLinExpr expr2 = new GRBLinExpr();
+                    expr2.addTerm(1.0, xr.get(k)); // xr.get(k)
+                    expr2.addTerm(1.0, axp.get(i).get(k)); // +xp.get(i).get(k)
+                    expr2.addConstant(-1.0/L_max); // -1/L_max
+                    model.addConstr(x.get(i), GRB.LESS_EQUAL, expr2, "c_14_"+i+"_"+k);
+
+                    GRBLinExpr expr3 = new GRBLinExpr();
+                    expr3.addTerm(1.0, y.get(i)); // y.get(i)
+                    expr3.addConstant(1.0); // +1
+                    expr3.addTerm(-1.0, ayp.get(i).get(k)); // -yp.get(i).get(k)
+                    model.addConstr(yr.get(k), GRB.LESS_EQUAL, expr3, "c_15_"+i+"_"+k);
+
+                    GRBLinExpr expr4 = new GRBLinExpr();
+                    expr4.addTerm(1.0, yr.get(k)); // yr.get(k)
+                    expr4.addTerm(1.0, ayp.get(i).get(k)); // +yp.get(i).get(k)
+                    expr4.addConstant(-1.0/W_max); // -1/W_max
+                    model.addConstr(y.get(i), GRB.LESS_EQUAL, expr4, "c_16_"+i+"_"+k);
+
+                    GRBLinExpr expr5 = new GRBLinExpr();
+                    expr5.addTerm(1.0, z.get(i)); // z.get(i)
+                    expr5.addConstant(1.0); // +1
+                    expr5.addTerm(-1.0, azp.get(i).get(k)); // -zp.get(i).get(k)
+                    model.addConstr(zr.get(k), GRB.LESS_EQUAL, expr5, "c_17_"+i+"_"+k);
+                }
+            }
+
+            // Symmetry breaking constraints
+            for (int i = 0; i < 1; ++i) {
+                GRBLinExpr sumL = new GRBLinExpr();
+                GRBLinExpr sumW = new GRBLinExpr();
+                GRBLinExpr sumH = new GRBLinExpr();
+                for (int j = 0; j < numPackages; ++j) {
+                    sumL.addTerm(myPackages.get(j).get(2) / L_max / 2, s.get(i).get(j));
+                    sumW.addTerm(myPackages.get(j).get(3) / W_max / 2, s.get(i).get(j));
+                    sumH.addTerm(myPackages.get(j).get(4) / H_max / 2, s.get(i).get(j));
+                }
+
+                // 约束 1: x.get(i) + 0.5 * (t.get(i).get(0).get(0) * parcel_p.get(i) / L_max + t.get(i).get(0).get(1) * parcel_q.get(i) / L_max + t.get(i).get(0).get(2) * parcel_r.get(i) / L_max) <= sumL
+                GRBLinExpr expr1 = new GRBLinExpr();
+                expr1.addTerm(1.0, x.get(i)); // x.get(i)
+                expr1.addTerm(0.5 * parcel_p.get(i) / L_max, t.get(i).get(0).get(0)); // 0.5 * t.get(i).get(0).get(0) * parcel_p.get(i) / L_max
+                expr1.addTerm(0.5 * parcel_q.get(i) / L_max, t.get(i).get(0).get(1)); // 0.5 * t.get(i).get(0).get(1) * parcel_q.get(i) / L_max
+                expr1.addTerm(0.5 * parcel_r.get(i) / L_max, t.get(i).get(0).get(2)); // 0.5 * t.get(i).get(0).get(2) * parcel_r.get(i) / L_max
+                model.addConstr(expr1, GRB.LESS_EQUAL, sumL, "c_24_"+i);
+
+// 约束 2: y.get(i) + 0.5 * (t.get(i).get(1).get(0) * parcel_p.get(i) / W_max + t.get(i).get(1).get(1) * parcel_q.get(i) / W_max + t.get(i).get(1).get(2) * parcel_r.get(i) / W_max) <= sumW
+                GRBLinExpr expr2 = new GRBLinExpr();
+                expr2.addTerm(1.0, y.get(i)); // y.get(i)
+                expr2.addTerm(0.5 * parcel_p.get(i) / W_max, t.get(i).get(1).get(0)); // 0.5 * t.get(i).get(1).get(0) * parcel_p.get(i) / W_max
+                expr2.addTerm(0.5 * parcel_q.get(i) / W_max, t.get(i).get(1).get(1)); // 0.5 * t.get(i).get(1).get(1) * parcel_q.get(i) / W_max
+                expr2.addTerm(0.5 * parcel_r.get(i) / W_max, t.get(i).get(1).get(2)); // 0.5 * t.get(i).get(1).get(2) * parcel_r.get(i) / W_max
+                model.addConstr(expr2, GRB.LESS_EQUAL, sumW, "c_25_"+i);
+
+// 约束 3: z.get(i) + 0.5 * (t.get(i).get(2).get(0) * parcel_p.get(i) / H_max + t.get(i).get(2).get(1) * parcel_q.get(i) / H_max + t.get(i).get(2).get(2) * parcel_r.get(i) / H_max) <= sumH
+                GRBLinExpr expr3 = new GRBLinExpr();
+                expr3.addTerm(1.0, z.get(i)); // z.get(i)
+                expr3.addTerm(0.5 * parcel_p.get(i) / H_max, t.get(i).get(2).get(0)); // 0.5 * t.get(i).get(2).get(0) * parcel_p.get(i) / H_max
+                expr3.addTerm(0.5 * parcel_q.get(i) / H_max, t.get(i).get(2).get(1)); // 0.5 * t.get(i).get(2).get(1) * parcel_q.get(i) / H_max
+                expr3.addTerm(0.5 * parcel_r.get(i) / H_max, t.get(i).get(2).get(2)); // 0.5 * t.get(i).get(2).get(2) * parcel_r.get(i) / H_max
+                model.addConstr(expr3, GRB.LESS_EQUAL, sumH, "c_26_"+i);
+            }
+
+            // Limit box
+            GRBLinExpr sumN = new GRBLinExpr();
+            for (int j = 0; j < numPackages; ++j) {
+                sumN.addTerm(1.0, n.get(j));
+            }
+            model.addConstr(sumN, GRB.LESS_EQUAL, boxNumbers, "c_23");
+
+            // 目标函数
+            GRBLinExpr objUsedVolume = new GRBLinExpr();
+            for (int j = 0; j < numPackages; ++j) {
+                objUsedVolume.addTerm(myPackages.get(j).get(1), n.get(j));
+            }
+            for (int i = 0; i < numParcels; ++i) {
+                objUsedVolume.addConstant(-parcel_p.get(i) * parcel_q.get(i) * parcel_r.get(i));
+            }
+            model.setObjective(objUsedVolume, GRB.MINIMIZE);
+
+            // 优化模型
+            model.optimize();
+
+            // 检查是否有解
+            int solCount = (int) model.get(GRB.IntAttr.SolCount);
+
+            if (solCount > 0) {
+                // 当前解是可行解
+                int status = (int) model.get(GRB.IntAttr.Status);
+                if (status == GRB.Status.OPTIMAL || status == GRB.Status.TIME_LIMIT) {
+                    return 1;  // 当前解可行（包括最优解和时间限制内的可行解）
+                }
+            } else {
+                // 当前无可行解
+                int status = (int) model.get(GRB.IntAttr.Status);
+                if (status == GRB.Status.INFEASIBLE) {
+                    return 0;  // 模型无解
+                } else if (status == GRB.Status.TIME_LIMIT) {
+                    return -1; // 时间限制内无可行解
+                } else {
+                    return -2; // 其他未知错误
+                }
+            }
+
+            return -1;
+
+        } catch (GRBException e) {
+            System.err.println("Error code = " + e.getErrorCode());
+            System.err.println(e.getMessage());
+            return -1;
+        } catch (Exception e) {
+            System.err.println("Exception during optimization");
+            return -1;
+        }
+
+
+
+
+
+
+
+    }
+
+
+
+
+
+
+}
