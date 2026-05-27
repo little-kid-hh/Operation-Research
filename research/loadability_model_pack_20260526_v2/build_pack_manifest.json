@@ -1,0 +1,13 @@
+{
+  "data_path": "FunSearch_test/training_2orientations.csv",
+  "active_bank_path": "feature_engineering/reference_active_bank.csv",
+  "random_state": 42,
+  "test_size": 0.25,
+  "models": [
+    "svm_base40",
+    "lg_base40",
+    "rf_base40",
+    "xgb_base40",
+    "svm_feature_engineered"
+  ]
+}
