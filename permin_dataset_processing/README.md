@@ -1,26 +1,83 @@
-# Permin Dataset Labeling Pipeline
+# Permin Package-Aware Loadability Dataset
 
-This directory contains the scripts needed to generate Ground Truth labels for the Permin (2022) 3D Bin Packing dataset using Gurobi.
+This directory contains the scripts and experiment summaries for constructing
+package-aware loadability labels from the Permin/S3DBSP performance instances.
+Each row is an `(instance_name, order_id, package_id)` tuple and the labels
+answer whether the order can be packed into that candidate package.
 
-## Workflow
+## Dataset Status
 
-1.  **Run `permin_dataset_processing/export_items_for_milp.py` (Already Done)**
-    This script extracts the dimensions of items from the XML files into `permin_dataset_processing/milp_labels/items_to_label.csv`. This provides a flat structure that is easy to load in Java.
+- Base XML instances only: `BSP_<n>_O6_<seed>.xml`
+- Candidate package list: `S3DBSP-main/performanceTest/packages.txt`
+- Exported labeling tasks: 675,000 package-order tasks
+- Trusted labels: `milp_labels/ground_truth_package_labels_csv.zip`
+- Label columns: `label_2ori`, `label_6ori`
+- Label distribution:
+  - `label_2ori`: 233,605 feasible, 441,375 infeasible, 20 solver failures
+  - `label_6ori`: 238,083 feasible, 436,898 infeasible, 19 solver failures
 
-2.  **Move to a machine with Gurobi Installed**
-    If the current machine does not have a Gurobi Academic License installed and activated, copy the entire project (including `MILP_3DBPP` and `permin_dataset_processing`) to the machine with Gurobi.
+The full labeled feature matrices are generated artifacts and are not tracked
+because they are large:
 
-3.  **Run the Java Label Generator**
-    Navigate to the `MILP_3DBPP` directory and use Maven to compile and run the wrapper class.
+- `processed_features/permin_labeled_base40_package.csv`
+- `processed_features/permin_labeled_fe111_package.csv`
 
-    ```bash
-    cd MILP_3DBPP
-    mvn clean compile
-    mvn exec:java -Dexec.mainClass="org.example.GeneratePerminLabels"
-    ```
+The uncompressed MILP label CSV is generated as
+`milp_labels/ground_truth_package_labels.csv`; Git tracks the compressed copy
+to keep pushes lightweight.
 
-    *Note: Ensure your `pom.xml` properly points to your local Gurobi `.jar` file.*
+## Reproduce Labels
 
-4.  **Merge Results**
-    The Java script will output the feasibility results to `permin_dataset_processing/milp_labels/ground_truth_labels.csv`. It contains labels for both `2-orientations` and `6-orientations`.
-    You can then merge these labels back with the `permin_base40_features.csv` to evaluate the ML models.
+Generate the package-order task table:
+
+```powershell
+python permin_dataset_processing/export_labeling_tasks.py
+```
+
+Run the Java/Gurobi package labeler:
+
+```powershell
+javac -encoding UTF-8 -cp "C:\gurobi1300\win64\lib\gurobi.jar;MILP_3DBPP\src\main\java" MILP_3DBPP\src\main\java\org\example\GeneratePerminPackageLabels.java
+java -cp "C:\gurobi1300\win64\lib\gurobi.jar;MILP_3DBPP\src\main\java" org.example.GeneratePerminPackageLabels
+```
+
+For batch labeling, use:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File permin_dataset_processing/run_permin_label_batches.ps1
+```
+
+## Build Feature Matrices
+
+Build base 40-feature package rows:
+
+```powershell
+python permin_dataset_processing/build_labeled_base40_dataset.py
+```
+
+Build the engineered 111-feature rows:
+
+```powershell
+python permin_dataset_processing/build_labeled_fe111_dataset.py
+```
+
+## Cross-Validation Results
+
+Five-fold `StratifiedGroupKFold` results are stored in:
+
+```text
+experiments/all_model_summary_20260527.csv
+```
+
+Top results by target:
+
+| Target | Feature set | Model | Accuracy | AUC | TPR at 1% FPR |
+| --- | --- | --- | ---: | ---: | ---: |
+| `label_2ori` | `base40` | random forest | 0.997964 | 0.999981 | 0.999898 |
+| `label_6ori` | `base40` | random forest | 0.997326 | 0.999966 | 0.999675 |
+
+Run cross-validation with:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File permin_dataset_processing/run_cross_validation.ps1
+```

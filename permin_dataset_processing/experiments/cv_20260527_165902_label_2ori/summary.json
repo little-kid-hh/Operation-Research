@@ -1,0 +1,100 @@
+{
+  "data_path": "permin_dataset_processing\\processed_features\\permin_labeled_base40_package.csv",
+  "target": "label_2ori",
+  "n_rows": 674980,
+  "n_features": 40,
+  "feature_cols": [
+    "sku_counts",
+    "sku_average_volume",
+    "sku_length_var",
+    "sku_width_var",
+    "sku_height_var",
+    "sku_length_avg",
+    "sku_width_avg",
+    "sku_height_avg",
+    "max_asr",
+    "vehicle_length",
+    "vehicle_width",
+    "vehicle_height",
+    "spare_capacity",
+    "sku_concentration",
+    "sku_min_length",
+    "sku_max_length",
+    "sku_std_length",
+    "sku_min_width",
+    "sku_max_width",
+    "sku_std_width",
+    "sku_min_height",
+    "sku_max_height",
+    "sku_std_height",
+    "l_to_L_ratio_avg",
+    "l_to_L_ratio_min",
+    "l_to_L_ratio_max",
+    "l_to_L_ratio_std",
+    "h_to_H_ratio_avg",
+    "h_to_H_ratio_min",
+    "h_to_H_ratio_max",
+    "h_to_H_ratio_std",
+    "w_to_W_ratio_avg",
+    "w_to_W_ratio_min",
+    "w_to_W_ratio_max",
+    "w_to_W_ratio_std",
+    "wl_to_vehicle_wl_avg",
+    "wl_to_vehicle_wl_min",
+    "wl_to_vehicle_wl_max",
+    "wl_to_vehicle_wl_std",
+    "wl_to_vehicle_wl_total"
+  ],
+  "cv": {
+    "type": "StratifiedGroupKFold",
+    "n_splits": 5,
+    "group": "instance_name::order_id",
+    "random_state": 42
+  },
+  "models": {
+    "xgboost": {
+      "accuracy": {
+        "mean": 0.9959183774439776,
+        "std": 0.0002674679329247495,
+        "min": 0.9955629300957785,
+        "max": 0.9962025316455696
+      },
+      "precision": {
+        "mean": 0.99310430564122,
+        "std": 0.0005700956181369626,
+        "min": 0.9922999075988912,
+        "max": 0.9938166445832545
+      },
+      "recall": {
+        "mean": 0.9950985814756355,
+        "std": 0.0004540044639575882,
+        "min": 0.9945097347474258,
+        "max": 0.9956830668814806
+      },
+      "auc": {
+        "mean": 0.9999367750791397,
+        "std": 8.305198918887075e-06,
+        "min": 0.9999239550738037,
+        "max": 0.9999444900933175
+      },
+      "tpr_at_fpr1pct": {
+        "mean": 0.9991485245558417,
+        "std": 0.0003053391522514394,
+        "min": 0.9987211430335369,
+        "max": 0.999524930805139
+      },
+      "fpr": {
+        "mean": 0.003651894311258945,
+        "std": 0.0002297862677534434,
+        "min": 0.0033554749024173117,
+        "max": 0.003904245588202485
+      },
+      "fnr": {
+        "mean": 0.0049014185243646795,
+        "std": 0.000454004463957594,
+        "min": 0.004316933118519437,
+        "max": 0.005490265252574251
+      }
+    }
+  }
+}

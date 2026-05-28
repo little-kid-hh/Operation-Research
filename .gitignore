@@ -58,3 +58,17 @@ Ensemble_baseline/experiments/*
 
 # Cursor local
 .cursor/
+
+# Codex/local dependency scratch space
+.codex_*/
+
+# Crash/runtime logs
+*.log
+hs_err_pid*.log
+replay_pid*.log
+
+# Large reproducible Permin generated outputs
+permin_dataset_processing/milp_labels/batches/
+permin_dataset_processing/milp_labels/labeling_tasks.csv
+permin_dataset_processing/milp_labels/ground_truth_package_labels.csv
+permin_dataset_processing/processed_features/permin_labeled_*.csv
