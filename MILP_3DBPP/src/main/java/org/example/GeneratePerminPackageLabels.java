@@ -12,6 +12,7 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -109,15 +110,29 @@ public class GeneratePerminPackageLabels {
                         List<List<Double>> onePackage = new ArrayList<>();
                         onePackage.add(packageType.toMilpPackage());
 
-                        Instant start2 = Instant.now();
-                        int label2 = MILP_Loading_2orientations.MILP_single_box(
-                                order.ids, order.p, order.q, order.r, onePackage, 1);
-                        long time2 = Duration.between(start2, Instant.now()).toMillis();
+                        int label2;
+                        long time2;
+                        if (isCertainlyInfeasible2Orientation(order, packageType)) {
+                            label2 = 0;
+                            time2 = 0L;
+                        } else {
+                            Instant start2 = Instant.now();
+                            label2 = MILP_Loading_2orientations.MILP_single_box(
+                                    order.ids, order.p, order.q, order.r, onePackage, 1);
+                            time2 = Duration.between(start2, Instant.now()).toMillis();
+                        }
 
-                        Instant start6 = Instant.now();
-                        int label6 = MILP_Loading_6orientations.MILP_single_box(
-                                order.ids, order.p, order.q, order.r, onePackage, 1);
-                        long time6 = Duration.between(start6, Instant.now()).toMillis();
+                        int label6;
+                        long time6;
+                        if (isCertainlyInfeasible6Orientation(order, packageType)) {
+                            label6 = 0;
+                            time6 = 0L;
+                        } else {
+                            Instant start6 = Instant.now();
+                            label6 = MILP_Loading_6orientations.MILP_single_box(
+                                    order.ids, order.p, order.q, order.r, onePackage, 1);
+                            time6 = Duration.between(start6, Instant.now()).toMillis();
+                        }
 
                         writer.write(String.format(
                                 "%s,%s,%d,%.6f,%.6f,%.6f,%d,%d,%d,%d",
@@ -138,6 +153,57 @@ public class GeneratePerminPackageLabels {
                 }
             }
         }
+    }
+
+    private static boolean isCertainlyInfeasible2Orientation(OrderData order, PackageType packageType) {
+        if (totalVolume(order) > packageType.length * packageType.width * packageType.height + 1e-9) {
+            return true;
+        }
+        for (int i = 0; i < order.p.size(); i++) {
+            double p = order.p.get(i);
+            double q = order.q.get(i);
+            double r = order.r.get(i);
+            boolean fitsWithoutRotation = p <= packageType.length + 1e-9
+                    && q <= packageType.width + 1e-9
+                    && r <= packageType.height + 1e-9;
+            boolean fitsWithHorizontalSwap = q <= packageType.length + 1e-9
+                    && p <= packageType.width + 1e-9
+                    && r <= packageType.height + 1e-9;
+            if (!fitsWithoutRotation && !fitsWithHorizontalSwap) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean isCertainlyInfeasible6Orientation(OrderData order, PackageType packageType) {
+        if (totalVolume(order) > packageType.length * packageType.width * packageType.height + 1e-9) {
+            return true;
+        }
+        double[] packageDims = sortedDims(packageType.length, packageType.width, packageType.height);
+        for (int i = 0; i < order.p.size(); i++) {
+            double[] itemDims = sortedDims(order.p.get(i), order.q.get(i), order.r.get(i));
+            for (int d = 0; d < 3; d++) {
+                if (itemDims[d] > packageDims[d] + 1e-9) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static double totalVolume(OrderData order) {
+        double volume = 0.0;
+        for (int i = 0; i < order.p.size(); i++) {
+            volume += order.p.get(i) * order.q.get(i) * order.r.get(i);
+        }
+        return volume;
+    }
+
+    private static double[] sortedDims(double a, double b, double c) {
+        double[] dims = new double[]{a, b, c};
+        Arrays.sort(dims);
+        return dims;
     }
 
     private static void rejectBspDerivedPath(Path path, boolean allowBspDerivedData) {
