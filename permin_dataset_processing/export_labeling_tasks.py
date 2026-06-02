@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Export package-aware Permin labeling tasks.
+"""Export package-aware OR 2023 3D-BPP labeling tasks.
 
 The formal loadability label target is one row per
 (instance_name, order_id, package_id).  The MILP solver should decide whether
@@ -14,7 +14,22 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 
-BASE_PERFORMANCE_RE = re.compile(r"^BSP_\d+_O6_\d+\.xml$")
+OR2023_BPP_XML_DIR = Path("or2023_bpp_data/xml")
+OR2023_BPP_PACKAGES = Path("or2023_bpp_data/packages.txt")
+DEFAULT_XML_RE = re.compile(r".*\.xml$")
+S3DBSP_PATH_MARKER = "S3DBSP-main"
+
+
+def reject_bsp_derived_path(path: Path, allow_bsp_derived_data: bool) -> None:
+    if allow_bsp_derived_data:
+        return
+    if S3DBSP_PATH_MARKER.lower() in str(path).replace("\\", "/").lower():
+        raise ValueError(
+            f"{path} is a S3DBSP/stochastic-BSP data path. "
+            "This project is now scoped to the Fontaine & Minner OR 2023 3D-BPP data. "
+            "Pass the OR 2023 BPP e-companion path instead, or use "
+            "--allow-bsp-derived-data only for legacy audits."
+        )
 
 
 def read_packages(path):
@@ -59,16 +74,17 @@ def read_orders(xml_path):
     return orders
 
 
-def select_xml_files(xml_dir, include_variants):
+def select_xml_files(xml_dir, xml_name_regex):
     files = sorted(xml_dir.glob("*.xml"))
-    if include_variants:
-        return files
-    return [path for path in files if BASE_PERFORMANCE_RE.match(path.name)]
+    pattern = re.compile(xml_name_regex)
+    return [path for path in files if pattern.match(path.name)]
 
 
-def export_tasks(xml_dir, packages_path, output_path, include_variants):
+def export_tasks(xml_dir, packages_path, output_path, xml_name_regex):
     packages = read_packages(packages_path)
-    xml_files = select_xml_files(xml_dir, include_variants)
+    xml_files = select_xml_files(xml_dir, xml_name_regex)
+    if not xml_files:
+        raise ValueError(f"No XML files matched {xml_name_regex!r} in {xml_dir}")
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     task_count = 0
@@ -113,13 +129,13 @@ def main():
     parser.add_argument(
         "--xml-dir",
         type=Path,
-        default=Path("S3DBSP-main/performanceTest"),
-        help="Directory containing Permin/S3DBSP XML files.",
+        default=OR2023_BPP_XML_DIR,
+        help="Directory containing Fontaine & Minner OR 2023 3D-BPP XML files.",
     )
     parser.add_argument(
         "--packages-path",
         type=Path,
-        default=Path("S3DBSP-main/performanceTest/packages.txt"),
+        default=OR2023_BPP_PACKAGES,
         help="Candidate package list: package_id length width height.",
     )
     parser.add_argument(
@@ -129,17 +145,24 @@ def main():
         help="Output CSV consumed by the formal MILP label generator.",
     )
     parser.add_argument(
-        "--include-variants",
+        "--xml-name-regex",
+        default=DEFAULT_XML_RE.pattern,
+        help="Regex for OR 2023 BPP XML file names. Defaults to all XML files.",
+    )
+    parser.add_argument(
+        "--allow-bsp-derived-data",
         action="store_true",
-        help="Include scenario/demand variant XML files such as *_2_5.xml.",
+        help="Legacy escape hatch: allow S3DBSP/stochastic-BSP paths for audits only.",
     )
     args = parser.parse_args()
+    reject_bsp_derived_path(args.xml_dir, args.allow_bsp_derived_data)
+    reject_bsp_derived_path(args.packages_path, args.allow_bsp_derived_data)
 
     xml_count, package_count, task_count = export_tasks(
         args.xml_dir,
         args.packages_path,
         args.output_path,
-        args.include_variants,
+        args.xml_name_regex,
     )
     print(
         f"Exported {task_count} tasks from {xml_count} XML files and "

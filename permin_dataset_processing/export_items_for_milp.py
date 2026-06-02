@@ -8,11 +8,42 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+OR2023_BPP_XML_DIR = Path("or2023_bpp_data/xml")
+S3DBSP_PATH_MARKER = "S3DBSP-main"
+
+
+def reject_bsp_derived_path(path: Path, allow_bsp_derived_data: bool) -> None:
+    if allow_bsp_derived_data:
+        return
+    if S3DBSP_PATH_MARKER.lower() in str(path).replace("\\", "/").lower():
+        raise ValueError(
+            f"{path} is a S3DBSP/stochastic-BSP data path. "
+            "Use the Fontaine & Minner OR 2023 3D-BPP data path instead."
+        )
+
+
 def main():
-    XML_DIR = "S3DBSP-main/performanceTest"
-    OUTPUT_CSV = "permin_dataset_processing/milp_labels/items_to_label.csv"
+    import argparse
+
+    cli = argparse.ArgumentParser()
+    cli.add_argument("--xml-dir", type=Path, default=OR2023_BPP_XML_DIR)
+    cli.add_argument("--xml-glob", default="*.xml")
+    cli.add_argument(
+        "--output-csv",
+        type=Path,
+        default=Path("permin_dataset_processing/milp_labels/items_to_label.csv"),
+    )
+    cli.add_argument(
+        "--allow-bsp-derived-data",
+        action="store_true",
+        help="Legacy escape hatch: allow S3DBSP/stochastic-BSP paths for audits only.",
+    )
+    args = cli.parse_args()
+    reject_bsp_derived_path(args.xml_dir, args.allow_bsp_derived_data)
     
-    xml_files = sorted(Path(XML_DIR).glob("BSP_100_O6_*.xml"))
+    xml_files = sorted(args.xml_dir.glob(args.xml_glob))
+    if not xml_files:
+        raise ValueError(f"No XML files matched {args.xml_glob!r} in {args.xml_dir}")
     
     rows = []
     for xml_file in xml_files:
@@ -37,9 +68,9 @@ def main():
                 
     df = pd.DataFrame(rows)
     # Ensure directory exists
-    os.makedirs(os.path.dirname(OUTPUT_CSV), exist_ok=True)
-    df.to_csv(OUTPUT_CSV, index=False)
-    logger.info(f"Exported {len(df)} items to {OUTPUT_CSV}")
+    os.makedirs(os.path.dirname(args.output_csv), exist_ok=True)
+    df.to_csv(args.output_csv, index=False)
+    logger.info(f"Exported {len(df)} items to {args.output_csv}")
     logger.info("This file can now be read by the Java Gurobi wrapper to generate labels.")
 
 if __name__ == "__main__":

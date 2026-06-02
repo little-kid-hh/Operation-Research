@@ -4,13 +4,18 @@ param(
 
     [int]$Splits = 5,
 
+    [ValidateSet("order", "instance")]
+    [string]$GroupLevel = "instance",
+
     [switch]$Quick,
 
     [string[]]$Models = @(),
 
     [string]$Python = "D:\python_anaconda\python.exe",
 
-    [string]$TempDir = "D:\360Downloads\CodexTrainingTmp"
+    [string]$TempDir = ".codex_training_tmp",
+
+    [string]$DataPath = "permin_dataset_processing\processed_features\or2023_bpp_labeled_base40_package.csv"
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,7 +31,9 @@ if (Test-Path ".codex_xgb_only") {
 
 $argsList = @(
     "permin_dataset_processing\cross_validate_permin_models.py",
+    "--data-path", $DataPath,
     "--target", $Target,
+    "--group-level", $GroupLevel,
     "--n-splits", "$Splits"
 )
 

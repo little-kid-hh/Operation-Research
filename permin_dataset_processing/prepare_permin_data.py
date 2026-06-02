@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import argparse
 import os
 import pandas as pd
 import numpy as np
@@ -8,6 +9,21 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+OR2023_BPP_XML_DIR = Path("or2023_bpp_data/xml")
+OR2023_BPP_PACKAGES = Path("or2023_bpp_data/packages.txt")
+S3DBSP_PATH_MARKER = "S3DBSP-main"
+
+
+def reject_bsp_derived_path(path: Path, allow_bsp_derived_data: bool) -> None:
+    if allow_bsp_derived_data:
+        return
+    if S3DBSP_PATH_MARKER.lower() in str(path).replace("\\", "/").lower():
+        raise ValueError(
+            f"{path} is a S3DBSP/stochastic-BSP data path. "
+            "Use the Fontaine & Minner OR 2023 3D-BPP data path instead."
+        )
+
 
 class PerminParser:
     def __init__(self, packages_file):
@@ -29,10 +45,8 @@ class PerminParser:
         tree = ET.parse(xml_file)
         root = tree.getroot()
         
-        # Determine container dimensions from filename or default
-        # In S3DBSP, container is often ID 89 (120x120x120) or derived from problem context
-        # For evaluation, we'll assume the standard vehicle/bin used in our MILP: 60x25x30
-        # unless the paper specified otherwise.
+        # The container/package dimensions are attached later when the candidate
+        # package is chosen for the BPP feasibility task.
         
         all_orders = []
         orders_node = root.find('orders')
@@ -132,15 +146,30 @@ def calculate_base40_features(items, v_l=60.0, v_w=25.0, v_h=30.0):
     return res
 
 def main():
-    PACKAGES_PATH = "S3DBSP-main/performanceTest/packages.txt"
-    XML_DIR = "S3DBSP-main/performanceTest"
-    OUTPUT_CSV = "permin_dataset_processing/processed_features/permin_base40_features.csv"
+    cli = argparse.ArgumentParser()
+    cli.add_argument("--packages-path", type=Path, default=OR2023_BPP_PACKAGES)
+    cli.add_argument("--xml-dir", type=Path, default=OR2023_BPP_XML_DIR)
+    cli.add_argument("--xml-glob", default="*.xml")
+    cli.add_argument(
+        "--output-csv",
+        type=Path,
+        default=Path("permin_dataset_processing/processed_features/or2023_bpp_base40_features.csv"),
+    )
+    cli.add_argument(
+        "--allow-bsp-derived-data",
+        action="store_true",
+        help="Legacy escape hatch: allow S3DBSP/stochastic-BSP paths for audits only.",
+    )
+    args = cli.parse_args()
+    reject_bsp_derived_path(args.packages_path, args.allow_bsp_derived_data)
+    reject_bsp_derived_path(args.xml_dir, args.allow_bsp_derived_data)
     
-    parser = PerminParser(PACKAGES_PATH)
+    parser = PerminParser(args.packages_path)
     all_features = []
     
-    # Iterate through XML instances (let's start with O6 baseline)
-    xml_files = sorted(Path(XML_DIR).glob("BSP_100_O6_*.xml"))
+    xml_files = sorted(args.xml_dir.glob(args.xml_glob))
+    if not xml_files:
+        raise ValueError(f"No XML files matched {args.xml_glob!r} in {args.xml_dir}")
     
     for xml_file in xml_files:
         logger.info(f"Processing {xml_file.name}...")
@@ -154,8 +183,9 @@ def main():
                 all_features.append(feats)
                 
     df_final = pd.DataFrame(all_features)
-    df_final.to_csv(OUTPUT_CSV, index=False)
-    logger.info(f"Saved {len(df_final)} instances to {OUTPUT_CSV}")
+    args.output_csv.parent.mkdir(parents=True, exist_ok=True)
+    df_final.to_csv(args.output_csv, index=False)
+    logger.info(f"Saved {len(df_final)} instances to {args.output_csv}")
 
 if __name__ == "__main__":
     main()

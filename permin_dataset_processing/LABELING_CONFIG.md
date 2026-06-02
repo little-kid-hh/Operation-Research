@@ -1,7 +1,21 @@
-# Permin MILP Labeling Configuration
+# OR 2023 BPP MILP Labeling Configuration
 
-This file records the formal labeling contract for the Permin/S3DBSP
-loadability dataset.
+This file records the labeling contract for the Fontaine & Minner OR 2023
+3D-BPP loadability dataset.
+
+## Scope
+
+Target paper:
+
+```text
+Pirmin Fontaine, Stefan Minner (2023)
+A Branch-and-Repair Method for Three-Dimensional Bin Selection and Packing in E-Commerce
+Operations Research 71(1):273-288
+DOI: 10.1287/opre.2022.2369
+```
+
+The current project should not default to the later `S3DBSP-main` stochastic
+BSP data. Those files are legacy/debug data unless explicitly marked otherwise.
 
 ## Label Unit
 
@@ -16,20 +30,45 @@ single candidate package.
 
 ## Raw Inputs
 
-- Orders: `S3DBSP-main/performanceTest/*.xml`
-- Candidate packages: `S3DBSP-main/performanceTest/packages.txt`
-- Package format: `package_id length width height`
-- Order item format: XML `order -> item -> p, q, r`
-
-By default, labeling should use only base performance instances matching:
+Expected local staging path:
 
 ```text
-BSP_<n>_O6_<seed>.xml
+or2023_bpp_data/
+  xml/
+  packages.txt
 ```
 
-Scenario/demand variants such as `BSP_100_O6_0_2_5.xml` should not be mixed
-into the base loadability dataset unless we explicitly decide to label that
-scenario-aware setting.
+Package format:
+
+```text
+package_id length width height
+```
+
+Order item format:
+
+```text
+XML order -> item -> p, q, r
+```
+
+If the OR 2023 e-companion uses a different folder or XML naming convention,
+pass it explicitly via `--xml-dir`, `--packages-path`, and `--xml-name-regex`.
+
+## BSP-Derived Data Guard
+
+Scripts reject paths containing `S3DBSP-main` by default. This prevents new
+labeling/evaluation runs from silently indexing the stochastic BSP data package.
+
+Only use the escape hatch for legacy audits:
+
+```powershell
+--allow-bsp-derived-data
+```
+
+or:
+
+```powershell
+-AllowBspDerivedData
+```
 
 ## Task Export
 
@@ -45,7 +84,7 @@ Default output:
 permin_dataset_processing/milp_labels/labeling_tasks.csv
 ```
 
-The expected columns are:
+Expected columns:
 
 ```text
 instance_name,order_id,package_id,package_l,package_w,package_h,item_count,item_volume_sum,items_json
@@ -53,32 +92,40 @@ instance_name,order_id,package_id,package_l,package_w,package_h,item_count,item_
 
 ## Solver Contract
 
-The trusted MILP implementation should consume `labeling_tasks.csv` or an
-equivalent `(order, package)` task stream and emit:
+The trusted MILP implementation consumes an `(order, package)` task stream and
+emits:
 
 ```text
 instance_name,order_id,package_id,orientation_mode,solver_status,feasible,runtime_sec
 ```
 
-The orientation modes and all geometry constraints must follow the trusted
-MILP implementation, not the smoke-test implementation.
-
-## Current Status
-
-`MILP_3DBPP` has been committed as a regular directory in this repository.
-The package-aware label generator is:
+The current package label generator is:
 
 ```text
 MILP_3DBPP/src/main/java/org/example/GeneratePerminPackageLabels.java
 ```
 
-Full base-instance package labeling produced:
+It now requires explicit data arguments:
 
-```text
-permin_dataset_processing/milp_labels/ground_truth_package_labels.csv
+```powershell
+java -cp "<gurobi-and-project-classpath>" org.example.GeneratePerminPackageLabels or2023_bpp_data\xml or2023_bpp_data\packages.txt permin_dataset_processing\milp_labels\or2023_bpp_package_labels.csv
 ```
 
-The generated task table and labeled feature matrices are intentionally
-reproducible artifacts. They can be regenerated with the scripts in this
-directory and are excluded from Git when they are too large for convenient
-GitHub storage.
+The MILP non-overlap constraints should remain aligned with the normalized
+Fontaine-Minner formulation unless a paper-level model review says otherwise.
+
+The default solver time limit is 300 seconds for both orientation modes. A
+feasible solution found before the limit is a positive label; proven infeasible
+is a negative label; a time limit with no feasible solution is `-1` and remains
+unknown for ML training/evaluation.
+
+## Evaluation Contract
+
+ML evaluation must use an OR 2023 BPP labeled feature matrix, defaulting to:
+
+```text
+permin_dataset_processing/processed_features/or2023_bpp_labeled_base40_package.csv
+```
+
+The evaluation split defaults to instance-level grouping to avoid train/test
+leakage across orders from the same XML instance.

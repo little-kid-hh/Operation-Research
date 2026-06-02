@@ -1,0 +1,18 @@
+<?xml version='1.0' encoding='utf-8'?>
+<instance>
+  <norder>1</norder>
+  <orders>
+    <order id="0">
+      <item id="0">
+        <p>26</p>
+        <q>19</q>
+        <r>10</r>
+      </item>
+      <item id="1">
+        <p>22</p>
+        <q>17</q>
+        <r>10</r>
+      </item>
+    </order>
+  </orders>
+</instance>

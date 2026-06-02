@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class GeneratePerminPackageLabels {
-    private static final Pattern BASE_PERFORMANCE_XML = Pattern.compile("^BSP_\\d+_O6_\\d+\\.xml$");
+    private static final Pattern DEFAULT_XML_PATTERN = Pattern.compile(".*\\.xml$");
 
     private static class PackageType {
         final int id;
@@ -57,17 +57,26 @@ public class GeneratePerminPackageLabels {
     }
 
     public static void main(String[] args) throws Exception {
-        Path xmlDir = args.length > 0 ? Path.of(args[0]) : Path.of("S3DBSP-main/performanceTest");
-        Path packagesPath = args.length > 1 ? Path.of(args[1]) : Path.of("S3DBSP-main/performanceTest/packages.txt");
-        Path outputPath = args.length > 2 ? Path.of(args[2]) : Path.of("permin_dataset_processing/milp_labels/ground_truth_package_labels.csv");
+        if (args.length < 3) {
+            throw new IllegalArgumentException(
+                    "Usage: GeneratePerminPackageLabels <or2023_bpp_xml_dir> <packages_path> <output_csv> "
+                            + "[maxXml] [maxOrdersPerXml] [maxPackages] [xmlNameRegex] [startGlobalTask] [maxTasks] "
+                            + "[allowBspDerivedData]");
+        }
+        Path xmlDir = Path.of(args[0]);
+        Path packagesPath = Path.of(args[1]);
+        Path outputPath = Path.of(args[2]);
         int maxXml = args.length > 3 ? Integer.parseInt(args[3]) : -1;
         int maxOrdersPerXml = args.length > 4 ? Integer.parseInt(args[4]) : -1;
         int maxPackages = args.length > 5 ? Integer.parseInt(args[5]) : -1;
-        boolean includeVariants = args.length > 6 && Boolean.parseBoolean(args[6]);
+        Pattern xmlNamePattern = args.length > 6 ? Pattern.compile(args[6]) : DEFAULT_XML_PATTERN;
         long startGlobalTask = args.length > 7 ? Long.parseLong(args[7]) : 0L;
         long maxTasks = args.length > 8 ? Long.parseLong(args[8]) : -1L;
+        boolean allowBspDerivedData = args.length > 9 && Boolean.parseBoolean(args[9]);
+        rejectBspDerivedPath(xmlDir, allowBspDerivedData);
+        rejectBspDerivedPath(packagesPath, allowBspDerivedData);
 
-        List<Path> xmlFiles = selectXmlFiles(xmlDir, includeVariants);
+        List<Path> xmlFiles = selectXmlFiles(xmlDir, xmlNamePattern);
         List<PackageType> packages = readPackages(packagesPath);
         if (maxXml > 0 && maxXml < xmlFiles.size()) {
             xmlFiles = xmlFiles.subList(0, maxXml);
@@ -131,11 +140,24 @@ public class GeneratePerminPackageLabels {
         }
     }
 
-    private static List<Path> selectXmlFiles(Path xmlDir, boolean includeVariants) throws Exception {
+    private static void rejectBspDerivedPath(Path path, boolean allowBspDerivedData) {
+        if (allowBspDerivedData) {
+            return;
+        }
+        String normalized = path.toString().replace("\\", "/").toLowerCase();
+        if (normalized.contains("s3dbsp-main")) {
+            throw new IllegalArgumentException(
+                    "Refusing S3DBSP/stochastic-BSP data path. "
+                            + "Use the Fontaine & Minner OR 2023 3D-BPP e-companion data path, "
+                            + "or pass allowBspDerivedData=true only for legacy audits: " + path);
+        }
+    }
+
+    private static List<Path> selectXmlFiles(Path xmlDir, Pattern xmlNamePattern) throws Exception {
         try (var stream = Files.list(xmlDir)) {
             return stream
                     .filter(path -> path.getFileName().toString().endsWith(".xml"))
-                    .filter(path -> includeVariants || BASE_PERFORMANCE_XML.matcher(path.getFileName().toString()).matches())
+                    .filter(path -> xmlNamePattern.matcher(path.getFileName().toString()).matches())
                     .sorted(Comparator.comparing(path -> path.getFileName().toString()))
                     .collect(Collectors.toList());
         }

@@ -1,0 +1,48 @@
+<?xml version='1.0' encoding='utf-8'?>
+<instance>
+  <norder>1</norder>
+  <orders>
+    <order id="0">
+      <item id="0">
+        <p>23</p>
+        <q>21</q>
+        <r>18</r>
+      </item>
+      <item id="1">
+        <p>22</p>
+        <q>22</q>
+        <r>16</r>
+      </item>
+      <item id="2">
+        <p>44</p>
+        <q>30</q>
+        <r>8</r>
+      </item>
+      <item id="3">
+        <p>35</p>
+        <q>13</q>
+        <r>13</r>
+      </item>
+      <item id="4">
+        <p>43</p>
+        <q>20</q>
+        <r>11</r>
+      </item>
+      <item id="5">
+        <p>28</p>
+        <q>16</q>
+        <r>14</r>
+      </item>
+      <item id="6">
+        <p>30</p>
+        <q>30</q>
+        <r>7</r>
+      </item>
+      <item id="7">
+        <p>30</p>
+        <q>20</q>
+        <r>20</r>
+      </item>
+    </order>
+  </orders>
+</instance>

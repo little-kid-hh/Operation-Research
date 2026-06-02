@@ -6,6 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class MILP_Loading_2orientations {
+    private static double timeLimitSeconds() {
+        return Double.parseDouble(System.getProperty("or2023.bpp.timeLimit2ori", "300.0"));
+    }
+
     public static int MILP_single_box(List<Double> L_Packages,
                                       List<Double> parcel_p,
                                       List<Double> parcel_q,
@@ -13,15 +17,16 @@ public class MILP_Loading_2orientations {
                                       List<List<Double>> myPackages,
                                       int boxNumbers){
 
+        GRBEnv env = null;
+        GRBModel model = null;
         try {
             // 定义模型
-            GRBEnv env = new GRBEnv(true);
+            env = new GRBEnv(true);
             env.set("OutputFlag", "0"); // 设置输出参数为0，禁止输出详细信息
             env.start();
-            GRBModel model = new GRBModel(env);
+            model = new GRBModel(env);
 
-            // 设置时间上限为 60 秒
-            model.set(GRB.DoubleParam.TimeLimit, 2.0);
+            model.set(GRB.DoubleParam.TimeLimit, timeLimitSeconds());
             model.set(GRB.IntParam.PoolSearchMode,1);
             model.set(GRB.IntParam.PoolSolutions, 1);
             
@@ -215,7 +220,7 @@ public class MILP_Loading_2orientations {
             }
 
 
-            // Logic constraints
+            // Logic constraints from the Fontaine-Minner normalized MILP form.
             for (int i = 0; i < numParcels; ++i) {
                 for (int k = 0; k < numParcels; ++k) {
                     GRBLinExpr expr1 = new GRBLinExpr();
@@ -344,10 +349,21 @@ public class MILP_Loading_2orientations {
         } catch (GRBException e) {
             System.err.println("Error code = " + e.getErrorCode());
             System.err.println(e.getMessage());
-            return -1;
+            throw new RuntimeException("Gurobi failed while solving 2-orientation MILP", e);
         } catch (Exception e) {
             System.err.println("Exception during optimization");
-            return -1;
+            throw new RuntimeException("Failed while solving 2-orientation MILP", e);
+        } finally {
+            if (model != null) {
+                model.dispose();
+            }
+            if (env != null) {
+                try {
+                    env.dispose();
+                } catch (GRBException e) {
+                    System.err.println("Failed to dispose Gurobi environment: " + e.getMessage());
+                }
+            }
         }
 
 

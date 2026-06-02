@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Build the 111-feature Permin dataset for the feature-engineered SVM."""
+"""Build the 111-feature OR 2023 3D-BPP dataset for the feature-engineered SVM."""
 
 from __future__ import annotations
 
@@ -14,7 +14,9 @@ import numpy as np
 import pandas as pd
 
 
-BASE_PERFORMANCE_RE = re.compile(r"^BSP_\d+_O6_\d+\.xml$")
+OR2023_BPP_XML_DIR = Path("or2023_bpp_data/xml")
+DEFAULT_XML_RE = re.compile(r".*\.xml$")
+S3DBSP_PATH_MARKER = "S3DBSP-main"
 PACK_ROOT = Path("research/loadability_model_pack_20260526_v2")
 FE_SCRIPT = PACK_ROOT / "feature_engineering" / "build_active_bank.py"
 FE_MODEL_JSON = PACK_ROOT / "models" / "svm_feature_engineered" / "linear_svm_fe_20260526.json"
@@ -30,10 +32,21 @@ def load_build_active_bank():
     return mod.build_active_bank
 
 
-def read_order_items(xml_dir: Path) -> pd.DataFrame:
+def reject_bsp_derived_path(path: Path, allow_bsp_derived_data: bool) -> None:
+    if allow_bsp_derived_data:
+        return
+    if S3DBSP_PATH_MARKER.lower() in str(path).replace("\\", "/").lower():
+        raise ValueError(
+            f"{path} is a S3DBSP/stochastic-BSP data path. "
+            "Use the Fontaine & Minner OR 2023 3D-BPP data path instead."
+        )
+
+
+def read_order_items(xml_dir: Path, xml_name_regex: str) -> pd.DataFrame:
     rows = []
+    pattern = re.compile(xml_name_regex)
     for xml_path in sorted(xml_dir.glob("*.xml")):
-        if not BASE_PERFORMANCE_RE.match(xml_path.name):
+        if not pattern.match(xml_path.name):
             continue
         root = ET.parse(xml_path).getroot()
         orders_node = root.find("orders")
@@ -71,15 +84,26 @@ def main() -> None:
     parser.add_argument(
         "--base-path",
         type=Path,
-        default=Path("permin_dataset_processing/processed_features/permin_labeled_base40_package.csv"),
+        default=Path("permin_dataset_processing/processed_features/or2023_bpp_labeled_base40_package.csv"),
     )
-    parser.add_argument("--xml-dir", type=Path, default=Path("S3DBSP-main/performanceTest"))
+    parser.add_argument("--xml-dir", type=Path, default=OR2023_BPP_XML_DIR)
+    parser.add_argument(
+        "--xml-name-regex",
+        default=DEFAULT_XML_RE.pattern,
+        help="Regex for OR 2023 BPP XML file names. Defaults to all XML files.",
+    )
+    parser.add_argument(
+        "--allow-bsp-derived-data",
+        action="store_true",
+        help="Legacy escape hatch: allow S3DBSP/stochastic-BSP paths for audits only.",
+    )
     parser.add_argument(
         "--output-path",
         type=Path,
-        default=Path("permin_dataset_processing/processed_features/permin_labeled_fe111_package.csv"),
+        default=Path("permin_dataset_processing/processed_features/or2023_bpp_labeled_fe111_package.csv"),
     )
     args = parser.parse_args()
+    reject_bsp_derived_path(args.xml_dir, args.allow_bsp_derived_data)
 
     base_df = pd.read_csv(args.base_path)
     base_df = base_df.reset_index(drop=True)
@@ -89,7 +113,9 @@ def main() -> None:
         base_df["vehicle_length"] * base_df["vehicle_width"] * base_df["vehicle_height"]
     )
 
-    order_items = read_order_items(args.xml_dir)
+    order_items = read_order_items(args.xml_dir, args.xml_name_regex)
+    if order_items.empty:
+        raise ValueError(f"No item rows found in {args.xml_dir} matching {args.xml_name_regex!r}")
     items_df = base_df[
         [
             "dispatch_id",

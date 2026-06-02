@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Cross-validate baseline ML models on the Permin package-aware dataset."""
+"""Cross-validate baseline ML models on the OR 2023 3D-BPP package-aware dataset."""
 
 from __future__ import annotations
 
@@ -42,18 +42,26 @@ ID_COLS = {
 
 
 def metric_bundle(y_true: np.ndarray, y_pred: np.ndarray, y_score: np.ndarray) -> dict[str, Any]:
-    tn, fp, fn, tp = confusion_matrix(y_true, y_pred).ravel()
+    tn, fp, fn, tp = confusion_matrix(y_true, y_pred, labels=[0, 1]).ravel()
     fpr = fp / (fp + tn) if (fp + tn) > 0 else 0.0
     fnr = fn / (fn + tp) if (fn + tp) > 0 else 0.0
-    fpr_arr, tpr_arr, thresh = roc_curve(y_true, y_score)
-    idx = int(np.argmin(np.abs(fpr_arr - 0.01)))
+    if len(np.unique(y_true)) == 2:
+        fpr_arr, tpr_arr, thresh = roc_curve(y_true, y_score)
+        idx = int(np.argmin(np.abs(fpr_arr - 0.01)))
+        auc = float(roc_auc_score(y_true, y_score))
+        tpr_at_fpr1pct = float(tpr_arr[idx])
+        threshold_at_fpr1pct = float(thresh[idx])
+    else:
+        auc = float("nan")
+        tpr_at_fpr1pct = float("nan")
+        threshold_at_fpr1pct = float("nan")
     return {
         "accuracy": float(accuracy_score(y_true, y_pred)),
         "precision": float(precision_score(y_true, y_pred, zero_division=0)),
         "recall": float(recall_score(y_true, y_pred, zero_division=0)),
-        "auc": float(roc_auc_score(y_true, y_score)),
-        "tpr_at_fpr1pct": float(tpr_arr[idx]),
-        "threshold_at_fpr1pct": float(thresh[idx]),
+        "auc": auc,
+        "tpr_at_fpr1pct": tpr_at_fpr1pct,
+        "threshold_at_fpr1pct": threshold_at_fpr1pct,
         "tn": int(tn),
         "fp": int(fp),
         "fn": int(fn),
@@ -126,11 +134,12 @@ def summarize(df: pd.DataFrame) -> dict[str, Any]:
     out: dict[str, Any] = {}
     for col in ["accuracy", "precision", "recall", "auc", "tpr_at_fpr1pct", "fpr", "fnr"]:
         vals = df[col].to_numpy(dtype=float)
+        valid = vals[~np.isnan(vals)]
         out[col] = {
-            "mean": float(np.mean(vals)),
-            "std": float(np.std(vals, ddof=1)) if len(vals) > 1 else 0.0,
-            "min": float(np.min(vals)),
-            "max": float(np.max(vals)),
+            "mean": float(np.mean(valid)) if len(valid) else float("nan"),
+            "std": float(np.std(valid, ddof=1)) if len(valid) > 1 else 0.0,
+            "min": float(np.min(valid)) if len(valid) else float("nan"),
+            "max": float(np.max(valid)) if len(valid) else float("nan"),
         }
     return out
 
@@ -140,9 +149,18 @@ def main() -> None:
     parser.add_argument(
         "--data-path",
         type=Path,
-        default=Path("permin_dataset_processing/processed_features/permin_labeled_base40_package.csv"),
+        default=Path("permin_dataset_processing/processed_features/or2023_bpp_labeled_base40_package.csv"),
     )
     parser.add_argument("--target", choices=["label_2ori", "label_6ori"], default="label_6ori")
+    parser.add_argument(
+        "--group-level",
+        choices=["order", "instance"],
+        default="instance",
+        help=(
+            "Group split level. 'order' keeps all packages for one order together; "
+            "'instance' holds out complete XML instances for stricter leakage checks."
+        ),
+    )
     parser.add_argument("--n-splits", type=int, default=5)
     parser.add_argument("--random-state", type=int, default=42)
     parser.add_argument("--quick", action="store_true")
@@ -163,7 +181,12 @@ def main() -> None:
     feature_cols = [c for c in df.columns if c not in ID_COLS]
     x = df[feature_cols].to_numpy(dtype=float)
     y = df[args.target].to_numpy(dtype=int)
-    groups = (df["instance_name"].astype(str) + "::" + df["order_id"].astype(str)).to_numpy()
+    if args.group_level == "instance":
+        groups = df["instance_name"].astype(str).to_numpy()
+        group_description = "instance_name"
+    else:
+        groups = (df["instance_name"].astype(str) + "::" + df["order_id"].astype(str)).to_numpy()
+        group_description = "instance_name::order_id"
 
     cv = StratifiedGroupKFold(n_splits=args.n_splits, shuffle=True, random_state=args.random_state)
     models = make_models(args.random_state, args.quick)
@@ -180,6 +203,11 @@ def main() -> None:
     fold_rows = []
     for model_name, model in models.items():
         for fold_id, (train_idx, test_idx) in enumerate(cv.split(x, y, groups), start=1):
+            train_groups = set(groups[train_idx])
+            test_groups = set(groups[test_idx])
+            overlap = train_groups.intersection(test_groups)
+            if overlap:
+                raise RuntimeError(f"Group leakage detected in fold {fold_id}: {len(overlap)} overlapping groups")
             model.fit(x[train_idx], y[train_idx])
             score = score_model(model, x[test_idx])
             pred = (score >= 0.5).astype(int) if model_name not in {"linear_svm"} else (score >= 0.0).astype(int)
@@ -212,7 +240,8 @@ def main() -> None:
         "cv": {
             "type": "StratifiedGroupKFold",
             "n_splits": int(args.n_splits),
-            "group": "instance_name::order_id",
+            "group_level": args.group_level,
+            "group": group_description,
             "random_state": int(args.random_state),
         },
         "models": {},
