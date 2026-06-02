@@ -17,6 +17,13 @@ DOI: 10.1287/opre.2022.2369
 The current project should not default to the later `S3DBSP-main` stochastic
 BSP data. Those files are legacy/debug data unless explicitly marked otherwise.
 
+For repository-wide data usage rules, including the difference between the OR
+2023 BPP benchmark and OR 2023 BSP/design XML track, see:
+
+```text
+DATA_USAGE.md
+```
+
 ## Label Unit
 
 One label row is one tuple:
@@ -27,6 +34,23 @@ One label row is one tuple:
 
 The label answers whether all items in that order can be packed into that
 single candidate package.
+
+For BSP labels, `order_id` in
+`permin_dataset_processing/milp_labels/or2023_bsp_unique_package_labels.csv`
+is the deduplicated `geom_id`, not the original XML order id. Recover original
+BSP `(instance_name, order_id)` rows by joining to:
+
+```text
+or2023_bsp_data/order_geometry_map.csv
+```
+
+When reconstructing expanded BSP labels, rename the label file's `instance_name`
+to `label_source_xml` before merging. The original BSP XML file name comes from
+`order_geometry_map.csv`.
+
+BSP geometry deduplication ignores item order but preserves each item's
+`(p, q, r)` axis naming. This is safe for MILP feasibility because item indices
+are symmetric, while the two-orientation height axis remains explicit.
 
 ## Raw Inputs
 

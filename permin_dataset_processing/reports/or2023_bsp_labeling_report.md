@@ -132,8 +132,16 @@ import pandas as pd
 
 mapping = pd.read_csv("or2023_bsp_data/order_geometry_map.csv")
 labels = pd.read_csv("permin_dataset_processing/milp_labels/or2023_bsp_unique_package_labels.csv")
-labels = labels.rename(columns={"order_id": "geom_id"})
+labels = labels.rename(columns={"order_id": "geom_id", "instance_name": "label_source_xml"})
 expanded = mapping.merge(labels, on="geom_id", how="left")
 ```
 
 The resulting `expanded` table has 13,500,000 rows.
+
+In the expanded table, `instance_name` and `order_id` from `mapping` identify the
+original BSP XML order. `label_source_xml` identifies only the deduplicated XML
+file used for MILP labeling.
+
+The geometry key ignores item order but preserves each item's `(p, q, r)` axis
+naming. This keeps two-orientation labels semantically valid: item height is not
+deduplicated away or treated as interchangeable with length/width.
