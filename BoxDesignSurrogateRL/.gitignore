@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+results/kandula_repro/run_*/
+results/surrogate_eval/run_*/
+results/surrogate_design/run_*/
+results/surrogate_local_search_smoke.json
