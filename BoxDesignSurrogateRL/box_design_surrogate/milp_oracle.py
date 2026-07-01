@@ -178,7 +178,7 @@ class JavaMilpOracle:
 
     def evaluate(self, orders: list[OrderSummary], boxes: list[Box]) -> MilpBoxSetScore:
         self._validate_environment()
-        self._validate_order_prefix(orders)
+        self._validate_orders_for_xml(orders)
         signature = self._order_signature(orders)
         statuses = np.zeros((len(orders), len(boxes)), dtype=np.int8)
         unknown_boxes: list[Box] = []
@@ -268,14 +268,19 @@ class JavaMilpOracle:
                 "Compile MILP_3DBPP with the Java/Gurobi dependencies first."
             )
 
-    def _validate_order_prefix(self, orders: list[OrderSummary]) -> None:
+    def _validate_orders_for_xml(self, orders: list[OrderSummary]) -> None:
         expected_instance = self.xml_path.name
-        for idx, order in enumerate(orders):
-            if order.instance_name != expected_instance or str(order.order_id) != str(idx):
+        seen: set[str] = set()
+        for order in orders:
+            order_id = str(order.order_id)
+            if order.instance_name != expected_instance:
                 raise ValueError(
-                    "JavaMilpOracle currently supports prefix slices from the unique XML only; "
-                    f"expected ({expected_instance}, {idx}), got ({order.instance_name}, {order.order_id})"
+                    "JavaMilpOracle orders must come from the same XML passed to the Java labeler; "
+                    f"expected instance={expected_instance}, got ({order.instance_name}, {order.order_id})"
                 )
+            if order_id in seen:
+                raise ValueError(f"duplicate order_id in oracle input: {order_id}")
+            seen.add(order_id)
 
     @staticmethod
     def _order_signature(orders: list[OrderSummary]) -> tuple[tuple[str, str], ...]:

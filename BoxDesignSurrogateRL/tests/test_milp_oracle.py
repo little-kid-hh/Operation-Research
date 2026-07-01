@@ -214,16 +214,13 @@ class MilpOracleTest(unittest.TestCase):
             def _validate_environment(self) -> None:
                 return None
 
-            def _validate_order_prefix(self, orders) -> None:
-                return None
-
             def _evaluate_uncached(self, orders, boxes):
                 self.uncached_calls += 1
                 return np.ones((len(orders), len(boxes)), dtype=bool)
 
         orders = [
-            summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)]),
-            summarize_items("toy.xml", "1", [(2.0, 1.0, 1.0)]),
+            summarize_items("toy.xml", "10", [(1.0, 1.0, 1.0)]),
+            summarize_items("toy.xml", "20", [(2.0, 1.0, 1.0)]),
         ]
         oracle = FakeJavaOracle()
         boxes = [Box(0, 2.0, 2.0, 2.0), Box(1, 3.0, 3.0, 3.0)]

@@ -50,8 +50,8 @@ def parse_schedule(value: str) -> list[tuple[float, int]]:
     return schedule
 
 
-def score_rank(score: MilpBoxSetScore) -> tuple[int, float]:
-    return score.uncovered_orders, score.packaging_factor
+def score_rank(score: MilpBoxSetScore) -> tuple[int, int, float]:
+    return score.uncovered_orders, score.unknown_pairs, score.packaging_factor
 
 
 def boxes_to_rows(boxes: list[Box]) -> list[dict[str, float | int]]:
@@ -111,18 +111,20 @@ def best_single_action(
     current: list[Box],
     current_score: MilpBoxSetScore,
     step: float,
-) -> tuple[list[Box], MilpBoxSetScore, str]:
+) -> tuple[list[Box], MilpBoxSetScore, str, int]:
     best_boxes = current
     best_score = current_score
     best_action = "noop"
+    candidate_evaluations = 0
     for move in coordinate_moves(current, step):
         candidate = apply_move(current, move)
+        candidate_evaluations += 1
         score = oracle.evaluate(orders, candidate)
         if score_rank(score) < score_rank(best_score):
             best_boxes = candidate
             best_score = score
             best_action = f"{move.box_id}:{move.dimension}:{move.delta:+.6f}"
-    return best_boxes, best_score, best_action
+    return best_boxes, best_score, best_action, candidate_evaluations
 
 
 def run_fixed_step(
@@ -141,11 +143,12 @@ def run_fixed_step(
             "iteration": 0,
             "step": step,
             "action": "init",
+            "candidate_evaluations": 0,
             **score_to_dict(current_score),
         }
     ]
     for iteration in range(1, iterations + 1):
-        best_boxes, best_score, action = best_single_action(
+        best_boxes, best_score, action, candidate_evaluations = best_single_action(
             oracle=oracle,
             orders=orders,
             current=current,
@@ -160,6 +163,7 @@ def run_fixed_step(
                 "step": step,
                 "action": action,
                 "improved": improved,
+                "candidate_evaluations": candidate_evaluations,
                 **score_to_dict(best_score),
             }
         )
@@ -186,6 +190,7 @@ def run_staged_greedy(
             "stage": 0,
             "step": schedule[0][0],
             "action": "init",
+            "candidate_evaluations": 0,
             **score_to_dict(current_score),
         }
     ]
@@ -193,7 +198,7 @@ def run_staged_greedy(
     for stage_idx, (step, iterations) in enumerate(schedule, start=1):
         for _ in range(iterations):
             global_iteration += 1
-            best_boxes, best_score, action = best_single_action(
+            best_boxes, best_score, action, candidate_evaluations = best_single_action(
                 oracle=oracle,
                 orders=orders,
                 current=current,
@@ -209,6 +214,7 @@ def run_staged_greedy(
                     "step": step,
                     "action": action,
                     "improved": improved,
+                    "candidate_evaluations": candidate_evaluations,
                     **score_to_dict(best_score),
                 }
             )
@@ -233,6 +239,9 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "mean_order_volume",
         "coverage_rate",
         "uncovered_orders",
+        "unknown_pairs",
+        "orders_with_unknown",
+        "candidate_evaluations",
     ]
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
@@ -324,6 +333,8 @@ def main() -> None:
         **manifest,
         "initial_score": trace[0],
         "best_score": score_to_dict(best_score),
+        "trace_rows": len(trace),
+        "candidate_evaluations": int(sum(row.get("candidate_evaluations", 0) for row in trace)),
         "elapsed_seconds": elapsed_seconds,
         "oracle_cache": oracle.cache_info() if hasattr(oracle, "cache_info") else None,
         "run_dir": str(run_dir),
