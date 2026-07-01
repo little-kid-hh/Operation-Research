@@ -20,7 +20,7 @@ if str(ROOT) not in sys.path:
 
 from box_design_surrogate.evaluator import Box
 from box_design_surrogate.features import read_order_summaries
-from box_design_surrogate.kandula_repro import initial_boxes_kmeans
+from box_design_surrogate.kandula_repro import initial_boxes_kmeans, order_requirement
 from box_design_surrogate.milp_oracle import (
     JavaMilpOracle,
     MilpBoxSetScore,
@@ -49,6 +49,15 @@ def parse_schedule(value: str) -> list[tuple[float, int]]:
     if not schedule:
         raise argparse.ArgumentTypeError("schedule must contain at least one step:iters entry")
     return schedule
+
+
+def parse_float_list(value: str) -> list[float]:
+    values = [float(item.strip()) for item in value.split(",") if item.strip()]
+    if not values:
+        raise argparse.ArgumentTypeError("expected at least one float value")
+    if any(value <= 0.0 for value in values):
+        raise argparse.ArgumentTypeError("all float-list values must be positive")
+    return values
 
 
 def score_rank(score: MilpBoxSetScore) -> tuple[int, int, float]:
@@ -129,6 +138,91 @@ def make_oracle(args: argparse.Namespace) -> BoxSetOracle:
     )
 
 
+def replace_box(boxes: list[Box], replacement: Box) -> list[Box]:
+    return [replacement if box.box_id == replacement.box_id else box for box in boxes]
+
+
+def expand_box_for_order(box: Box, order, margin: float) -> Box:
+    req_l, req_m, req_s, total_volume = order_requirement(order)
+    length = max(box.length, req_l * margin)
+    width = max(box.width, req_m * margin)
+    height = max(box.height, req_s * margin)
+    target_volume = total_volume * (margin**3)
+    volume = length * width * height
+    if volume < target_volume:
+        scale = float((target_volume / volume) ** (1.0 / 3.0))
+        length *= scale
+        width *= scale
+        height *= scale
+    return Box(box.box_id, float(length), float(width), float(height))
+
+
+def same_box_dimensions(left: Box, right: Box, tolerance: float = 1e-9) -> bool:
+    return (
+        abs(left.length - right.length) <= tolerance
+        and abs(left.width - right.width) <= tolerance
+        and abs(left.height - right.height) <= tolerance
+    )
+
+
+def repair_coverage_by_expansion(
+    *,
+    oracle: BoxSetOracle,
+    orders: list,
+    boxes: list[Box],
+    initial_score: MilpBoxSetScore,
+    margins: list[float],
+    max_rounds: int,
+) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
+    current = sorted(boxes, key=lambda b: b.box_id)
+    current_score = initial_score
+    trace: list[dict] = []
+    for repair_round in range(1, max_rounds + 1):
+        if current_score.uncovered_orders == 0:
+            break
+
+        best_boxes = current
+        best_score = current_score
+        best_action = "noop"
+        candidate_evaluations = 0
+        uncovered_indices = [idx for idx, assignment in enumerate(current_score.assignments) if assignment is None]
+        for order_idx in uncovered_indices:
+            order = orders[order_idx]
+            for box in current:
+                for margin in margins:
+                    replacement = expand_box_for_order(box, order, margin)
+                    if same_box_dimensions(box, replacement):
+                        continue
+                    candidate = replace_box(current, replacement)
+                    candidate_evaluations += 1
+                    score = oracle.evaluate(orders, candidate)
+                    if score_rank(score) < score_rank(best_score):
+                        best_boxes = candidate
+                        best_score = score
+                        best_action = (
+                            f"order={order.order_id};box={box.box_id};"
+                            f"margin={margin:.6f}"
+                        )
+
+        improved = score_rank(best_score) < score_rank(current_score)
+        trace.append(
+            {
+                "phase": "coverage_repair",
+                "repair_round": repair_round,
+                "iteration": 0,
+                "action": best_action,
+                "improved": improved,
+                "candidate_evaluations": candidate_evaluations,
+                **score_to_dict(best_score),
+            }
+        )
+        if not improved:
+            break
+        current = best_boxes
+        current_score = best_score
+    return sorted(current, key=lambda b: b.volume), current_score, trace
+
+
 def best_single_action(
     *,
     oracle: BoxSetOracle,
@@ -159,12 +253,14 @@ def run_fixed_step(
     boxes: list[Box],
     step: float,
     iterations: int,
+    initial_score: MilpBoxSetScore | None = None,
+    initial_phase: str = "initial",
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
-    current_score = oracle.evaluate(orders, current)
+    current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
     trace = [
         {
-            "phase": "initial",
+            "phase": initial_phase,
             "iteration": 0,
             "step": step,
             "action": "init",
@@ -205,12 +301,14 @@ def run_staged_greedy(
     orders: list,
     boxes: list[Box],
     schedule: list[tuple[float, int]],
+    initial_score: MilpBoxSetScore | None = None,
+    initial_phase: str = "initial",
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
-    current_score = oracle.evaluate(orders, current)
+    current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
     trace = [
         {
-            "phase": "initial",
+            "phase": initial_phase,
             "iteration": 0,
             "stage": 0,
             "step": schedule[0][0],
@@ -255,6 +353,7 @@ def write_trace(path: Path, trace: list[dict]) -> None:
     fieldnames = [
         "phase",
         "stage",
+        "repair_round",
         "iteration",
         "step",
         "action",
@@ -299,6 +398,13 @@ def main() -> None:
     parser.add_argument("--allow-bsp-derived-data", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--oracle-cache-dir", type=Path, default=None)
     parser.add_argument("--out-root", type=Path, default=ROOT / "results/milp_box_algorithms")
+    parser.add_argument("--coverage-repair", choices=["none", "geometric_expand"], default="none")
+    parser.add_argument(
+        "--repair-margins",
+        type=parse_float_list,
+        default=parse_float_list("1.0,1.05,1.1,1.25,1.5,2.0"),
+    )
+    parser.add_argument("--repair-max-rounds", type=int, default=5)
     parser.add_argument(
         "--code-version",
         default=None,
@@ -308,6 +414,8 @@ def main() -> None:
 
     if args.iterations < 0:
         raise ValueError("--iterations must be non-negative")
+    if args.repair_max_rounds < 0:
+        raise ValueError("--repair-max-rounds must be non-negative")
     if args.orders_limit is not None and args.orders_limit < args.k:
         raise ValueError("--orders-limit must be >= --k for k-means initialization")
 
@@ -337,6 +445,9 @@ def main() -> None:
         "java_classes": str(args.java_classes),
         "java_classpath_extra": args.java_classpath,
         "milp_time_limit_seconds": args.milp_time_limit_seconds,
+        "coverage_repair": args.coverage_repair,
+        "repair_margins": args.repair_margins,
+        "repair_max_rounds": args.repair_max_rounds,
         "code_version": args.code_version,
         "git": git_info(REPO_ROOT),
     }
@@ -344,26 +455,63 @@ def main() -> None:
     write_json(run_dir / "initial_boxes.json", boxes_to_rows(initial_boxes))
 
     started = time.perf_counter()
+    pre_search_trace: list[dict] = []
+    search_boxes = initial_boxes
+    search_initial_score: MilpBoxSetScore | None = None
+    if args.coverage_repair != "none":
+        raw_initial_score = oracle.evaluate(orders, search_boxes)
+        pre_search_trace.append(
+            {
+                "phase": "initial",
+                "iteration": 0,
+                "action": "init",
+                "candidate_evaluations": 0,
+                **score_to_dict(raw_initial_score),
+            }
+        )
+        if args.coverage_repair == "geometric_expand":
+            search_boxes, search_initial_score, repair_trace = repair_coverage_by_expansion(
+                oracle=oracle,
+                orders=orders,
+                boxes=search_boxes,
+                initial_score=raw_initial_score,
+                margins=args.repair_margins,
+                max_rounds=args.repair_max_rounds,
+            )
+            pre_search_trace.extend(repair_trace)
+        else:
+            raise ValueError(f"unknown coverage repair mode: {args.coverage_repair}")
+
     if args.algorithm == "paper_fixed_step":
-        best_boxes, best_score, trace = run_fixed_step(
+        best_boxes, best_score, search_trace = run_fixed_step(
             oracle=oracle,
             orders=orders,
-            boxes=initial_boxes,
+            boxes=search_boxes,
             step=args.fixed_step,
             iterations=args.iterations,
+            initial_score=search_initial_score,
+            initial_phase="search_initial" if pre_search_trace else "initial",
         )
     else:
-        best_boxes, best_score, trace = run_staged_greedy(
+        best_boxes, best_score, search_trace = run_staged_greedy(
             oracle=oracle,
             orders=orders,
-            boxes=initial_boxes,
+            boxes=search_boxes,
             schedule=args.schedule,
+            initial_score=search_initial_score,
+            initial_phase="search_initial" if pre_search_trace else "initial",
         )
+    trace = pre_search_trace + search_trace
     elapsed_seconds = time.perf_counter() - started
+
+    repair_rows = [row for row in trace if row.get("phase") == "coverage_repair"]
+    search_initial_rows = [row for row in trace if row.get("phase") in {"search_initial", "initial"}]
 
     summary = {
         **manifest,
         "initial_score": trace[0],
+        "search_initial_score": search_initial_rows[-1] if search_initial_rows else trace[0],
+        "coverage_repair_score": repair_rows[-1] if repair_rows else None,
         "best_score": score_to_dict(best_score),
         "trace_rows": len(trace),
         "candidate_evaluations": int(sum(row.get("candidate_evaluations", 0) for row in trace)),

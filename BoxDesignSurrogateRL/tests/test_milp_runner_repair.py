@@ -1,0 +1,67 @@
+from __future__ import annotations
+
+import importlib.util
+import unittest
+from pathlib import Path
+
+import numpy as np
+
+from box_design_surrogate.evaluator import Box
+from box_design_surrogate.features import summarize_items
+from box_design_surrogate.milp_oracle import score_milp_feasibility_matrix
+
+
+def _load_runner_module():
+    root = Path(__file__).resolve().parents[1]
+    module_path = root / "scripts" / "run_milp_box_algorithms.py"
+    spec = importlib.util.spec_from_file_location("run_milp_box_algorithms", module_path)
+    module = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(module)
+    return module
+
+
+class AggregateOracle:
+    def evaluate(self, orders, boxes):
+        feasible = []
+        for order in orders:
+            row = []
+            for box in boxes:
+                row.append(
+                    max(order.dim_l) <= box.length
+                    and max(order.dim_m) <= box.width
+                    and max(order.dim_s) <= box.height
+                    and order.total_volume <= box.volume
+                )
+            feasible.append(row)
+        return score_milp_feasibility_matrix(orders, boxes, np.asarray(feasible, dtype=bool))
+
+
+class MilpRunnerRepairTest(unittest.TestCase):
+    def test_geometric_repair_can_remove_uncovered_order(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(2.0, 2.0, 2.0)])]
+        boxes = [Box(0, 1.0, 1.0, 1.0)]
+        oracle = AggregateOracle()
+        initial_score = oracle.evaluate(orders, boxes)
+
+        repaired_boxes, repaired_score, trace = runner.repair_coverage_by_expansion(
+            oracle=oracle,
+            orders=orders,
+            boxes=boxes,
+            initial_score=initial_score,
+            margins=[1.0],
+            max_rounds=1,
+        )
+
+        self.assertEqual(initial_score.uncovered_orders, 1)
+        self.assertEqual(repaired_score.uncovered_orders, 0)
+        self.assertEqual(len(trace), 1)
+        self.assertEqual(trace[0]["phase"], "coverage_repair")
+        self.assertTrue(trace[0]["improved"])
+        self.assertEqual(trace[0]["candidate_evaluations"], 1)
+        self.assertEqual((repaired_boxes[0].length, repaired_boxes[0].width, repaired_boxes[0].height), (2.0, 2.0, 2.0))
+
+
+if __name__ == "__main__":
+    unittest.main()

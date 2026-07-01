@@ -34,6 +34,9 @@ def load_run(path: Path) -> dict[str, Any]:
         "git_commit": git.get("commit"),
         "git_branch": git.get("branch"),
         "git_dirty": git.get("dirty"),
+        "coverage_repair": summary.get("coverage_repair"),
+        "repair_margins": json.dumps(summary.get("repair_margins", []), sort_keys=True),
+        "repair_max_rounds": summary.get("repair_max_rounds"),
         "orders_limit": summary.get("orders_limit"),
         "k": summary.get("k"),
         "seed": summary.get("seed"),
@@ -67,12 +70,16 @@ def paired_deltas(runs: list[dict[str, Any]], baseline: str, candidate: str) -> 
     groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
     for run in runs:
         key = (
+            run["code_version"],
             run["orders_limit"],
             run["k"],
             run["seed"],
             run["orientation_label"],
             run["xml_path"],
             run["milp_time_limit_seconds"],
+            run["coverage_repair"],
+            run["repair_margins"],
+            run["repair_max_rounds"],
         )
         groups.setdefault(key, []).append(run)
 
@@ -88,12 +95,16 @@ def paired_deltas(runs: list[dict[str, Any]], baseline: str, candidate: str) -> 
         c = cand[0]
         pairs.append(
             {
-                "orders_limit": key[0],
-                "k": key[1],
-                "seed": key[2],
-                "orientation_label": key[3],
-                "xml_path": key[4],
-                "milp_time_limit_seconds": key[5],
+                "code_version": key[0],
+                "orders_limit": key[1],
+                "k": key[2],
+                "seed": key[3],
+                "orientation_label": key[4],
+                "xml_path": key[5],
+                "milp_time_limit_seconds": key[6],
+                "coverage_repair": key[7],
+                "repair_margins": key[8],
+                "repair_max_rounds": key[9],
                 "baseline_pf": b["best_pf"],
                 "candidate_pf": c["best_pf"],
                 "delta_pf": c["best_pf"] - b["best_pf"],
