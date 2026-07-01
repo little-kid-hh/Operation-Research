@@ -26,10 +26,16 @@ def load_run(path: Path) -> dict[str, Any]:
     best = summary.get("best_score", {})
     cache = summary.get("oracle_cache") or {}
     git = summary.get("git") or {}
+    config_label = summary.get("config_label")
+    algorithm = summary.get("algorithm")
+    method_label = config_label or algorithm
     return {
         "summary_path": str(path),
         "run_dir": summary.get("run_dir", str(path.parent)),
-        "algorithm": summary.get("algorithm"),
+        "algorithm": algorithm,
+        "comparison_label": summary.get("comparison_label"),
+        "config_label": config_label,
+        "method_label": method_label,
         "code_version": summary.get("code_version"),
         "git_commit": git.get("commit"),
         "git_branch": git.get("branch"),
@@ -66,10 +72,15 @@ def load_run(path: Path) -> dict[str, Any]:
     }
 
 
+def matches_selector(run: dict[str, Any], selector: str) -> bool:
+    return selector in {run.get("algorithm"), run.get("config_label"), run.get("method_label")}
+
+
 def paired_deltas(runs: list[dict[str, Any]], baseline: str, candidate: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     groups: dict[tuple[Any, ...], list[dict[str, Any]]] = {}
     for run in runs:
         key = (
+            run["comparison_label"],
             run["code_version"],
             run["orders_limit"],
             run["k"],
@@ -86,8 +97,8 @@ def paired_deltas(runs: list[dict[str, Any]], baseline: str, candidate: str) -> 
     pairs: list[dict[str, Any]] = []
     skipped: list[dict[str, Any]] = []
     for key, group in sorted(groups.items(), key=lambda kv: str(kv[0])):
-        base = [run for run in group if run["algorithm"] == baseline]
-        cand = [run for run in group if run["algorithm"] == candidate]
+        base = [run for run in group if matches_selector(run, baseline)]
+        cand = [run for run in group if matches_selector(run, candidate)]
         if len(base) != 1 or len(cand) != 1:
             skipped.append({"key": key, "baseline_count": len(base), "candidate_count": len(cand)})
             continue
@@ -95,16 +106,19 @@ def paired_deltas(runs: list[dict[str, Any]], baseline: str, candidate: str) -> 
         c = cand[0]
         pairs.append(
             {
-                "code_version": key[0],
-                "orders_limit": key[1],
-                "k": key[2],
-                "seed": key[3],
-                "orientation_label": key[4],
-                "xml_path": key[5],
-                "milp_time_limit_seconds": key[6],
-                "coverage_repair": key[7],
-                "repair_margins": key[8],
-                "repair_max_rounds": key[9],
+                "comparison_label": key[0],
+                "code_version": key[1],
+                "orders_limit": key[2],
+                "k": key[3],
+                "seed": key[4],
+                "orientation_label": key[5],
+                "xml_path": key[6],
+                "milp_time_limit_seconds": key[7],
+                "coverage_repair": key[8],
+                "repair_margins": key[9],
+                "repair_max_rounds": key[10],
+                "baseline_method_label": b["method_label"],
+                "candidate_method_label": c["method_label"],
                 "baseline_pf": b["best_pf"],
                 "candidate_pf": c["best_pf"],
                 "delta_pf": c["best_pf"] - b["best_pf"],
@@ -150,6 +164,15 @@ def algorithm_stats(runs: list[dict[str, Any]]) -> dict[str, Any]:
         grouped.setdefault(algorithm, []).append(run)
 
     return {algorithm: _summarize_runs(group) for algorithm, group in sorted(grouped.items())}
+
+
+def method_stats(runs: list[dict[str, Any]]) -> dict[str, Any]:
+    grouped: dict[str, list[dict[str, Any]]] = {}
+    for run in runs:
+        method = str(run.get("method_label"))
+        grouped.setdefault(method, []).append(run)
+
+    return {method: _summarize_runs(group) for method, group in sorted(grouped.items())}
 
 
 def _summarize_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
@@ -251,6 +274,7 @@ def main() -> None:
     pairs, skipped = paired_deltas(runs, args.baseline, args.candidate)
     stats = paired_stats(pairs)
     by_algorithm = algorithm_stats(runs)
+    by_method = method_stats(runs)
 
     args.out_dir.mkdir(parents=True, exist_ok=True)
     if runs:
@@ -265,6 +289,7 @@ def main() -> None:
                 "baseline": args.baseline,
                 "candidate": args.candidate,
                 "algorithm_stats": by_algorithm,
+                "method_stats": by_method,
                 "paired_stats": stats,
                 "skipped_pairs": skipped,
                 "summary_files": [str(path) for path in summaries],
@@ -280,6 +305,7 @@ def main() -> None:
                 "runs": len(runs),
                 "pairs": len(pairs),
                 "algorithm_stats": by_algorithm,
+                "method_stats": by_method,
                 "paired_stats": stats,
             },
             indent=2,

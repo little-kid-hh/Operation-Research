@@ -398,6 +398,16 @@ def main() -> None:
     parser.add_argument("--allow-bsp-derived-data", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--oracle-cache-dir", type=Path, default=None)
     parser.add_argument("--out-root", type=Path, default=ROOT / "results/milp_box_algorithms")
+    parser.add_argument(
+        "--comparison-label",
+        default=None,
+        help="Optional label shared by runs that should be paired in one comparison.",
+    )
+    parser.add_argument(
+        "--config-label",
+        default=None,
+        help="Optional label for this concrete algorithm/configuration, e.g. fixed05_i2.",
+    )
     parser.add_argument("--coverage-repair", choices=["none", "geometric_expand"], default="none")
     parser.add_argument(
         "--repair-margins",
@@ -431,6 +441,8 @@ def main() -> None:
 
     manifest = {
         "algorithm": args.algorithm,
+        "comparison_label": args.comparison_label,
+        "config_label": args.config_label,
         "dataset": "OR2023 unique orders",
         "orders_limit": args.orders_limit,
         "k": args.k,
