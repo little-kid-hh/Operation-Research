@@ -26,6 +26,7 @@ The main A/B comparison must hold fixed:
 - same MILP feasibility oracle;
 - same orientation label, primary `label_6ori`;
 - same time limit and unknown-label policy;
+- same coverage-repair setting, if enabled;
 - matched search budget, reported as actual candidate evaluations and oracle
   cache misses.
 
@@ -59,6 +60,34 @@ python BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
 
 This uses the same coordinate action set and MILP oracle as Algorithm A. The
 only intended algorithmic difference is the step schedule.
+
+## Common Coverage Repair
+
+Exact MILP feasibility is stricter than the aggregate initialization used to
+construct KMeans boxes. A box set can satisfy aggregate sorted dimensions and
+total volume while still failing to load a multi-item order under the MILP
+packing model. Because uncovered orders dominate PF through the hard penalty,
+main comparisons should either:
+
+- report the raw initialization/search result as infeasible when uncovered
+  orders remain; or
+- apply the same explicit MILP-verified coverage repair to every algorithm
+  before comparing volume optimization.
+
+The current common repair is:
+
+```bash
+--coverage-repair geometric_expand \
+--repair-margins 1.0,1.05,1.1,1.25,1.5,2.0 \
+--repair-max-rounds 3
+```
+
+For each uncovered order, it generates candidate replacements by expanding one
+existing box at a time to meet aggregate requirements at the listed margins,
+then accepts only improvements verified by the same MILP oracle. This repair is
+a shared initialization step, not an algorithm-specific advantage. Reports must
+include both `initial_score` and `search_initial_score` so the repair effect is
+auditable.
 
 ## Reference Baselines
 
@@ -150,18 +179,37 @@ Do not claim Algorithm B beats Algorithm A unless all are true:
 
 ## Development Run Ladder
 
-Current Java oracle supports prefix slices only, so small-prefix runs are
-plumbing and runtime calibration, not final evidence.
+Small-prefix runs are plumbing and runtime calibration, not final evidence.
+Use deterministic hash materialized split XMLs for dev/test comparisons.
 
 1. Environment gate on Windows/Gurobi:
    - `orders-limit=10`, `K=10`, `iterations=0`.
 2. Runtime calibration:
    - initial-only runs at `orders-limit=20,100,500`.
 3. Search micro-benchmark:
-   - A/B, seeds `0,1,2`, small prefix, `iterations=1` or `0.5:1`.
-4. Add split XML or arbitrary-order oracle support before final test claims.
-5. Run dev tuning.
-6. Freeze schedule.
-7. Run held-out exact-MILP final comparison.
-8. Separately report all-12,864 in-sample benchmark.
+   - A/B, seeds `0,1,2`, deterministic hash dev split, `iterations=1` or
+     `0.5:1`.
+4. Run dev tuning with the coverage-repair setting fixed across algorithms.
+5. Freeze schedule and budget.
+6. Run held-out exact-MILP final comparison.
+7. Separately report all-12,864 in-sample benchmark when runtime allows.
 
+## Current Calibration Evidence
+
+On `2026-07-01`, code version `7b15578`, hash split
+`or2023_seed20260701_limit250` dev set (`50` orders), `K=10`, seed `0`,
+`label_6ori`, and MILP time limit `1s`:
+
+- raw KMeans initialization had `coverage=98%`, `uncovered=1`, `PF=24.6438`;
+- shared `geometric_expand` repair improved this to `coverage=100%`,
+  `uncovered=0`, `PF=2.4513`;
+- repaired fixed `0.5` one-sweep baseline reached `PF=2.4447`;
+- repaired `0.25` one-sweep candidate reached `PF=2.4480`;
+- both repaired searches had `unknown=0` and `119` candidate evaluations.
+- repaired fixed `0.5` two-sweep baseline reached `PF=2.4380`;
+- repaired staged `0.5:1,0.25:1` two-sweep candidate reached `PF=2.4413`;
+- both repaired two-sweep searches had `unknown=0` and `179` candidate
+  evaluations.
+
+This is a calibration result only. It supports using common MILP coverage
+repair before volume comparisons, but it is not a final performance claim.
