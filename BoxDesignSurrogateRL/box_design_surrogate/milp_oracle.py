@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import csv
+import hashlib
+import json
 import os
 import shutil
 import subprocess
@@ -25,6 +27,8 @@ class MilpBoxSetScore:
     mean_order_volume: float
     coverage_rate: float
     uncovered_orders: int
+    unknown_pairs: int
+    orders_with_unknown: int
     assignments: tuple[int | None, ...]
 
 
@@ -33,6 +37,7 @@ def score_milp_feasibility_matrix(
     boxes: list[Box],
     feasible: np.ndarray,
     *,
+    unknown: np.ndarray | None = None,
     uncovered_penalty_factor: float = 100.0,
 ) -> MilpBoxSetScore:
     if feasible.shape != (len(orders), len(boxes)):
@@ -44,6 +49,10 @@ def score_milp_feasibility_matrix(
         raise ValueError("orders must be non-empty")
     if not boxes:
         raise ValueError("boxes must be non-empty")
+    if unknown is None:
+        unknown = np.zeros_like(feasible, dtype=bool)
+    if unknown.shape != feasible.shape:
+        raise ValueError(f"unknown matrix shape {unknown.shape} does not match feasible shape {feasible.shape}")
 
     box_volumes = np.asarray([box.volume for box in boxes], dtype=np.float64)
     order_volumes = np.asarray([order.total_volume for order in orders], dtype=np.float64)
@@ -65,6 +74,8 @@ def score_milp_feasibility_matrix(
         mean_order_volume=mean_order_volume,
         coverage_rate=(len(orders) - uncovered) / len(orders),
         uncovered_orders=uncovered,
+        unknown_pairs=int(np.count_nonzero(unknown)),
+        orders_with_unknown=int(np.count_nonzero(np.any(unknown, axis=1))),
         assignments=assignments,
     )
 
@@ -120,11 +131,11 @@ class MilpLabelTableOracle:
                 )
             package_ids.append(package_id)
 
-        feasible = np.zeros((len(orders), len(boxes)), dtype=bool)
+        statuses = np.zeros((len(orders), len(boxes)), dtype=np.int8)
         for i, order in enumerate(orders):
             for j, package_id in enumerate(package_ids):
-                feasible[i, j] = self._rows_by_order_and_package.get((str(order.order_id), package_id), 0) == 1
-        return score_milp_feasibility_matrix(orders, boxes, feasible)
+                statuses[i, j] = self._rows_by_order_and_package.get((str(order.order_id), package_id), 0)
+        return score_milp_feasibility_matrix(orders, boxes, statuses == 1, unknown=statuses < 0)
 
 
 class JavaMilpOracle:
@@ -144,6 +155,7 @@ class JavaMilpOracle:
         orientation_label: OrientationLabel = "label_6ori",
         time_limit_seconds: float = 30.0,
         allow_bsp_derived_data: bool = True,
+        cache_dir: Path | None = None,
     ) -> None:
         if orientation_label not in {"label_2ori", "label_6ori"}:
             raise ValueError(f"unknown orientation label: {orientation_label}")
@@ -153,18 +165,22 @@ class JavaMilpOracle:
         self.orientation_label = orientation_label
         self.time_limit_seconds = float(time_limit_seconds)
         self.allow_bsp_derived_data = allow_bsp_derived_data
+        self.cache_dir = cache_dir
         self._feasibility_cache: dict[
             tuple[tuple[tuple[str, str], ...], tuple[float, float, float]],
-            tuple[bool, ...],
+            tuple[int, ...],
         ] = {}
         self.cache_hits = 0
         self.cache_misses = 0
+        self.disk_cache_hits = 0
+        if self.cache_dir is not None:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def evaluate(self, orders: list[OrderSummary], boxes: list[Box]) -> MilpBoxSetScore:
         self._validate_environment()
         self._validate_order_prefix(orders)
         signature = self._order_signature(orders)
-        feasible = np.zeros((len(orders), len(boxes)), dtype=bool)
+        statuses = np.zeros((len(orders), len(boxes)), dtype=np.int8)
         unknown_boxes: list[Box] = []
         unknown_columns: list[int] = []
         unknown_keys: list[tuple[float, float, float]] = []
@@ -173,28 +189,34 @@ class JavaMilpOracle:
             cache_key = (signature, dims_key)
             cached = self._feasibility_cache.get(cache_key)
             if cached is None:
+                cached = self._read_disk_cache(signature, dims_key)
+                if cached is not None:
+                    self._feasibility_cache[cache_key] = cached
+                    self.disk_cache_hits += 1
+            if cached is None:
                 self.cache_misses += 1
                 unknown_boxes.append(box)
                 unknown_columns.append(j)
                 unknown_keys.append(dims_key)
                 continue
             self.cache_hits += 1
-            feasible[:, j] = np.asarray(cached, dtype=bool)
+            statuses[:, j] = np.asarray(cached, dtype=np.int8)
 
         if unknown_boxes:
-            unknown_feasible = self._evaluate_uncached(orders, unknown_boxes)
+            unknown_statuses = self._evaluate_uncached(orders, unknown_boxes)
             for local_j, (global_j, dims_key) in enumerate(zip(unknown_columns, unknown_keys)):
-                feasible[:, global_j] = unknown_feasible[:, local_j]
-                self._feasibility_cache[(signature, dims_key)] = tuple(
-                    bool(x) for x in unknown_feasible[:, local_j]
-                )
-        return score_milp_feasibility_matrix(orders, boxes, feasible)
+                statuses[:, global_j] = unknown_statuses[:, local_j]
+                status_col = tuple(int(x) for x in unknown_statuses[:, local_j])
+                self._feasibility_cache[(signature, dims_key)] = status_col
+                self._write_disk_cache(signature, dims_key, status_col)
+        return score_milp_feasibility_matrix(orders, boxes, statuses == 1, unknown=statuses < 0)
 
     def cache_info(self) -> dict[str, int]:
         return {
             "entries": len(self._feasibility_cache),
             "hits": self.cache_hits,
             "misses": self.cache_misses,
+            "disk_hits": self.disk_cache_hits,
         }
 
     def _evaluate_uncached(self, orders: list[OrderSummary], boxes: list[Box]) -> np.ndarray:
@@ -231,7 +253,7 @@ class JavaMilpOracle:
                     "Java MILP oracle failed with exit code "
                     f"{exc.returncode}\nSTDOUT:\n{exc.stdout}\nSTDERR:\n{exc.stderr}"
                 ) from exc
-            return self._read_output(output_path, orders, boxes)
+            return self._read_output_statuses(output_path, orders, boxes)
 
     def _validate_environment(self) -> None:
         if shutil.which("java") is None:
@@ -263,14 +285,71 @@ class JavaMilpOracle:
     def _box_dims_key(box: Box) -> tuple[float, float, float]:
         return round(box.length, 6), round(box.width, 6), round(box.height, 6)
 
-    def _read_output(self, output_path: Path, orders: list[OrderSummary], boxes: list[Box]) -> np.ndarray:
+    def _cache_payload(
+        self,
+        signature: tuple[tuple[str, str], ...],
+        dims_key: tuple[float, float, float],
+    ) -> dict:
+        return {
+            "xml_name": self.xml_path.name,
+            "orders": [[instance_name, order_id] for instance_name, order_id in signature],
+            "dims": list(dims_key),
+            "orientation_label": self.orientation_label,
+            "time_limit_seconds": self.time_limit_seconds,
+            "labeler_class": self.labeler_class,
+        }
+
+    def _disk_cache_path(
+        self,
+        signature: tuple[tuple[str, str], ...],
+        dims_key: tuple[float, float, float],
+    ) -> Path | None:
+        if self.cache_dir is None:
+            return None
+        payload = self._cache_payload(signature, dims_key)
+        digest = hashlib.sha256(json.dumps(payload, sort_keys=True).encode("utf-8")).hexdigest()
+        return self.cache_dir / f"{digest}.json"
+
+    def _read_disk_cache(
+        self,
+        signature: tuple[tuple[str, str], ...],
+        dims_key: tuple[float, float, float],
+    ) -> tuple[int, ...] | None:
+        path = self._disk_cache_path(signature, dims_key)
+        if path is None or not path.exists():
+            return None
+        with path.open(encoding="utf-8") as f:
+            payload = json.load(f)
+        expected = self._cache_payload(signature, dims_key)
+        for key, expected_value in expected.items():
+            if payload.get(key) != expected_value:
+                return None
+        return tuple(int(x) for x in payload["statuses"])
+
+    def _write_disk_cache(
+        self,
+        signature: tuple[tuple[str, str], ...],
+        dims_key: tuple[float, float, float],
+        statuses: tuple[int, ...],
+    ) -> None:
+        path = self._disk_cache_path(signature, dims_key)
+        if path is None:
+            return
+        payload = self._cache_payload(signature, dims_key)
+        payload["statuses"] = list(statuses)
+        tmp_path = path.with_suffix(".tmp")
+        with tmp_path.open("w", encoding="utf-8") as f:
+            json.dump(payload, f, ensure_ascii=False)
+        tmp_path.replace(path)
+
+    def _read_output_statuses(self, output_path: Path, orders: list[OrderSummary], boxes: list[Box]) -> np.ndarray:
         box_index = {box.box_id: idx for idx, box in enumerate(boxes)}
         order_index = {str(order.order_id): idx for idx, order in enumerate(orders)}
-        feasible = np.zeros((len(orders), len(boxes)), dtype=bool)
+        statuses = np.zeros((len(orders), len(boxes)), dtype=np.int8)
         with output_path.open(newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
                 i = order_index[str(row["order_id"])]
                 j = box_index[int(row["package_id"])]
-                feasible[i, j] = int(row[self.orientation_label]) == 1
-        return feasible
+                statuses[i, j] = int(row[self.orientation_label])
+        return statuses

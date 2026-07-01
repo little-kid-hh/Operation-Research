@@ -100,6 +100,7 @@ def make_oracle(args: argparse.Namespace) -> BoxSetOracle:
         orientation_label=args.orientation_label,
         time_limit_seconds=args.milp_time_limit_seconds,
         allow_bsp_derived_data=args.allow_bsp_derived_data,
+        cache_dir=args.oracle_cache_dir,
     )
 
 
@@ -262,6 +263,7 @@ def main() -> None:
     parser.add_argument("--java-classpath", default="")
     parser.add_argument("--milp-time-limit-seconds", type=float, default=30.0)
     parser.add_argument("--allow-bsp-derived-data", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument("--oracle-cache-dir", type=Path, default=None)
     parser.add_argument("--out-root", type=Path, default=ROOT / "results/milp_box_algorithms")
     args = parser.parse_args()
 

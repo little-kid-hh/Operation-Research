@@ -37,6 +37,8 @@ class MilpOracleTest(unittest.TestCase):
         score = score_milp_feasibility_matrix(orders, boxes, feasible)
 
         self.assertEqual(score.uncovered_orders, 0)
+        self.assertEqual(score.unknown_pairs, 0)
+        self.assertEqual(score.orders_with_unknown, 0)
         self.assertEqual(score.assignments, (10, 20))
         self.assertAlmostEqual(score.mean_order_volume, 1.5)
         self.assertAlmostEqual(score.mean_box_volume, 2.5)
@@ -54,8 +56,28 @@ class MilpOracleTest(unittest.TestCase):
 
         self.assertEqual(score.uncovered_orders, 1)
         self.assertEqual(score.coverage_rate, 0.5)
+        self.assertEqual(score.unknown_pairs, 0)
+        self.assertEqual(score.orders_with_unknown, 0)
         self.assertEqual(score.assignments, (10, None))
         self.assertAlmostEqual(score.mean_box_volume, 50.5)
+
+    def test_score_milp_feasibility_matrix_tracks_unknown_labels(self) -> None:
+        orders = [
+            summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)]),
+            summarize_items("toy.xml", "1", [(2.0, 1.0, 1.0)]),
+        ]
+        boxes = [
+            Box(10, 1.0, 1.0, 1.0),
+            Box(20, 2.0, 2.0, 1.0),
+        ]
+        feasible = np.asarray([[True, False], [False, False]], dtype=bool)
+        unknown = np.asarray([[False, False], [True, True]], dtype=bool)
+
+        score = score_milp_feasibility_matrix(orders, boxes, feasible, unknown=unknown)
+
+        self.assertEqual(score.uncovered_orders, 1)
+        self.assertEqual(score.unknown_pairs, 2)
+        self.assertEqual(score.orders_with_unknown, 1)
 
     def test_label_table_oracle_uses_precomputed_labels(self) -> None:
         orders = [
@@ -208,15 +230,15 @@ class MilpOracleTest(unittest.TestCase):
 
         oracle.evaluate(orders, boxes)
         self.assertEqual(oracle.uncached_calls, 1)
-        self.assertEqual(oracle.cache_info(), {"entries": 2, "hits": 0, "misses": 2})
+        self.assertEqual(oracle.cache_info(), {"entries": 2, "hits": 0, "misses": 2, "disk_hits": 0})
 
         oracle.evaluate(orders, boxes)
         self.assertEqual(oracle.uncached_calls, 1)
-        self.assertEqual(oracle.cache_info(), {"entries": 2, "hits": 2, "misses": 2})
+        self.assertEqual(oracle.cache_info(), {"entries": 2, "hits": 2, "misses": 2, "disk_hits": 0})
 
         oracle.evaluate(orders, [boxes[0], Box(2, 4.0, 4.0, 4.0)])
         self.assertEqual(oracle.uncached_calls, 2)
-        self.assertEqual(oracle.cache_info(), {"entries": 3, "hits": 3, "misses": 3})
+        self.assertEqual(oracle.cache_info(), {"entries": 3, "hits": 3, "misses": 3, "disk_hits": 0})
 
 
 if __name__ == "__main__":
