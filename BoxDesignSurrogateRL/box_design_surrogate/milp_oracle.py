@@ -153,10 +153,51 @@ class JavaMilpOracle:
         self.orientation_label = orientation_label
         self.time_limit_seconds = float(time_limit_seconds)
         self.allow_bsp_derived_data = allow_bsp_derived_data
+        self._feasibility_cache: dict[
+            tuple[tuple[tuple[str, str], ...], tuple[float, float, float]],
+            tuple[bool, ...],
+        ] = {}
+        self.cache_hits = 0
+        self.cache_misses = 0
 
     def evaluate(self, orders: list[OrderSummary], boxes: list[Box]) -> MilpBoxSetScore:
         self._validate_environment()
         self._validate_order_prefix(orders)
+        signature = self._order_signature(orders)
+        feasible = np.zeros((len(orders), len(boxes)), dtype=bool)
+        unknown_boxes: list[Box] = []
+        unknown_columns: list[int] = []
+        unknown_keys: list[tuple[float, float, float]] = []
+        for j, box in enumerate(boxes):
+            dims_key = self._box_dims_key(box)
+            cache_key = (signature, dims_key)
+            cached = self._feasibility_cache.get(cache_key)
+            if cached is None:
+                self.cache_misses += 1
+                unknown_boxes.append(box)
+                unknown_columns.append(j)
+                unknown_keys.append(dims_key)
+                continue
+            self.cache_hits += 1
+            feasible[:, j] = np.asarray(cached, dtype=bool)
+
+        if unknown_boxes:
+            unknown_feasible = self._evaluate_uncached(orders, unknown_boxes)
+            for local_j, (global_j, dims_key) in enumerate(zip(unknown_columns, unknown_keys)):
+                feasible[:, global_j] = unknown_feasible[:, local_j]
+                self._feasibility_cache[(signature, dims_key)] = tuple(
+                    bool(x) for x in unknown_feasible[:, local_j]
+                )
+        return score_milp_feasibility_matrix(orders, boxes, feasible)
+
+    def cache_info(self) -> dict[str, int]:
+        return {
+            "entries": len(self._feasibility_cache),
+            "hits": self.cache_hits,
+            "misses": self.cache_misses,
+        }
+
+    def _evaluate_uncached(self, orders: list[OrderSummary], boxes: list[Box]) -> np.ndarray:
         with tempfile.TemporaryDirectory(prefix="or2023_milp_oracle_") as tmp:
             tmp_dir = Path(tmp)
             packages_path = tmp_dir / "packages.txt"
@@ -183,9 +224,14 @@ class JavaMilpOracle:
                 "-1",
                 "true" if self.allow_bsp_derived_data else "false",
             ]
-            subprocess.run(cmd, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            feasible = self._read_output(output_path, orders, boxes)
-        return score_milp_feasibility_matrix(orders, boxes, feasible)
+            try:
+                subprocess.run(cmd, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            except subprocess.CalledProcessError as exc:
+                raise RuntimeError(
+                    "Java MILP oracle failed with exit code "
+                    f"{exc.returncode}\nSTDOUT:\n{exc.stdout}\nSTDERR:\n{exc.stderr}"
+                ) from exc
+            return self._read_output(output_path, orders, boxes)
 
     def _validate_environment(self) -> None:
         if shutil.which("java") is None:
@@ -208,6 +254,14 @@ class JavaMilpOracle:
                     "JavaMilpOracle currently supports prefix slices from the unique XML only; "
                     f"expected ({expected_instance}, {idx}), got ({order.instance_name}, {order.order_id})"
                 )
+
+    @staticmethod
+    def _order_signature(orders: list[OrderSummary]) -> tuple[tuple[str, str], ...]:
+        return tuple((order.instance_name, str(order.order_id)) for order in orders)
+
+    @staticmethod
+    def _box_dims_key(box: Box) -> tuple[float, float, float]:
+        return round(box.length, 6), round(box.width, 6), round(box.height, 6)
 
     def _read_output(self, output_path: Path, orders: list[OrderSummary], boxes: list[Box]) -> np.ndarray:
         box_index = {box.box_id: idx for idx, box in enumerate(boxes)}

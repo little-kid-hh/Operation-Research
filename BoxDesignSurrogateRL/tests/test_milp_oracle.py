@@ -10,6 +10,7 @@ import numpy as np
 from box_design_surrogate.evaluator import Box
 from box_design_surrogate.features import summarize_items
 from box_design_surrogate.milp_oracle import (
+    JavaMilpOracle,
     MilpLabelTableOracle,
     score_milp_feasibility_matrix,
 )
@@ -181,6 +182,41 @@ class MilpOracleTest(unittest.TestCase):
             oracle = MilpLabelTableOracle(labels_path=labels_path)
             with self.assertRaisesRegex(ValueError, "pre-labeled package dimensions"):
                 oracle.evaluate([order], [Box(99, 3.0, 3.0, 3.0)])
+
+    def test_java_oracle_caches_feasibility_by_order_signature_and_box_dimensions(self) -> None:
+        class FakeJavaOracle(JavaMilpOracle):
+            def __init__(self) -> None:
+                super().__init__(xml_path=Path("toy.xml"), java_classpath="unused")
+                self.uncached_calls = 0
+
+            def _validate_environment(self) -> None:
+                return None
+
+            def _validate_order_prefix(self, orders) -> None:
+                return None
+
+            def _evaluate_uncached(self, orders, boxes):
+                self.uncached_calls += 1
+                return np.ones((len(orders), len(boxes)), dtype=bool)
+
+        orders = [
+            summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)]),
+            summarize_items("toy.xml", "1", [(2.0, 1.0, 1.0)]),
+        ]
+        oracle = FakeJavaOracle()
+        boxes = [Box(0, 2.0, 2.0, 2.0), Box(1, 3.0, 3.0, 3.0)]
+
+        oracle.evaluate(orders, boxes)
+        self.assertEqual(oracle.uncached_calls, 1)
+        self.assertEqual(oracle.cache_info(), {"entries": 2, "hits": 0, "misses": 2})
+
+        oracle.evaluate(orders, boxes)
+        self.assertEqual(oracle.uncached_calls, 1)
+        self.assertEqual(oracle.cache_info(), {"entries": 2, "hits": 2, "misses": 2})
+
+        oracle.evaluate(orders, [boxes[0], Box(2, 4.0, 4.0, 4.0)])
+        self.assertEqual(oracle.uncached_calls, 2)
+        self.assertEqual(oracle.cache_info(), {"entries": 3, "hits": 3, "misses": 3})
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ import csv
 import json
 import os
 import sys
+import time
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
@@ -299,6 +300,7 @@ def main() -> None:
     write_json(run_dir / "manifest.json", manifest)
     write_json(run_dir / "initial_boxes.json", boxes_to_rows(initial_boxes))
 
+    started = time.perf_counter()
     if args.algorithm == "paper_fixed_step":
         best_boxes, best_score, trace = run_fixed_step(
             oracle=oracle,
@@ -314,11 +316,14 @@ def main() -> None:
             boxes=initial_boxes,
             schedule=args.schedule,
         )
+    elapsed_seconds = time.perf_counter() - started
 
     summary = {
         **manifest,
         "initial_score": trace[0],
         "best_score": score_to_dict(best_score),
+        "elapsed_seconds": elapsed_seconds,
+        "oracle_cache": oracle.cache_info() if hasattr(oracle, "cache_info") else None,
         "run_dir": str(run_dir),
     }
     write_trace(run_dir / "trace.csv", trace)
