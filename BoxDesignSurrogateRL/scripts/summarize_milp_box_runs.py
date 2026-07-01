@@ -25,10 +25,15 @@ def load_run(path: Path) -> dict[str, Any]:
     initial = summary.get("initial_score", {})
     best = summary.get("best_score", {})
     cache = summary.get("oracle_cache") or {}
+    git = summary.get("git") or {}
     return {
         "summary_path": str(path),
         "run_dir": summary.get("run_dir", str(path.parent)),
         "algorithm": summary.get("algorithm"),
+        "code_version": summary.get("code_version"),
+        "git_commit": git.get("commit"),
+        "git_branch": git.get("branch"),
+        "git_dirty": git.get("dirty"),
         "orders_limit": summary.get("orders_limit"),
         "k": summary.get("k"),
         "seed": summary.get("seed"),

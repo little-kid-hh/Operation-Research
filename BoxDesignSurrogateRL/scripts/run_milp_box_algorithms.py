@@ -5,6 +5,7 @@ import argparse
 import csv
 import json
 import os
+import subprocess
 import sys
 import time
 from dataclasses import asdict
@@ -78,6 +79,30 @@ def write_json(path: Path, payload: dict | list) -> None:
     with path.open("w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
         f.write("\n")
+
+
+def git_info(repo_root: Path) -> dict[str, str | bool | None]:
+    def run_git(args: list[str]) -> str | None:
+        try:
+            result = subprocess.run(
+                ["git", "-C", str(repo_root), *args],
+                check=True,
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+        except (OSError, subprocess.CalledProcessError):
+            return None
+        return result.stdout.strip()
+
+    commit = run_git(["rev-parse", "HEAD"])
+    branch = run_git(["rev-parse", "--abbrev-ref", "HEAD"])
+    status = run_git(["status", "--porcelain"])
+    return {
+        "commit": commit,
+        "branch": branch,
+        "dirty": bool(status) if status is not None else None,
+    }
 
 
 def make_oracle(args: argparse.Namespace) -> BoxSetOracle:
@@ -274,6 +299,11 @@ def main() -> None:
     parser.add_argument("--allow-bsp-derived-data", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--oracle-cache-dir", type=Path, default=None)
     parser.add_argument("--out-root", type=Path, default=ROOT / "results/milp_box_algorithms")
+    parser.add_argument(
+        "--code-version",
+        default=None,
+        help="Optional manually supplied code version, e.g. the pushed GitHub commit used for this run.",
+    )
     args = parser.parse_args()
 
     if args.iterations < 0:
@@ -307,6 +337,8 @@ def main() -> None:
         "java_classes": str(args.java_classes),
         "java_classpath_extra": args.java_classpath,
         "milp_time_limit_seconds": args.milp_time_limit_seconds,
+        "code_version": args.code_version,
+        "git": git_info(REPO_ROOT),
     }
     write_json(run_dir / "manifest.json", manifest)
     write_json(run_dir / "initial_boxes.json", boxes_to_rows(initial_boxes))
