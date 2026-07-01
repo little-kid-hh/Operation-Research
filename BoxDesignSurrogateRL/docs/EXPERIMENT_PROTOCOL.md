@@ -213,3 +213,6 @@ On `2026-07-01`, code version `7b15578`, hash split
 
 This is a calibration result only. It supports using common MILP coverage
 repair before volume comparisons, but it is not a final performance claim.
+
+The detailed dev100 repaired three-seed calibration is recorded in
+`BoxDesignSurrogateRL/docs/CALIBRATION_RESULTS_20260701.md`.
