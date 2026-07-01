@@ -17,7 +17,8 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from box_design_surrogate.evaluator import Box
-from box_design_surrogate.kandula_repro import initial_boxes_kmeans, read_default_orders
+from box_design_surrogate.features import read_order_summaries
+from box_design_surrogate.kandula_repro import initial_boxes_kmeans
 from box_design_surrogate.milp_oracle import (
     JavaMilpOracle,
     MilpBoxSetScore,
@@ -268,7 +269,9 @@ def main() -> None:
     if args.orders_limit is not None and args.orders_limit < args.k:
         raise ValueError("--orders-limit must be >= --k for k-means initialization")
 
-    orders = read_default_orders(limit=args.orders_limit)
+    orders = read_order_summaries(args.xml_path)
+    if args.orders_limit is not None:
+        orders = orders[: args.orders_limit]
     initial_boxes = initial_boxes_kmeans(orders, args.k, random_state=args.seed)
     oracle = make_oracle(args)
 
