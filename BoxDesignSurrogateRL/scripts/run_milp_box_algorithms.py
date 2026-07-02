@@ -145,6 +145,42 @@ def write_json(path: Path, payload: dict | list) -> None:
         f.write("\n")
 
 
+def deadline_reached(deadline: float | None) -> bool:
+    return deadline is not None and time.perf_counter() >= deadline
+
+
+def time_limit_row(
+    *,
+    phase: str,
+    iteration: int,
+    step: float,
+    score: MilpBoxSetScore,
+    stage: int | None = None,
+) -> dict[str, Any]:
+    row: dict[str, Any] = {
+        "phase": phase,
+        "iteration": iteration,
+        "step": step,
+        "action": "time_limit",
+        "improved": False,
+        "stop_reason": "time_limit",
+        "candidate_evaluations": 0,
+        "generated_candidates": 0,
+        "surrogate_scored_candidates": 0,
+        "ranker_scored_candidates": 0,
+        "milp_validated_candidates": 0,
+        "milp_candidate_evaluations_avoided": 0,
+        "milp_avoidance_rate": 0.0,
+        "surrogate_eval_seconds": 0.0,
+        "ranker_eval_seconds": 0.0,
+        "milp_eval_seconds": 0.0,
+        **score_to_dict(score),
+    }
+    if stage is not None:
+        row["stage"] = stage
+    return row
+
+
 def git_info(repo_root: Path) -> dict[str, str | bool | None]:
     def run_git(args: list[str]) -> str | None:
         try:
@@ -623,6 +659,7 @@ def run_fixed_step(
     initial_phase: str = "initial",
     candidate_trace: list[dict] | None = None,
     source_run_id: str = "",
+    deadline: float | None = None,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -637,6 +674,17 @@ def run_fixed_step(
         }
     ]
     for iteration in range(1, iterations + 1):
+        if deadline_reached(deadline):
+            trace.append(
+                time_limit_row(
+                    phase="fixed_step",
+                    iteration=iteration,
+                    step=step,
+                    score=current_score,
+                    stage=1,
+                )
+            )
+            break
         best_boxes, best_score, action, selection_metrics = best_single_action(
             oracle=oracle,
             orders=orders,
@@ -681,6 +729,7 @@ def run_staged_greedy(
     initial_phase: str = "initial",
     candidate_trace: list[dict] | None = None,
     source_run_id: str = "",
+    deadline: float | None = None,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -698,6 +747,17 @@ def run_staged_greedy(
     global_iteration = 0
     for stage_idx, (step, iterations) in enumerate(schedule, start=1):
         for _ in range(iterations):
+            if deadline_reached(deadline):
+                trace.append(
+                    time_limit_row(
+                        phase="staged_greedy",
+                        iteration=global_iteration + 1,
+                        stage=stage_idx,
+                        step=step,
+                        score=current_score,
+                    )
+                )
+                return sorted(current, key=lambda b: b.volume), current_score, trace
             global_iteration += 1
             best_boxes, best_score, action, selection_metrics = best_single_action(
                 oracle=oracle,
@@ -748,6 +808,7 @@ def run_surrogate_filtered_greedy(
     candidate_batch_size: int | None,
     initial_score: MilpBoxSetScore | None = None,
     initial_phase: str = "initial",
+    deadline: float | None = None,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -775,6 +836,17 @@ def run_surrogate_filtered_greedy(
     global_iteration = 0
     for stage_idx, (step, iterations) in enumerate(schedule, start=1):
         for _ in range(iterations):
+            if deadline_reached(deadline):
+                trace.append(
+                    time_limit_row(
+                        phase="surrogate_filtered_greedy",
+                        iteration=global_iteration + 1,
+                        stage=stage_idx,
+                        step=step,
+                        score=current_score,
+                    )
+                )
+                return sorted(current, key=lambda b: b.volume), current_score, trace
             global_iteration += 1
             best_boxes, best_score, action, selection_metrics = best_single_action_surrogate_filtered(
                 oracle=oracle,
@@ -821,6 +893,7 @@ def run_ranker_filtered_greedy(
     noop_fallback: bool,
     initial_score: MilpBoxSetScore | None = None,
     initial_phase: str = "initial",
+    deadline: float | None = None,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -848,6 +921,17 @@ def run_ranker_filtered_greedy(
     global_iteration = 0
     for stage_idx, (step, iterations) in enumerate(schedule, start=1):
         for _ in range(iterations):
+            if deadline_reached(deadline):
+                trace.append(
+                    time_limit_row(
+                        phase="ranker_filtered_greedy",
+                        iteration=global_iteration + 1,
+                        stage=stage_idx,
+                        step=step,
+                        score=current_score,
+                    )
+                )
+                return sorted(current, key=lambda b: b.volume), current_score, trace
             global_iteration += 1
             best_boxes, best_score, action, selection_metrics = best_single_action_ranker_filtered(
                 oracle=oracle,
@@ -892,6 +976,7 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "step",
         "action",
         "improved",
+        "stop_reason",
         "packaging_factor",
         "mean_box_volume",
         "mean_order_volume",
@@ -1062,6 +1147,16 @@ def main() -> None:
     )
     parser.add_argument("--repair-max-rounds", type=int, default=5)
     parser.add_argument(
+        "--max-elapsed-seconds",
+        type=float,
+        default=None,
+        help=(
+            "Optional graceful wall-clock budget for the search phase. "
+            "The runner checks this before starting each new local-search iteration "
+            "and writes the current best boxes and summary when reached."
+        ),
+    )
+    parser.add_argument(
         "--code-version",
         default=None,
         help="Optional manually supplied code version, e.g. the pushed GitHub commit used for this run.",
@@ -1072,6 +1167,8 @@ def main() -> None:
         raise ValueError("--iterations must be non-negative")
     if args.repair_max_rounds < 0:
         raise ValueError("--repair-max-rounds must be non-negative")
+    if args.max_elapsed_seconds is not None and args.max_elapsed_seconds <= 0.0:
+        raise ValueError("--max-elapsed-seconds must be positive when supplied")
     if args.orders_limit is not None and args.orders_limit < args.k:
         raise ValueError("--orders-limit must be >= --k for k-means initialization")
     if args.surrogate_top_k <= 0:
@@ -1148,6 +1245,7 @@ def main() -> None:
         "coverage_repair": args.coverage_repair,
         "repair_margins": args.repair_margins,
         "repair_max_rounds": args.repair_max_rounds,
+        "max_elapsed_seconds": args.max_elapsed_seconds,
         "code_version": args.code_version,
         "git": git_info(REPO_ROOT),
     }
@@ -1155,6 +1253,7 @@ def main() -> None:
     write_json(run_dir / "initial_boxes.json", boxes_to_rows(initial_boxes))
 
     started = time.perf_counter()
+    deadline = started + args.max_elapsed_seconds if args.max_elapsed_seconds is not None else None
     candidate_trace_rows: list[dict] | None = [] if args.candidate_trace_csv is not None else None
     pre_search_trace: list[dict] = []
     search_boxes = initial_boxes
@@ -1194,6 +1293,7 @@ def main() -> None:
             initial_phase="search_initial" if pre_search_trace else "initial",
             candidate_trace=candidate_trace_rows,
             source_run_id=run_id,
+            deadline=deadline,
         )
     elif args.algorithm == "staged_greedy":
         best_boxes, best_score, search_trace = run_staged_greedy(
@@ -1205,6 +1305,7 @@ def main() -> None:
             initial_phase="search_initial" if pre_search_trace else "initial",
             candidate_trace=candidate_trace_rows,
             source_run_id=run_id,
+            deadline=deadline,
         )
     elif args.algorithm == "surrogate_filtered_greedy":
         if surrogate is None:
@@ -1222,6 +1323,7 @@ def main() -> None:
             candidate_batch_size=args.surrogate_candidate_batch_size,
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
+            deadline=deadline,
         )
     else:
         if ranker is None:
@@ -1237,6 +1339,7 @@ def main() -> None:
             noop_fallback=args.ranker_noop_fallback,
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
+            deadline=deadline,
         )
     trace = pre_search_trace + search_trace
     elapsed_seconds = time.perf_counter() - started
@@ -1277,6 +1380,14 @@ def main() -> None:
             sum(1 for row in trace if str(row.get("ranker_noop_fallback_used", "")).lower() == "true")
         ),
         "elapsed_seconds": elapsed_seconds,
+        "stop_reason": next(
+            (
+                str(row.get("stop_reason"))
+                for row in trace
+                if row.get("stop_reason") not in {None, ""}
+            ),
+            None,
+        ),
         "oracle_cache": oracle.cache_info() if hasattr(oracle, "cache_info") else None,
         "run_dir": str(run_dir),
     }

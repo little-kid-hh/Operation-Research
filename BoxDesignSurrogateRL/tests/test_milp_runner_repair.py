@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import tempfile
+import time
 import unittest
 from pathlib import Path
 
@@ -79,6 +80,26 @@ class MilpRunnerRepairTest(unittest.TestCase):
         self.assertTrue(trace[0]["improved"])
         self.assertEqual(trace[0]["candidate_evaluations"], 1)
         self.assertEqual((repaired_boxes[0].length, repaired_boxes[0].width, repaired_boxes[0].height), (2.0, 2.0, 2.0))
+
+    def test_staged_greedy_writes_time_limit_trace_row(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+        boxes = [Box(0, 2.0, 2.0, 2.0)]
+        oracle = AggregateOracle()
+
+        best_boxes, best_score, trace = runner.run_staged_greedy(
+            oracle=oracle,
+            orders=orders,
+            boxes=boxes,
+            schedule=[(0.25, 10)],
+            deadline=time.perf_counter() - 1.0,
+        )
+
+        self.assertEqual([box.box_id for box in best_boxes], [0])
+        self.assertEqual(best_score.uncovered_orders, 0)
+        self.assertEqual(trace[-1]["action"], "time_limit")
+        self.assertEqual(trace[-1]["stop_reason"], "time_limit")
+        self.assertEqual(trace[-1]["candidate_evaluations"], 0)
 
 
 if __name__ == "__main__":

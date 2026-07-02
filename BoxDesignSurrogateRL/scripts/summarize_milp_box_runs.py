@@ -49,6 +49,8 @@ def load_run(path: Path) -> dict[str, Any]:
         "orientation_label": summary.get("orientation_label"),
         "xml_path": summary.get("xml_path"),
         "milp_time_limit_seconds": summary.get("milp_time_limit_seconds"),
+        "max_elapsed_seconds": summary.get("max_elapsed_seconds"),
+        "stop_reason": summary.get("stop_reason"),
         "fixed_step": summary.get("fixed_step"),
         "schedule": json.dumps(summary.get("schedule", []), sort_keys=True),
         "surrogate_top_k": summary.get("surrogate_top_k"),

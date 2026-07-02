@@ -223,6 +223,22 @@ The scientific comparison should emphasize `oracle_cache.uncached_boxes`,
 `milp_validated_candidates`, because the online Java MILP oracle caches
 order-box feasibility labels across candidate box sets.
 
+## Time-Budgeted Runs
+
+Long held-out or full-data exact runs can take much longer than the dev fine
+stage. Use:
+
+```text
+--max-elapsed-seconds <seconds>
+```
+
+to request a graceful wall-clock budget. The runner checks the budget before
+starting each new local-search iteration. When the budget is reached, it writes
+the current best boxes, trace, and summary with `stop_reason: time_limit`.
+The budget is therefore not a hard interrupt inside a Java/Gurobi candidate
+batch; elapsed time can exceed the requested value by the duration of the
+current iteration.
+
 ## Outputs
 
 Each run writes a timestamped directory under:
