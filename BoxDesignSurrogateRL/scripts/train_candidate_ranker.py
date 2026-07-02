@@ -86,6 +86,17 @@ def load_trace_csvs(paths: list[Path]) -> pd.DataFrame:
     return data
 
 
+def ensure_feature_columns(data: pd.DataFrame) -> pd.DataFrame:
+    out = data.copy()
+    for col in CANDIDATE_NUMERIC_FEATURES:
+        if col not in out.columns:
+            out[col] = 0.0
+    for col in CANDIDATE_CATEGORICAL_FEATURES:
+        if col not in out.columns:
+            out[col] = ""
+    return out
+
+
 def add_training_columns(
     data: pd.DataFrame,
     *,
@@ -121,7 +132,38 @@ def add_training_columns(
         + "::"
         + col("iteration", 0).astype(str)
     )
+    if "candidate_rank" not in out.columns:
+        ranks = pd.Series(index=out.index, dtype=float)
+        for _, group in out.groupby("step_group_id", sort=False):
+            ranked_indices = sorted(
+                group.index,
+                key=lambda idx: (
+                    int(out.loc[idx, "candidate_uncovered_orders"]),
+                    int(out.loc[idx, "candidate_unknown_pairs"]),
+                    float(out.loc[idx, "candidate_packaging_factor"]),
+                    int(col("candidate_index", 0).loc[idx]),
+                ),
+            )
+            for rank, idx in enumerate(ranked_indices, start=1):
+                ranks.loc[idx] = rank
+        out["candidate_rank"] = ranks.astype(int)
+    out["candidate_objective_gap_to_best"] = (
+        out["candidate_objective"].astype(float)
+        - out.groupby("step_group_id")["candidate_objective"].transform("min").astype(float)
+    )
+    out["candidate_rank_log_target"] = np.log1p(out["candidate_rank"].astype(float) - 1.0)
     return out
+
+
+def target_values(data: pd.DataFrame, target_mode: str) -> np.ndarray:
+    mode = target_mode.strip().lower()
+    if mode == "objective":
+        return data["candidate_objective"].astype(float).to_numpy()
+    if mode == "objective_gap":
+        return data["candidate_objective_gap_to_best"].astype(float).to_numpy()
+    if mode == "rank":
+        return data["candidate_rank_log_target"].astype(float).to_numpy()
+    raise ValueError(f"unknown --target-mode {target_mode!r}")
 
 
 def split_by_step(
@@ -206,6 +248,7 @@ def evaluate_predictions(eval_data: pd.DataFrame, top_ks: list[int]) -> dict[str
         return {}
 
     best_predicted_ranks = []
+    accepted_best_predicted_ranks = []
     accepted_groups = 0
     metrics: dict[str, Any] = {
         "eval_groups": len(groups),
@@ -213,7 +256,10 @@ def evaluate_predictions(eval_data: pd.DataFrame, top_ks: list[int]) -> dict[str
     }
     captures = {k: 0 for k in top_ks}
     accepted_captures = {k: 0 for k in top_ks}
+    accepted_preserved = {k: 0 for k in top_ks}
     preserved = {k: 0 for k in top_ks}
+    accepted_objective_gaps = {k: [] for k in top_ks}
+    accepted_pf_gaps = {k: [] for k in top_ks}
     objective_gaps = {k: [] for k in top_ks}
     pf_gaps = {k: [] for k in top_ks}
 
@@ -228,6 +274,7 @@ def evaluate_predictions(eval_data: pd.DataFrame, top_ks: list[int]) -> dict[str
         has_accepted = bool(int(exact_best.get("is_accepted", 0)) == 1)
         if has_accepted:
             accepted_groups += 1
+            accepted_best_predicted_ranks.append(exact_best_rank)
 
         exact_best_objective = float(exact_best["candidate_objective"])
         exact_best_pf = float(exact_best["candidate_packaging_factor"])
@@ -241,8 +288,13 @@ def evaluate_predictions(eval_data: pd.DataFrame, top_ks: list[int]) -> dict[str
             selected = selected_row_for_top_k(group, k)
             if score_tuple(selected) == score_tuple(exact_best):
                 preserved[k] += 1
+                if has_accepted:
+                    accepted_preserved[k] += 1
             objective_gaps[k].append(float(selected["candidate_objective"]) - exact_best_objective)
             pf_gaps[k].append(float(selected["candidate_packaging_factor"]) - exact_best_pf)
+            if has_accepted:
+                accepted_objective_gaps[k].append(float(selected["candidate_objective"]) - exact_best_objective)
+                accepted_pf_gaps[k].append(float(selected["candidate_packaging_factor"]) - exact_best_pf)
 
     rank_arr = np.asarray(best_predicted_ranks, dtype=np.float64)
     metrics.update(
@@ -251,6 +303,16 @@ def evaluate_predictions(eval_data: pd.DataFrame, top_ks: list[int]) -> dict[str
             "mean_exact_best_predicted_rank": float(np.mean(rank_arr)),
             "median_exact_best_predicted_rank": float(np.median(rank_arr)),
             "p90_exact_best_predicted_rank": float(np.percentile(rank_arr, 90)),
+            "mean_accepted_exact_best_predicted_rank": (
+                float(np.mean(np.asarray(accepted_best_predicted_ranks, dtype=np.float64)))
+                if accepted_best_predicted_ranks
+                else None
+            ),
+            "median_accepted_exact_best_predicted_rank": (
+                float(np.median(np.asarray(accepted_best_predicted_ranks, dtype=np.float64)))
+                if accepted_best_predicted_ranks
+                else None
+            ),
         }
     )
     for k in top_ks:
@@ -259,8 +321,17 @@ def evaluate_predictions(eval_data: pd.DataFrame, top_ks: list[int]) -> dict[str
             accepted_captures[k] / accepted_groups if accepted_groups else None
         )
         metrics[f"exact_step_preservation_at_{k}"] = preserved[k] / len(groups)
+        metrics[f"accepted_step_preservation_at_{k}"] = (
+            accepted_preserved[k] / accepted_groups if accepted_groups else None
+        )
         metrics[f"mean_objective_gap_at_{k}"] = float(np.mean(objective_gaps[k]))
         metrics[f"mean_pf_gap_at_{k}"] = float(np.mean(pf_gaps[k]))
+        metrics[f"mean_accepted_objective_gap_at_{k}"] = (
+            float(np.mean(accepted_objective_gaps[k])) if accepted_objective_gaps[k] else None
+        )
+        metrics[f"mean_accepted_pf_gap_at_{k}"] = (
+            float(np.mean(accepted_pf_gaps[k])) if accepted_pf_gaps[k] else None
+        )
         metrics[f"mean_validations_at_{k}"] = float(
             np.mean([min(k, len(group)) for _, group in groups])
         )
@@ -272,6 +343,16 @@ def main() -> None:
         description="Train a candidate-level ranker from exact MILP local-search candidate traces."
     )
     parser.add_argument("--trace-csv", type=Path, nargs="+", required=True)
+    parser.add_argument(
+        "--eval-trace-csv",
+        type=Path,
+        nargs="+",
+        default=None,
+        help=(
+            "Optional held-out trace CSV(s). When supplied, the model trains on "
+            "all --trace-csv rows and reports metrics on these held-out rows."
+        ),
+    )
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--model", choices=["hgbt", "rf"], default="hgbt")
     parser.add_argument(
@@ -287,6 +368,16 @@ def main() -> None:
         help="Learning rate for --model hgbt.",
     )
     parser.add_argument("--top-k", type=parse_int_list, default=parse_int_list("5,10,30"))
+    parser.add_argument(
+        "--target-mode",
+        choices=["objective", "objective_gap", "rank"],
+        default="objective",
+        help=(
+            "Training target. objective reproduces the original absolute score "
+            "regression; objective_gap predicts each candidate's exact gap to "
+            "the step-best candidate; rank predicts log(1 + exact_rank - 1)."
+        ),
+    )
     parser.add_argument("--test-fraction", type=float, default=0.25)
     parser.add_argument("--random-state", type=int, default=0)
     parser.add_argument("--uncovered-weight", type=float, default=1_000_000.0)
@@ -300,25 +391,30 @@ def main() -> None:
     if args.hgbt_learning_rate <= 0.0:
         raise ValueError("--hgbt-learning-rate must be positive")
 
-    data = add_training_columns(
-        load_trace_csvs(args.trace_csv),
-        uncovered_weight=args.uncovered_weight,
-        unknown_weight=args.unknown_weight,
+    data = ensure_feature_columns(
+        add_training_columns(
+            load_trace_csvs(args.trace_csv),
+            uncovered_weight=args.uncovered_weight,
+            unknown_weight=args.unknown_weight,
+        )
     )
-    for col in CANDIDATE_NUMERIC_FEATURES:
-        if col not in data.columns:
-            data[col] = 0.0
-    for col in CANDIDATE_CATEGORICAL_FEATURES:
-        if col not in data.columns:
-            data[col] = ""
-
-    train_idx, eval_idx = split_by_step(
-        data,
-        test_fraction=args.test_fraction,
-        random_state=args.random_state,
-    )
-    train_data = data.iloc[train_idx].copy()
-    eval_data = data.iloc[eval_idx].copy()
+    if args.eval_trace_csv is not None:
+        train_data = data.copy()
+        eval_data = ensure_feature_columns(
+            add_training_columns(
+                load_trace_csvs(args.eval_trace_csv),
+                uncovered_weight=args.uncovered_weight,
+                unknown_weight=args.unknown_weight,
+            )
+        )
+    else:
+        train_idx, eval_idx = split_by_step(
+            data,
+            test_fraction=args.test_fraction,
+            random_state=args.random_state,
+        )
+        train_data = data.iloc[train_idx].copy()
+        eval_data = data.iloc[eval_idx].copy()
 
     pipeline = make_pipeline(
         args.model,
@@ -328,7 +424,7 @@ def main() -> None:
     )
     pipeline.fit(
         train_data[CANDIDATE_NUMERIC_FEATURES + CANDIDATE_CATEGORICAL_FEATURES],
-        train_data["candidate_objective"].astype(float).to_numpy(),
+        target_values(train_data, args.target_mode),
     )
 
     eval_data["predicted_objective"] = pipeline.predict(
@@ -342,12 +438,14 @@ def main() -> None:
             "train_groups": int(train_data["step_group_id"].nunique()),
             "eval_groups": int(eval_data["step_group_id"].nunique()),
             "model": args.model,
+            "target_mode": args.target_mode,
             "model_params": {
                 "hgbt_max_iter": args.hgbt_max_iter if args.model == "hgbt" else None,
                 "hgbt_learning_rate": args.hgbt_learning_rate if args.model == "hgbt" else None,
             },
             "top_k": args.top_k,
             "trace_csv": [str(path) for path in args.trace_csv],
+            "eval_trace_csv": [str(path) for path in args.eval_trace_csv] if args.eval_trace_csv else None,
         }
     )
 
@@ -365,12 +463,20 @@ def main() -> None:
         "numeric_features": CANDIDATE_NUMERIC_FEATURES,
         "categorical_features": CANDIDATE_CATEGORICAL_FEATURES,
         "target": "candidate_objective",
+        "target_mode": args.target_mode,
+        "target_description": {
+            "objective": "absolute scalarized exact candidate objective",
+            "objective_gap": "within-step candidate_objective minus exact step-best objective",
+            "rank": "log1p(candidate_rank - 1), where lower rank is better",
+        }[args.target_mode],
         "objective_scalarization": {
             "formula": "uncovered_weight * uncovered_orders + unknown_weight * unknown_pairs + packaging_factor",
             "uncovered_weight": args.uncovered_weight,
             "unknown_weight": args.unknown_weight,
         },
         "metrics": metrics,
+        "trace_csv": [str(path) for path in args.trace_csv],
+        "eval_trace_csv": [str(path) for path in args.eval_trace_csv] if args.eval_trace_csv else None,
         "git": git_info(REPO_ROOT),
     }
     joblib.dump(
