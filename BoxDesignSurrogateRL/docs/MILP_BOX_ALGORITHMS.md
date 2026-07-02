@@ -195,12 +195,15 @@ candidate that exact greedy would have selected.
 
 There are two supported ranker modes:
 
-- **Exact-preserving filter mode**: use `--ranker-noop-fallback`. The ranker
+- **False-no-op fallback mode**: use `--ranker-noop-fallback`. The ranker
   checks small top-k tiers first, but if they contain no improving move, the
   runner validates the remaining candidates before declaring no-op. This should
-  match exact `staged_greedy` at the same step schedule, but real runtime gains
-  can be small when the Java MILP oracle cache already reuses many order-box
-  labels.
+  reduce false local optima caused by a missed improving candidate. It does
+  not theoretically guarantee the same step as exact `staged_greedy`: if an
+  early tier contains an improving move, the runner accepts the best
+  MILP-verified move in that tier without validating every lower-ranked
+  candidate. Any exact-equivalence claim must therefore be empirical for a
+  reported run, or certified by a subsequent exact audit.
 - **Query-budgeted mode**: use `--no-ranker-noop-fallback`. The ranker validates
   only the configured top-k tiers and accepts a move only after exact MILP
   verification. This cannot accept a surrogate-only false improvement, but it
