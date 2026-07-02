@@ -66,6 +66,8 @@ BoxDesignSurrogateRL\results\candidate_predictor_dev500_limit2500dev_query_budge
 
 ## Results
 
+### Exact-Preserving And Top10,30 Pilot
+
 | Metric | Exact 0.25 | Ranker + fallback | Query-budgeted ranker | Query-budgeted + exact audit |
 |---|---:|---:|---:|---:|
 | Final PF | 2.3062720835 | 2.3062720835 | 2.3174115903 | 2.3062720835 |
@@ -86,6 +88,27 @@ subprocess, elapsed, and ranker times are summed across the query-budgeted run
 and the subsequent exact audit run. The final PF and coverage are the audited
 final exact values.
 
+### Budget Frontier Smoke On Dev500
+
+The helper script was then run on two additional budget points, each with an
+independent cold cache and an exact audit sharing only that budget's cache:
+
+```text
+C:\Users\Lenovo\Downloads\Operation-Research\BoxDesignSurrogateRL\results\query_budgeted_ranker_frontier_dev500_20260703\frontier_20260703_020935
+```
+
+| Budget | Query-only PF | PF gap vs exact | Query-only coverage | Query-only uncached boxes | Query-only wall-clock seconds | Audited PF | Combined uncached boxes | Combined wall-clock seconds |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| top5 | 2.3250495869 | +0.0187775034 | 1.0000 | 18 | 62.5147 | 2.3062720835 | 133 | 251.6819 |
+| top10 | 2.3215656006 | +0.0152935171 | 1.0000 | 33 | 91.2342 | 2.3062720835 | 133 | 255.5133 |
+| top10,30 | 2.3174115903 | +0.0111395067 | 1.0000 | 63 | 136.4738 | 2.3062720835 | 130 | 252.4288 |
+
+Against the exact `0.25` baseline (`134` uncached boxes, `259.8127s`), the
+query-only frontier is monotonic in the expected direction: larger budget
+spends more uncached MILP queries and reduces PF gap. After exact audit, all
+three budget points recover the exact PF, but the combined wall-clock savings
+remain small (`1.7%` to `3.1%`).
+
 ## Interpretation
 
 The exact-preserving fallback mode is scientifically clean but currently not a
@@ -105,6 +128,12 @@ set, but consumes most of the saved runtime. End-to-end audited wall-clock time
 is `252.4s`, only `2.8%` faster than exact. This is useful as a rigor mechanism,
 not yet as the main speed claim.
 
+The frontier result strengthens the diagnosis: query-budgeted search alone
+shows a real cost-quality tradeoff, but exact audit still dominates the
+end-to-end cost. The next model improvement should target exact-best capture at
+low top-k so that the audit gap and audit cost shrink, not merely make ranker
+inference faster.
+
 ## Claim Status
 
 Supported now:
@@ -113,8 +142,9 @@ Supported now:
   surrogate-only improvements; every accepted move is still exact-MILP
   verified.
 - On this dev500 fine stage, query-budgeted search gives a meaningful Pareto
-  point: `52.99%` fewer uncached oracle boxes and `47.47%` lower wall-clock
-  time at a `0.48%` PF gap, with no coverage loss.
+  frontier: top5/top10/top10,30 reduce uncached oracle boxes by `86.57%`,
+  `75.37%`, and `52.99%`, respectively, with PF gaps of `0.81%`, `0.66%`, and
+  `0.48%`, and no coverage loss.
 - Exact audit can certify and repair the remaining local-search gap.
 
 Not yet supported:
