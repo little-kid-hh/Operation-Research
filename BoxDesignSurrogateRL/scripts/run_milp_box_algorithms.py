@@ -71,6 +71,15 @@ def parse_float_list(value: str) -> list[float]:
     return values
 
 
+def parse_int_list(value: str) -> list[int]:
+    values = [int(item.strip()) for item in value.split(",") if item.strip()]
+    if not values:
+        raise argparse.ArgumentTypeError("expected at least one integer value")
+    if any(value <= 0 for value in values):
+        raise argparse.ArgumentTypeError("all integer-list values must be positive")
+    return values
+
+
 def score_rank(score: MilpBoxSetScore) -> tuple[int, int, float]:
     return score.uncovered_orders, score.unknown_pairs, score.packaging_factor
 
@@ -360,6 +369,8 @@ def best_single_action_surrogate_filtered(
     current_score: MilpBoxSetScore,
     step: float,
     top_k: int,
+    adaptive_top_k: list[int] | None,
+    noop_fallback: bool,
     rank_mode: str,
     candidate_batch_size: int | None,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
@@ -376,6 +387,9 @@ def best_single_action_surrogate_filtered(
             "milp_avoidance_rate": 0.0,
             "surrogate_eval_seconds": 0.0,
             "milp_eval_seconds": 0.0,
+            "surrogate_top_k_sequence": "",
+            "surrogate_tiers_evaluated": 0,
+            "surrogate_noop_fallback_used": False,
         }
 
     assignment_mode = "min_volume" if rank_mode == "paper_pf_surrogate" else "risk_adjusted"
@@ -392,36 +406,61 @@ def best_single_action_surrogate_filtered(
             f"{len(surrogate_evaluations)} for {generated_candidates} candidates"
         )
 
-    keep = min(top_k, generated_candidates)
+    requested_top_k = adaptive_top_k if adaptive_top_k is not None else [top_k]
+    top_k_sequence: list[int] = []
+    for value in requested_top_k:
+        keep = min(value, generated_candidates)
+        if keep not in top_k_sequence:
+            top_k_sequence.append(keep)
+    if noop_fallback and generated_candidates not in top_k_sequence:
+        top_k_sequence.append(generated_candidates)
+
     ranked_indices = sorted(
         range(generated_candidates),
         key=lambda idx: (surrogate_rank(surrogate_evaluations[idx], rank_mode), idx),
-    )[:keep]
+    )
 
     best_boxes = current
     best_score = current_score
     best_action = "noop"
     milp_eval_seconds = 0.0
-    for idx in ranked_indices:
-        eval_started = time.perf_counter()
-        score = oracle.evaluate(orders, candidates[idx])
-        milp_eval_seconds += time.perf_counter() - eval_started
-        if score_rank(score) < score_rank(best_score):
-            best_boxes = candidates[idx]
-            best_score = score
-            move = moves[idx]
-            best_action = f"{move.box_id}:{move.dimension}:{move.delta:+.6f}"
+    validated_indices: set[int] = set()
+    tiers_evaluated = 0
+    noop_fallback_used = False
+    for tier_keep in top_k_sequence:
+        tier_indices = ranked_indices[:tier_keep]
+        new_indices = [idx for idx in tier_indices if idx not in validated_indices]
+        if not new_indices:
+            continue
+        tiers_evaluated += 1
+        if tier_keep == generated_candidates and len(validated_indices) > 0:
+            noop_fallback_used = True
+        for idx in new_indices:
+            validated_indices.add(idx)
+            eval_started = time.perf_counter()
+            score = oracle.evaluate(orders, candidates[idx])
+            milp_eval_seconds += time.perf_counter() - eval_started
+            if score_rank(score) < score_rank(best_score):
+                best_boxes = candidates[idx]
+                best_score = score
+                move = moves[idx]
+                best_action = f"{move.box_id}:{move.dimension}:{move.delta:+.6f}"
+        if score_rank(best_score) < score_rank(current_score):
+            break
 
-    avoided = generated_candidates - len(ranked_indices)
+    avoided = generated_candidates - len(validated_indices)
     metrics = {
-        "candidate_evaluations": len(ranked_indices),
+        "candidate_evaluations": len(validated_indices),
         "generated_candidates": generated_candidates,
         "surrogate_scored_candidates": generated_candidates,
-        "milp_validated_candidates": len(ranked_indices),
+        "milp_validated_candidates": len(validated_indices),
         "milp_candidate_evaluations_avoided": avoided,
         "milp_avoidance_rate": avoided / generated_candidates if generated_candidates else 0.0,
         "surrogate_eval_seconds": surrogate_eval_seconds,
         "milp_eval_seconds": milp_eval_seconds,
+        "surrogate_top_k_sequence": ",".join(str(value) for value in top_k_sequence),
+        "surrogate_tiers_evaluated": tiers_evaluated,
+        "surrogate_noop_fallback_used": noop_fallback_used,
     }
     return best_boxes, best_score, best_action, metrics
 
@@ -536,6 +575,8 @@ def run_surrogate_filtered_greedy(
     boxes: list[Box],
     schedule: list[tuple[float, int]],
     top_k: int,
+    adaptive_top_k: list[int] | None,
+    noop_fallback: bool,
     rank_mode: str,
     candidate_batch_size: int | None,
     initial_score: MilpBoxSetScore | None = None,
@@ -558,6 +599,9 @@ def run_surrogate_filtered_greedy(
             "milp_avoidance_rate": 0.0,
             "surrogate_eval_seconds": 0.0,
             "milp_eval_seconds": 0.0,
+            "surrogate_top_k_sequence": "",
+            "surrogate_tiers_evaluated": 0,
+            "surrogate_noop_fallback_used": False,
             **score_to_dict(current_score),
         }
     ]
@@ -573,6 +617,8 @@ def run_surrogate_filtered_greedy(
                 current_score=current_score,
                 step=step,
                 top_k=top_k,
+                adaptive_top_k=adaptive_top_k,
+                noop_fallback=noop_fallback,
                 rank_mode=rank_mode,
                 candidate_batch_size=candidate_batch_size,
             )
@@ -621,6 +667,9 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "milp_avoidance_rate",
         "surrogate_eval_seconds",
         "milp_eval_seconds",
+        "surrogate_top_k_sequence",
+        "surrogate_tiers_evaluated",
+        "surrogate_noop_fallback_used",
     ]
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
@@ -678,6 +727,21 @@ def main() -> None:
         help="Number of surrogate-ranked candidates per iteration to verify with MILP.",
     )
     parser.add_argument(
+        "--surrogate-adaptive-top-k",
+        type=parse_int_list,
+        default=None,
+        help=(
+            "Optional comma-separated top-k widening sequence, e.g. 10,30. "
+            "Each iteration evaluates the next tier only if smaller tiers have no MILP improvement."
+        ),
+    )
+    parser.add_argument(
+        "--surrogate-noop-fallback",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="When all surrogate tiers have no MILP improvement, validate the remaining candidates before noop.",
+    )
+    parser.add_argument(
         "--surrogate-candidate-batch-size",
         type=int,
         default=None,
@@ -724,6 +788,8 @@ def main() -> None:
         raise ValueError("--orders-limit must be >= --k for k-means initialization")
     if args.surrogate_top_k <= 0:
         raise ValueError("--surrogate-top-k must be positive")
+    if args.surrogate_adaptive_top_k is not None and any(value <= 0 for value in args.surrogate_adaptive_top_k):
+        raise ValueError("--surrogate-adaptive-top-k values must be positive")
     if args.surrogate_candidate_batch_size is not None and args.surrogate_candidate_batch_size <= 0:
         raise ValueError("--surrogate-candidate-batch-size must be positive")
 
@@ -767,6 +833,12 @@ def main() -> None:
         "tau_high": args.tau_high if args.algorithm == "surrogate_filtered_greedy" else None,
         "lambda_risk": args.lambda_risk if args.algorithm == "surrogate_filtered_greedy" else None,
         "surrogate_top_k": args.surrogate_top_k if args.algorithm == "surrogate_filtered_greedy" else None,
+        "surrogate_adaptive_top_k": (
+            args.surrogate_adaptive_top_k if args.algorithm == "surrogate_filtered_greedy" else None
+        ),
+        "surrogate_noop_fallback": (
+            args.surrogate_noop_fallback if args.algorithm == "surrogate_filtered_greedy" else None
+        ),
         "surrogate_candidate_batch_size": (
             args.surrogate_candidate_batch_size if args.algorithm == "surrogate_filtered_greedy" else None
         ),
@@ -837,6 +909,8 @@ def main() -> None:
             boxes=search_boxes,
             schedule=args.schedule,
             top_k=args.surrogate_top_k,
+            adaptive_top_k=args.surrogate_adaptive_top_k,
+            noop_fallback=args.surrogate_noop_fallback,
             rank_mode=args.surrogate_rank_mode,
             candidate_batch_size=args.surrogate_candidate_batch_size,
             initial_score=search_initial_score,
@@ -870,6 +944,10 @@ def main() -> None:
         ),
         "surrogate_eval_seconds": float(sum(row.get("surrogate_eval_seconds", 0.0) for row in trace)),
         "milp_eval_seconds": float(sum(row.get("milp_eval_seconds", 0.0) for row in trace)),
+        "surrogate_tiers_evaluated": int(sum(row.get("surrogate_tiers_evaluated", 0) for row in trace)),
+        "surrogate_noop_fallback_uses": int(
+            sum(1 for row in trace if str(row.get("surrogate_noop_fallback_used", "")).lower() == "true")
+        ),
         "elapsed_seconds": elapsed_seconds,
         "oracle_cache": oracle.cache_info() if hasattr(oracle, "cache_info") else None,
         "run_dir": str(run_dir),

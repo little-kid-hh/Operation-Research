@@ -93,6 +93,20 @@ candidate batch before calling `predict_proba`, then reconstructs each
 candidate score from the shared probability matrix. This avoids repeatedly
 scoring unchanged boxes in local-search neighborhoods.
 
+Two optional controls reduce false surrogate no-ops:
+
+```text
+--surrogate-adaptive-top-k 10,30
+--surrogate-noop-fallback
+```
+
+With an adaptive top-k sequence, the runner first validates only the smallest
+surrogate-ranked tier. If that tier contains no MILP-improving move, it widens
+to the next tier. With `--surrogate-noop-fallback`, a surrogate-filter no-op
+triggers exact MILP validation of the remaining generated candidates before the
+runner records a true no-op. This preserves exact-MILP acceptance while avoiding
+the false local optima caused by a missed candidate in the initial top-k.
+
 The first supported ranking mode is:
 
 ```text

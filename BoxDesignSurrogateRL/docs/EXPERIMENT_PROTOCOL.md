@@ -86,6 +86,11 @@ sent to MILP. A move is accepted only when the exact MILP score improves the
 current exact MILP score. Reports must not present surrogate scores as final
 quality metrics.
 
+Optional controls such as `--surrogate-adaptive-top-k 10,30` and
+`--surrogate-noop-fallback` may be used to reduce false surrogate no-ops. These
+controls widen the MILP-validated candidate set only when smaller surrogate
+tiers fail to find an exact-MILP improvement; fallback usage must be reported.
+
 ## Common Coverage Repair
 
 Exact MILP feasibility is stricter than the aggregate initialization used to
@@ -184,6 +189,7 @@ Always report:
 - generated candidate count;
 - MILP-validated candidate count;
 - avoided MILP candidate evaluations;
+- surrogate tier evaluations and no-op fallback uses, if enabled;
 - oracle uncached batches and boxes;
 - surrogate inference time, if used;
 - exact-oracle subprocess time;
@@ -222,6 +228,7 @@ For surrogate-filtered methods, additionally require:
 - final reported PF, coverage, and unknown counts come from exact MILP;
 - `milp_validated_candidates`, `milp_candidate_evaluations_avoided`, and
   `oracle_uncached_boxes` are reported;
+- adaptive top-k sequences and no-op fallback usage are reported when enabled;
 - rejected candidates are audited on dev before using the filter in a main
   result, with special attention to false negatives among candidates that would
   improve exact PF.

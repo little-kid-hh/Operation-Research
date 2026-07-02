@@ -52,6 +52,8 @@ def load_run(path: Path) -> dict[str, Any]:
         "fixed_step": summary.get("fixed_step"),
         "schedule": json.dumps(summary.get("schedule", []), sort_keys=True),
         "surrogate_top_k": summary.get("surrogate_top_k"),
+        "surrogate_adaptive_top_k": json.dumps(summary.get("surrogate_adaptive_top_k"), sort_keys=True),
+        "surrogate_noop_fallback": summary.get("surrogate_noop_fallback"),
         "surrogate_rank_mode": summary.get("surrogate_rank_mode"),
         "surrogate_candidate_batch_size": summary.get("surrogate_candidate_batch_size"),
         "initial_pf": initial.get("packaging_factor"),
@@ -73,6 +75,8 @@ def load_run(path: Path) -> dict[str, Any]:
         "milp_avoidance_rate": summary.get("milp_avoidance_rate"),
         "surrogate_eval_seconds": summary.get("surrogate_eval_seconds"),
         "milp_eval_seconds": summary.get("milp_eval_seconds"),
+        "surrogate_tiers_evaluated": summary.get("surrogate_tiers_evaluated"),
+        "surrogate_noop_fallback_uses": summary.get("surrogate_noop_fallback_uses"),
         "trace_rows": summary.get("trace_rows"),
         "elapsed_seconds": summary.get("elapsed_seconds"),
         "cache_entries": cache.get("entries"),
@@ -216,6 +220,8 @@ def _summarize_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
     milp_avoidance_rate = _numeric_values(runs, "milp_avoidance_rate")
     surrogate_eval_seconds = _numeric_values(runs, "surrogate_eval_seconds")
     milp_eval_seconds = _numeric_values(runs, "milp_eval_seconds")
+    surrogate_tiers_evaluated = _numeric_values(runs, "surrogate_tiers_evaluated")
+    surrogate_noop_fallback_uses = _numeric_values(runs, "surrogate_noop_fallback_uses")
     oracle_uncached_boxes = _numeric_values(runs, "oracle_uncached_boxes")
     oracle_subprocess_seconds = _numeric_values(runs, "oracle_subprocess_seconds")
     elapsed_seconds = _numeric_values(runs, "elapsed_seconds")
@@ -239,6 +245,8 @@ def _summarize_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "milp_avoidance_rate_mean": _mean(milp_avoidance_rate),
         "surrogate_eval_seconds_mean": _mean(surrogate_eval_seconds),
         "milp_eval_seconds_mean": _mean(milp_eval_seconds),
+        "surrogate_tiers_evaluated_mean": _mean(surrogate_tiers_evaluated),
+        "surrogate_noop_fallback_uses_mean": _mean(surrogate_noop_fallback_uses),
         "oracle_uncached_boxes_mean": _mean(oracle_uncached_boxes),
         "oracle_subprocess_seconds_mean": _mean(oracle_subprocess_seconds),
         "elapsed_seconds_mean": _mean(elapsed_seconds),

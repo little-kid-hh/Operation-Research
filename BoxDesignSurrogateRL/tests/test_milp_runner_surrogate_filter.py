@@ -89,6 +89,8 @@ class SurrogateFilterTest(unittest.TestCase):
             current_score=_milp_score(10.0),
             step=1.0,
             top_k=1,
+            adaptive_top_k=None,
+            noop_fallback=False,
             rank_mode="paper_pf_surrogate",
             candidate_batch_size=None,
         )
@@ -117,6 +119,8 @@ class SurrogateFilterTest(unittest.TestCase):
             current_score=_milp_score(10.0),
             step=1.0,
             top_k=1,
+            adaptive_top_k=None,
+            noop_fallback=False,
             rank_mode="paper_pf_surrogate",
             candidate_batch_size=None,
         )
@@ -126,6 +130,63 @@ class SurrogateFilterTest(unittest.TestCase):
         self.assertEqual(best_score.packaging_factor, 10.0)
         self.assertEqual(best_boxes, current)
         self.assertEqual(metrics["milp_candidate_evaluations_avoided"], 5)
+
+    def test_noop_fallback_recovers_improvement_filtered_out_by_surrogate(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+        current = [Box(0, 3.0, 3.0, 3.0)]
+        oracle = WidthImprovesOracle()
+        surrogate = RankingSurrogate(preferred_dimension="length")
+
+        best_boxes, best_score, action, metrics = runner.best_single_action_surrogate_filtered(
+            oracle=oracle,
+            surrogate=surrogate,
+            orders=orders,
+            current=current,
+            current_score=_milp_score(10.0),
+            step=1.0,
+            top_k=1,
+            adaptive_top_k=None,
+            noop_fallback=True,
+            rank_mode="paper_pf_surrogate",
+            candidate_batch_size=None,
+        )
+
+        self.assertEqual(len(oracle.evaluated_boxes), 6)
+        self.assertEqual(action, "0:width:-1.000000")
+        self.assertEqual(best_score.packaging_factor, 5.0)
+        self.assertEqual(best_boxes[0].width, 2.0)
+        self.assertEqual(metrics["milp_candidate_evaluations_avoided"], 0)
+        self.assertTrue(metrics["surrogate_noop_fallback_used"])
+
+    def test_adaptive_top_k_widens_only_until_it_finds_an_improvement(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+        current = [Box(0, 3.0, 3.0, 3.0)]
+        oracle = WidthImprovesOracle()
+        surrogate = RankingSurrogate(preferred_dimension="length")
+
+        best_boxes, best_score, action, metrics = runner.best_single_action_surrogate_filtered(
+            oracle=oracle,
+            surrogate=surrogate,
+            orders=orders,
+            current=current,
+            current_score=_milp_score(10.0),
+            step=1.0,
+            top_k=1,
+            adaptive_top_k=[1, 3, 6],
+            noop_fallback=False,
+            rank_mode="paper_pf_surrogate",
+            candidate_batch_size=None,
+        )
+
+        self.assertEqual(len(oracle.evaluated_boxes), 3)
+        self.assertEqual(action, "0:width:-1.000000")
+        self.assertEqual(best_score.packaging_factor, 5.0)
+        self.assertEqual(best_boxes[0].width, 2.0)
+        self.assertEqual(metrics["milp_candidate_evaluations_avoided"], 3)
+        self.assertEqual(metrics["surrogate_tiers_evaluated"], 2)
+        self.assertFalse(metrics["surrogate_noop_fallback_used"])
 
 
 if __name__ == "__main__":
