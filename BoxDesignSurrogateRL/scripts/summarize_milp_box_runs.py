@@ -77,6 +77,7 @@ def load_run(path: Path) -> dict[str, Any]:
         "milp_candidate_evaluations_avoided": summary.get("milp_candidate_evaluations_avoided"),
         "milp_avoidance_rate": summary.get("milp_avoidance_rate"),
         "surrogate_eval_seconds": summary.get("surrogate_eval_seconds"),
+        "prefetch_eval_seconds": summary.get("prefetch_eval_seconds"),
         "milp_eval_seconds": summary.get("milp_eval_seconds"),
         "surrogate_tiers_evaluated": summary.get("surrogate_tiers_evaluated"),
         "surrogate_noop_fallback_uses": summary.get("surrogate_noop_fallback_uses"),
@@ -112,6 +113,7 @@ def paired_deltas(runs: list[dict[str, Any]], baseline: str, candidate: str) -> 
             run["coverage_repair"],
             run["repair_margins"],
             run["repair_max_rounds"],
+            run["prefetch_candidate_statuses"],
         )
         groups.setdefault(key, []).append(run)
 
@@ -222,6 +224,7 @@ def _summarize_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
     milp_validated_candidates = _numeric_values(runs, "milp_validated_candidates")
     milp_avoidance_rate = _numeric_values(runs, "milp_avoidance_rate")
     surrogate_eval_seconds = _numeric_values(runs, "surrogate_eval_seconds")
+    prefetch_eval_seconds = _numeric_values(runs, "prefetch_eval_seconds")
     milp_eval_seconds = _numeric_values(runs, "milp_eval_seconds")
     surrogate_tiers_evaluated = _numeric_values(runs, "surrogate_tiers_evaluated")
     surrogate_noop_fallback_uses = _numeric_values(runs, "surrogate_noop_fallback_uses")
@@ -247,6 +250,7 @@ def _summarize_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "milp_validated_candidates_mean": _mean(milp_validated_candidates),
         "milp_avoidance_rate_mean": _mean(milp_avoidance_rate),
         "surrogate_eval_seconds_mean": _mean(surrogate_eval_seconds),
+        "prefetch_eval_seconds_mean": _mean(prefetch_eval_seconds),
         "milp_eval_seconds_mean": _mean(milp_eval_seconds),
         "surrogate_tiers_evaluated_mean": _mean(surrogate_tiers_evaluated),
         "surrogate_noop_fallback_uses_mean": _mean(surrogate_noop_fallback_uses),

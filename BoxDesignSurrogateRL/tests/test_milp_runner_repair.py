@@ -133,6 +133,8 @@ class MilpRunnerRepairTest(unittest.TestCase):
         self.assertLess(best_score.packaging_factor, current_score.packaging_factor)
         self.assertEqual(best_boxes[0].length, 1.75)
         self.assertEqual(metrics["candidate_evaluations"], 6)
+        self.assertIn("prefetch_eval_seconds", metrics)
+        self.assertGreaterEqual(metrics["milp_eval_seconds"], metrics["prefetch_eval_seconds"])
 
 
 if __name__ == "__main__":

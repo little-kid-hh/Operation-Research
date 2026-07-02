@@ -112,6 +112,8 @@ def add_common_runner_args(
             args.code_version,
         ]
     )
+    if args.prefetch_candidate_statuses:
+        cmd.append("--prefetch-candidate-statuses")
 
 
 def make_row(
@@ -130,10 +132,13 @@ def make_row(
     audit_subprocess = cache_value(audit_summary, "subprocess_seconds") if audit_summary else None
     ranker_elapsed = ranker_summary.get("elapsed_seconds")
     audit_elapsed = audit_summary.get("elapsed_seconds") if audit_summary else None
+    ranker_prefetch_elapsed = ranker_summary.get("prefetch_eval_seconds")
+    audit_prefetch_elapsed = audit_summary.get("prefetch_eval_seconds") if audit_summary else None
 
     return {
         "ranker_budget_sequence": sequence,
         "ranker_config_label": ranker_summary.get("config_label"),
+        "ranker_prefetch_candidate_statuses": ranker_summary.get("prefetch_candidate_statuses"),
         "ranker_run_dir": ranker_summary.get("run_dir"),
         "ranker_pf": ranker_pf,
         "ranker_pf_gap_vs_baseline": ranker_pf - baseline_pf if ranker_pf is not None and baseline_pf is not None else None,
@@ -143,10 +148,12 @@ def make_row(
         "ranker_milp_validated_candidates": ranker_summary.get("milp_validated_candidates"),
         "ranker_candidate_avoidance_rate": ranker_summary.get("milp_avoidance_rate"),
         "ranker_eval_seconds": ranker_summary.get("ranker_eval_seconds"),
+        "ranker_prefetch_eval_seconds": ranker_prefetch_elapsed,
         "ranker_oracle_uncached_boxes": ranker_uncached,
         "ranker_oracle_subprocess_seconds": ranker_subprocess,
         "ranker_elapsed_seconds": ranker_elapsed,
         "audit_config_label": audit_summary.get("config_label") if audit_summary else None,
+        "audit_prefetch_candidate_statuses": audit_summary.get("prefetch_candidate_statuses") if audit_summary else None,
         "audit_run_dir": audit_summary.get("run_dir") if audit_summary else None,
         "audit_pf": audit_pf,
         "audit_pf_gap_vs_baseline": audit_pf - baseline_pf if audit_pf is not None and baseline_pf is not None else None,
@@ -154,6 +161,7 @@ def make_row(
         "audit_uncovered": score_value(audit_summary, "uncovered_orders") if audit_summary else None,
         "audit_oracle_uncached_boxes": audit_uncached,
         "audit_oracle_subprocess_seconds": audit_subprocess,
+        "audit_prefetch_eval_seconds": audit_prefetch_elapsed,
         "audit_elapsed_seconds": audit_elapsed,
         "combined_oracle_uncached_boxes": (
             ranker_uncached + audit_uncached
@@ -165,10 +173,18 @@ def make_row(
             if ranker_subprocess is not None and audit_subprocess is not None
             else ranker_subprocess
         ),
+        "combined_prefetch_eval_seconds": (
+            ranker_prefetch_elapsed + audit_prefetch_elapsed
+            if ranker_prefetch_elapsed is not None and audit_prefetch_elapsed is not None
+            else ranker_prefetch_elapsed
+        ),
         "combined_elapsed_seconds": (
             ranker_elapsed + audit_elapsed if ranker_elapsed is not None and audit_elapsed is not None else ranker_elapsed
         ),
         "baseline_pf": baseline_pf,
+        "baseline_prefetch_candidate_statuses": baseline_summary.get("prefetch_candidate_statuses")
+        if baseline_summary
+        else None,
         "baseline_run_dir": baseline_summary.get("run_dir") if baseline_summary else None,
         "baseline_oracle_uncached_boxes": cache_value(baseline_summary, "uncached_boxes") if baseline_summary else None,
         "baseline_oracle_subprocess_seconds": cache_value(baseline_summary, "subprocess_seconds")
@@ -212,6 +228,7 @@ def main() -> None:
     parser.add_argument("--coverage-repair", choices=["none", "geometric_expand"], default="none")
     parser.add_argument("--out-root", type=Path, default=ROOT / "results/query_budgeted_ranker_frontier")
     parser.add_argument("--oracle-cache-dir", type=Path, default=None)
+    parser.add_argument("--prefetch-candidate-statuses", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--code-version", default="")
     args = parser.parse_args()
 

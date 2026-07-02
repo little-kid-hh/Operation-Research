@@ -75,7 +75,8 @@ python3 BoxDesignSurrogateRL/scripts/run_query_budgeted_ranker_frontier.py \
   --exact-baseline-summary BoxDesignSurrogateRL/results/<exact_0p25_run>/summary.json \
   --ranker-budget-sequence 10 \
   --ranker-budget-sequence 10,30 \
-  --run-audit
+  --run-audit \
+  --prefetch-candidate-statuses
 ```
 
 The default oracle is `--oracle java`, which invokes
@@ -296,7 +297,10 @@ Runtime and filtering metrics:
 - `surrogate_eval_seconds`: time spent scoring candidates with the surrogate.
 - `ranker_eval_seconds`: time spent scoring candidates with the candidate
   ranker.
-- `milp_eval_seconds`: Python-side elapsed time around exact oracle calls.
+- `prefetch_eval_seconds`: Python-side elapsed time spent prefetching exact
+  candidate statuses before per-candidate scoring.
+- `milp_eval_seconds`: Python-side elapsed time around exact oracle calls,
+  including prefetch time when `--prefetch-candidate-statuses` is enabled.
 - `oracle_cache`: includes cache hits/misses, uncached Java/Gurobi batches,
   uncached boxes, and subprocess wall time.
 

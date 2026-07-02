@@ -280,15 +280,17 @@ def prefetch_candidate_statuses(
     orders: list,
     candidates: list[list[Box]],
     enabled: bool,
-) -> None:
+) -> float:
     if not enabled or not candidates or not hasattr(oracle, "prefetch_box_statuses"):
-        return
+        return 0.0
     unique: dict[tuple[float, float, float], Box] = {}
     for candidate in candidates:
         for box in candidate:
             key = (round(float(box.length), 6), round(float(box.width), 6), round(float(box.height), 6))
             unique.setdefault(key, box)
+    started = time.perf_counter()
     oracle.prefetch_box_statuses(orders, list(unique.values()))  # type: ignore[attr-defined]
+    return time.perf_counter() - started
 
 
 def expand_box_for_order(box: Box, order, margin: float) -> Box:
@@ -388,18 +390,20 @@ def best_single_action(
     best_action = "noop"
     candidate_evaluations = 0
     milp_eval_seconds = 0.0
+    prefetch_eval_seconds = 0.0
     moves = list(coordinate_moves(current, step))
     candidates: list[list[Box]] = []
     candidate_scores: list[MilpBoxSetScore] = []
     for move in moves:
         candidate = apply_move(current, move)
         candidates.append(candidate)
-    prefetch_candidate_statuses(
+    prefetch_eval_seconds += prefetch_candidate_statuses(
         oracle=oracle,
         orders=orders,
         candidates=candidates,
         enabled=prefetch_candidate_statuses_enabled,
     )
+    milp_eval_seconds += prefetch_eval_seconds
     for move, candidate in zip(moves, candidates):
         candidate_evaluations += 1
         eval_started = time.perf_counter()
@@ -435,6 +439,7 @@ def best_single_action(
         "milp_candidate_evaluations_avoided": 0,
         "milp_avoidance_rate": 0.0,
         "surrogate_eval_seconds": 0.0,
+        "prefetch_eval_seconds": prefetch_eval_seconds,
         "milp_eval_seconds": milp_eval_seconds,
     }
     return best_boxes, best_score, best_action, metrics
@@ -484,6 +489,7 @@ def best_single_action_surrogate_filtered(
             "milp_candidate_evaluations_avoided": 0,
             "milp_avoidance_rate": 0.0,
             "surrogate_eval_seconds": 0.0,
+            "prefetch_eval_seconds": 0.0,
             "milp_eval_seconds": 0.0,
             "surrogate_top_k_sequence": "",
             "surrogate_tiers_evaluated": 0,
@@ -522,6 +528,7 @@ def best_single_action_surrogate_filtered(
     best_score = current_score
     best_action = "noop"
     milp_eval_seconds = 0.0
+    prefetch_eval_seconds = 0.0
     validated_indices: set[int] = set()
     tiers_evaluated = 0
     noop_fallback_used = False
@@ -533,12 +540,14 @@ def best_single_action_surrogate_filtered(
         tiers_evaluated += 1
         if tier_keep == generated_candidates and len(validated_indices) > 0:
             noop_fallback_used = True
-        prefetch_candidate_statuses(
+        prefetch_elapsed = prefetch_candidate_statuses(
             oracle=oracle,
             orders=orders,
             candidates=[candidates[idx] for idx in new_indices],
             enabled=prefetch_candidate_statuses_enabled,
         )
+        prefetch_eval_seconds += prefetch_elapsed
+        milp_eval_seconds += prefetch_elapsed
         for idx in new_indices:
             validated_indices.add(idx)
             eval_started = time.perf_counter()
@@ -561,6 +570,7 @@ def best_single_action_surrogate_filtered(
         "milp_candidate_evaluations_avoided": avoided,
         "milp_avoidance_rate": avoided / generated_candidates if generated_candidates else 0.0,
         "surrogate_eval_seconds": surrogate_eval_seconds,
+        "prefetch_eval_seconds": prefetch_eval_seconds,
         "milp_eval_seconds": milp_eval_seconds,
         "surrogate_top_k_sequence": ",".join(str(value) for value in top_k_sequence),
         "surrogate_tiers_evaluated": tiers_evaluated,
@@ -596,6 +606,7 @@ def best_single_action_ranker_filtered(
             "milp_candidate_evaluations_avoided": 0,
             "milp_avoidance_rate": 0.0,
             "ranker_eval_seconds": 0.0,
+            "prefetch_eval_seconds": 0.0,
             "milp_eval_seconds": 0.0,
             "ranker_top_k_sequence": "",
             "ranker_tiers_evaluated": 0,
@@ -640,6 +651,7 @@ def best_single_action_ranker_filtered(
     best_score = current_score
     best_action = "noop"
     milp_eval_seconds = 0.0
+    prefetch_eval_seconds = 0.0
     validated_indices: set[int] = set()
     tiers_evaluated = 0
     noop_fallback_used = False
@@ -651,12 +663,14 @@ def best_single_action_ranker_filtered(
         tiers_evaluated += 1
         if tier_keep == generated_candidates and len(validated_indices) > 0:
             noop_fallback_used = True
-        prefetch_candidate_statuses(
+        prefetch_elapsed = prefetch_candidate_statuses(
             oracle=oracle,
             orders=orders,
             candidates=[candidates[idx] for idx in new_indices],
             enabled=prefetch_candidate_statuses_enabled,
         )
+        prefetch_eval_seconds += prefetch_elapsed
+        milp_eval_seconds += prefetch_elapsed
         for idx in new_indices:
             validated_indices.add(idx)
             eval_started = time.perf_counter()
@@ -679,6 +693,7 @@ def best_single_action_ranker_filtered(
         "milp_candidate_evaluations_avoided": avoided,
         "milp_avoidance_rate": avoided / generated_candidates if generated_candidates else 0.0,
         "ranker_eval_seconds": ranker_eval_seconds,
+        "prefetch_eval_seconds": prefetch_eval_seconds,
         "milp_eval_seconds": milp_eval_seconds,
         "ranker_top_k_sequence": ",".join(str(value) for value in top_k_sequence),
         "ranker_tiers_evaluated": tiers_evaluated,
@@ -1040,6 +1055,7 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "surrogate_eval_seconds",
         "ranker_scored_candidates",
         "ranker_eval_seconds",
+        "prefetch_eval_seconds",
         "milp_eval_seconds",
         "surrogate_top_k_sequence",
         "surrogate_tiers_evaluated",
@@ -1433,6 +1449,7 @@ def main() -> None:
         ),
         "surrogate_eval_seconds": float(sum(row.get("surrogate_eval_seconds", 0.0) for row in trace)),
         "ranker_eval_seconds": float(sum(row.get("ranker_eval_seconds", 0.0) for row in trace)),
+        "prefetch_eval_seconds": float(sum(row.get("prefetch_eval_seconds", 0.0) for row in trace)),
         "milp_eval_seconds": float(sum(row.get("milp_eval_seconds", 0.0) for row in trace)),
         "surrogate_tiers_evaluated": int(sum(row.get("surrogate_tiers_evaluated", 0) for row in trace)),
         "surrogate_noop_fallback_uses": int(
