@@ -77,6 +77,35 @@ def boxes_to_rows(boxes: list[Box]) -> list[dict[str, float | int]]:
     ]
 
 
+def boxes_from_json(path: Path) -> list[Box]:
+    with path.open("r", encoding="utf-8") as f:
+        payload = json.load(f)
+    if not isinstance(payload, list):
+        raise ValueError(f"{path} must contain a JSON list of boxes")
+
+    boxes: list[Box] = []
+    seen_ids: set[int] = set()
+    for idx, row in enumerate(payload):
+        if not isinstance(row, dict):
+            raise ValueError(f"{path} box row {idx} must be an object")
+        try:
+            box_id = int(row["box_id"])
+            length = float(row["length"])
+            width = float(row["width"])
+            height = float(row["height"])
+        except KeyError as exc:
+            raise ValueError(f"{path} box row {idx} is missing {exc.args[0]!r}") from exc
+        if box_id in seen_ids:
+            raise ValueError(f"{path} contains duplicate box_id {box_id}")
+        if length <= 0.0 or width <= 0.0 or height <= 0.0:
+            raise ValueError(f"{path} box_id {box_id} has non-positive dimensions")
+        seen_ids.add(box_id)
+        boxes.append(Box(box_id=box_id, length=length, width=width, height=height))
+    if not boxes:
+        raise ValueError(f"{path} must contain at least one box")
+    return sorted(boxes, key=lambda b: b.box_id)
+
+
 def score_to_dict(score: MilpBoxSetScore) -> dict:
     out = asdict(score)
     out["assignments"] = list(score.assignments)
@@ -388,6 +417,12 @@ def main() -> None:
     parser.add_argument("--fixed-step", type=float, default=0.5)
     parser.add_argument("--iterations", type=int, default=3)
     parser.add_argument("--schedule", type=parse_schedule, default=parse_schedule("0.5:2,0.25:2"))
+    parser.add_argument(
+        "--initial-boxes-json",
+        type=Path,
+        default=None,
+        help="Optional best_boxes.json checkpoint to use instead of k-means initialization.",
+    )
     parser.add_argument("--oracle", choices=["java", "labels"], default="java")
     parser.add_argument("--orientation-label", choices=["label_2ori", "label_6ori"], default="label_6ori")
     parser.add_argument("--xml-path", type=Path, default=ROOT / "assets/or2023_bsp_data/xml_unique/or2023_bsp_unique_orders.xml")
@@ -432,7 +467,12 @@ def main() -> None:
     orders = read_order_summaries(args.xml_path)
     if args.orders_limit is not None:
         orders = orders[: args.orders_limit]
-    initial_boxes = initial_boxes_kmeans(orders, args.k, random_state=args.seed)
+    if args.initial_boxes_json is None:
+        initial_boxes = initial_boxes_kmeans(orders, args.k, random_state=args.seed)
+    else:
+        initial_boxes = boxes_from_json(args.initial_boxes_json)
+        if len(initial_boxes) != args.k:
+            raise ValueError(f"--initial-boxes-json contains {len(initial_boxes)} boxes, expected --k={args.k}")
     oracle = make_oracle(args)
 
     run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S")
@@ -452,6 +492,7 @@ def main() -> None:
         "fixed_step": args.fixed_step,
         "iterations": args.iterations,
         "schedule": [{"step": step, "iterations": iters} for step, iters in args.schedule],
+        "initial_boxes_json": str(args.initial_boxes_json) if args.initial_boxes_json is not None else None,
         "xml_path": str(args.xml_path),
         "labels_path": str(args.labels_path),
         "java_classes": str(args.java_classes),

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -38,6 +40,22 @@ class AggregateOracle:
 
 
 class MilpRunnerRepairTest(unittest.TestCase):
+    def test_boxes_from_json_loads_checkpoint_boxes(self) -> None:
+        runner = _load_runner_module()
+        payload = [
+            {"box_id": 2, "length": "3.5", "width": 4, "height": 5, "volume": 70},
+            {"box_id": 1, "length": 2, "width": 3, "height": 4, "volume": 24},
+        ]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = Path(tmpdir) / "best_boxes.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+
+            boxes = runner.boxes_from_json(path)
+
+        self.assertEqual([box.box_id for box in boxes], [1, 2])
+        self.assertEqual((boxes[0].length, boxes[0].width, boxes[0].height), (2.0, 3.0, 4.0))
+        self.assertEqual((boxes[1].length, boxes[1].width, boxes[1].height), (3.5, 4.0, 5.0))
+
     def test_geometric_repair_can_remove_uncovered_order(self) -> None:
         runner = _load_runner_module()
         orders = [summarize_items("toy.xml", "0", [(2.0, 2.0, 2.0)])]
