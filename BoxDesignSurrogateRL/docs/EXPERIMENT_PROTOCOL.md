@@ -91,6 +91,50 @@ Optional controls such as `--surrogate-adaptive-top-k 10,30` and
 controls widen the MILP-validated candidate set only when smaller surrogate
 tiers fail to find an exact-MILP improvement; fallback usage must be reported.
 
+### Algorithm D: MILP-Verified Candidate-Ranker Greedy
+
+Entrypoints:
+
+```bash
+python BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
+  --algorithm staged_greedy \
+  --schedule 0.25:300 \
+  --candidate-trace-csv BoxDesignSurrogateRL/results/candidate_traces/dev_exact.csv
+```
+
+```bash
+python BoxDesignSurrogateRL/scripts/train_candidate_ranker.py \
+  --trace-csv BoxDesignSurrogateRL/results/candidate_traces/dev_exact.csv \
+  --out-dir BoxDesignSurrogateRL/results/candidate_rankers \
+  --top-k 10,30
+```
+
+```bash
+python BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
+  --algorithm ranker_filtered_greedy \
+  --schedule 0.25:300 \
+  --candidate-ranker-path BoxDesignSurrogateRL/results/candidate_rankers/<run>/candidate_ranker.joblib \
+  --ranker-adaptive-top-k 10,30 \
+  --ranker-noop-fallback
+```
+
+This algorithm uses a learned model to rank local-search candidates, not to
+replace the final feasibility oracle. Training data must come from exact MILP
+candidate traces generated on the same problem formulation. The existing
+order-box feasibility model and its training data may be used as a reference or
+as auxiliary features in future variants, but they are not the primary labels
+for this algorithm because the bottleneck is candidate selection during
+box-set search.
+
+Reports must include ranker diagnostics before any end-to-end speed or quality
+claim:
+
+- exact-best candidate capture at top-k;
+- accepted-move capture at top-k;
+- exact step preservation at top-k;
+- predicted rank distribution of the exact-best candidate;
+- MILP-validated candidates and avoided candidates in the final verified run.
+
 ## Common Coverage Repair
 
 Exact MILP feasibility is stricter than the aggregate initialization used to
@@ -190,8 +234,10 @@ Always report:
 - MILP-validated candidate count;
 - avoided MILP candidate evaluations;
 - surrogate tier evaluations and no-op fallback uses, if enabled;
+- ranker tier evaluations and no-op fallback uses, if enabled;
 - oracle uncached batches and boxes;
 - surrogate inference time, if used;
+- ranker inference time, if used;
 - exact-oracle subprocess time;
 - candidate-evaluation budget.
 

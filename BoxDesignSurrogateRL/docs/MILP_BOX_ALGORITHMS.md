@@ -36,6 +36,36 @@ python3 BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
   --surrogate-top-k 10
 ```
 
+```bash
+PYTHONPATH=BoxDesignSurrogateRL \
+python3 BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
+  --algorithm staged_greedy \
+  --orders-limit 100 \
+  --k 10 \
+  --schedule 0.25:50 \
+  --candidate-trace-csv BoxDesignSurrogateRL/results/candidate_traces/dev100_exact025.csv
+```
+
+```bash
+PYTHONPATH=BoxDesignSurrogateRL \
+python3 BoxDesignSurrogateRL/scripts/train_candidate_ranker.py \
+  --trace-csv BoxDesignSurrogateRL/results/candidate_traces/dev100_exact025.csv \
+  --out-dir BoxDesignSurrogateRL/results/candidate_rankers \
+  --top-k 10,30
+```
+
+```bash
+PYTHONPATH=BoxDesignSurrogateRL \
+python3 BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
+  --algorithm ranker_filtered_greedy \
+  --orders-limit 100 \
+  --k 10 \
+  --schedule 0.25:50 \
+  --candidate-ranker-path BoxDesignSurrogateRL/results/candidate_rankers/<run>/candidate_ranker.joblib \
+  --ranker-adaptive-top-k 10,30 \
+  --ranker-noop-fallback
+```
+
 The default oracle is `--oracle java`, which invokes
 `org.example.GeneratePerminPackageLabels` through Java/Gurobi. This supports
 arbitrary generated box dimensions and is the correct oracle for searching new
@@ -118,6 +148,39 @@ surrogate feasibility threshold. `risk_aware_surrogate` is available for
 diagnostics, but should not be the primary claim until its thresholding and
 calibration are frozen.
 
+## Algorithm D: `ranker_filtered_greedy`
+
+This is the candidate-level version of the filter idea. Instead of training on
+standalone order-box feasibility labels, it trains from exact local-search
+candidate traces: for each search step, every generated coordinate candidate is
+evaluated by MILP and labeled with its exact rank, PF delta, and whether it was
+the accepted best-improvement move.
+
+The trained ranker predicts a scalar candidate objective used only to order the
+generated `6K` candidates. The runner validates the top-ranked candidates with
+the exact MILP oracle and accepts a move only if the exact MILP score improves
+the current exact score. This preserves the same final acceptance rule as
+`staged_greedy`.
+
+Use `--candidate-trace-csv` on exact `paper_fixed_step` or `staged_greedy`
+runs to export training data. The trace rows include:
+
+- current exact score and box-set summary;
+- moved box dimensions and coordinate action;
+- candidate exact score;
+- exact candidate rank within the step;
+- improvement and accepted-move labels.
+
+The primary ranker diagnostics are:
+
+- exact-best capture at top-k;
+- accepted-move capture at top-k;
+- exact step preservation at top-k;
+- mean predicted rank of the exact-best candidate.
+
+These diagnostics test whether the learned filter would have kept the
+candidate that exact greedy would have selected.
+
 ## Outputs
 
 Each run writes a timestamped directory under:
@@ -152,6 +215,8 @@ Runtime and filtering metrics:
   surrogate filter.
 - `milp_avoidance_rate`: avoided divided by generated candidates.
 - `surrogate_eval_seconds`: time spent scoring candidates with the surrogate.
+- `ranker_eval_seconds`: time spent scoring candidates with the candidate
+  ranker.
 - `milp_eval_seconds`: Python-side elapsed time around exact oracle calls.
 - `oracle_cache`: includes cache hits/misses, uncached Java/Gurobi batches,
   uncached boxes, and subprocess wall time.

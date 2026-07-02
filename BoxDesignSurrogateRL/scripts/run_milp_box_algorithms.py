@@ -19,6 +19,12 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from box_design_surrogate.evaluator import BatchSurrogateEvaluator, Box, BoxSetEvaluation, SurrogateEvaluator
+from box_design_surrogate.candidate_ranker import (
+    CANDIDATE_TRACE_COLUMNS,
+    CandidateRanker,
+    candidate_feature_row,
+    candidate_trace_rows as build_candidate_trace_rows,
+)
 from box_design_surrogate.features import read_order_summaries
 from box_design_surrogate.kandula_repro import initial_boxes_kmeans, order_requirement
 from box_design_surrogate.milp_oracle import (
@@ -206,6 +212,12 @@ def make_surrogate_evaluator(args: argparse.Namespace, orders: list) -> BatchSur
     return BatchSurrogateEvaluator.from_evaluator(evaluator, orders)
 
 
+def make_candidate_ranker(args: argparse.Namespace) -> CandidateRanker:
+    if args.candidate_ranker_path is None:
+        raise ValueError("--candidate-ranker-path is required for ranker_filtered_greedy")
+    return CandidateRanker.load(args.candidate_ranker_path)
+
+
 def patch_sklearn_model_compat(model: object) -> None:
     """Patch narrow sklearn persistence gaps seen across minor versions."""
 
@@ -314,22 +326,46 @@ def best_single_action(
     current: list[Box],
     current_score: MilpBoxSetScore,
     step: float,
+    candidate_trace: list[dict] | None = None,
+    candidate_trace_context: dict[str, Any] | None = None,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
     best_boxes = current
     best_score = current_score
     best_action = "noop"
     candidate_evaluations = 0
     milp_eval_seconds = 0.0
-    for move in coordinate_moves(current, step):
+    moves = list(coordinate_moves(current, step))
+    candidates: list[list[Box]] = []
+    candidate_scores: list[MilpBoxSetScore] = []
+    for move in moves:
         candidate = apply_move(current, move)
+        candidates.append(candidate)
         candidate_evaluations += 1
         eval_started = time.perf_counter()
         score = oracle.evaluate(orders, candidate)
+        candidate_scores.append(score)
         milp_eval_seconds += time.perf_counter() - eval_started
         if score_rank(score) < score_rank(best_score):
             best_boxes = candidate
             best_score = score
             best_action = f"{move.box_id}:{move.dimension}:{move.delta:+.6f}"
+
+    if candidate_trace is not None and candidate_trace_context is not None:
+        candidate_trace.extend(
+            build_candidate_trace_rows(
+                source_run_id=str(candidate_trace_context.get("source_run_id", "")),
+                algorithm=str(candidate_trace_context.get("algorithm", "")),
+                phase=str(candidate_trace_context.get("phase", "")),
+                stage=int(candidate_trace_context.get("stage", 0)),
+                iteration=int(candidate_trace_context.get("iteration", 0)),
+                step=step,
+                current_boxes=current,
+                current_score=current_score,
+                moves=moves,
+                candidates=candidates,
+                candidate_scores=candidate_scores,
+            )
+        )
     metrics = {
         "candidate_evaluations": candidate_evaluations,
         "generated_candidates": candidate_evaluations,
@@ -465,6 +501,117 @@ def best_single_action_surrogate_filtered(
     return best_boxes, best_score, best_action, metrics
 
 
+def best_single_action_ranker_filtered(
+    *,
+    oracle: BoxSetOracle,
+    ranker: CandidateRanker,
+    orders: list,
+    current: list[Box],
+    current_score: MilpBoxSetScore,
+    step: float,
+    stage: int,
+    iteration: int,
+    top_k: int,
+    adaptive_top_k: list[int] | None,
+    noop_fallback: bool,
+) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
+    moves = list(coordinate_moves(current, step))
+    candidates = [apply_move(current, move) for move in moves]
+    generated_candidates = len(candidates)
+    if generated_candidates == 0:
+        return current, current_score, "noop", {
+            "candidate_evaluations": 0,
+            "generated_candidates": 0,
+            "ranker_scored_candidates": 0,
+            "milp_validated_candidates": 0,
+            "milp_candidate_evaluations_avoided": 0,
+            "milp_avoidance_rate": 0.0,
+            "ranker_eval_seconds": 0.0,
+            "milp_eval_seconds": 0.0,
+            "ranker_top_k_sequence": "",
+            "ranker_tiers_evaluated": 0,
+            "ranker_noop_fallback_used": False,
+        }
+
+    feature_rows = [
+        candidate_feature_row(
+            current_boxes=current,
+            candidate_boxes=candidate,
+            move=move,
+            current_score=current_score,
+            step=step,
+            stage=stage,
+            iteration=iteration,
+            candidate_index=idx,
+            generated_candidates=generated_candidates,
+        )
+        for idx, (move, candidate) in enumerate(zip(moves, candidates))
+    ]
+    ranker_started = time.perf_counter()
+    predicted_scores = ranker.predict_scores(feature_rows)
+    ranker_eval_seconds = time.perf_counter() - ranker_started
+    if len(predicted_scores) != generated_candidates:
+        raise RuntimeError(
+            "ranker returned an unexpected number of scores: "
+            f"{len(predicted_scores)} for {generated_candidates} candidates"
+        )
+
+    requested_top_k = adaptive_top_k if adaptive_top_k is not None else [top_k]
+    top_k_sequence: list[int] = []
+    for value in requested_top_k:
+        keep = min(value, generated_candidates)
+        if keep not in top_k_sequence:
+            top_k_sequence.append(keep)
+    if noop_fallback and generated_candidates not in top_k_sequence:
+        top_k_sequence.append(generated_candidates)
+
+    ranked_indices = sorted(range(generated_candidates), key=lambda idx: (float(predicted_scores[idx]), idx))
+
+    best_boxes = current
+    best_score = current_score
+    best_action = "noop"
+    milp_eval_seconds = 0.0
+    validated_indices: set[int] = set()
+    tiers_evaluated = 0
+    noop_fallback_used = False
+    for tier_keep in top_k_sequence:
+        tier_indices = ranked_indices[:tier_keep]
+        new_indices = [idx for idx in tier_indices if idx not in validated_indices]
+        if not new_indices:
+            continue
+        tiers_evaluated += 1
+        if tier_keep == generated_candidates and len(validated_indices) > 0:
+            noop_fallback_used = True
+        for idx in new_indices:
+            validated_indices.add(idx)
+            eval_started = time.perf_counter()
+            score = oracle.evaluate(orders, candidates[idx])
+            milp_eval_seconds += time.perf_counter() - eval_started
+            if score_rank(score) < score_rank(best_score):
+                best_boxes = candidates[idx]
+                best_score = score
+                move = moves[idx]
+                best_action = f"{move.box_id}:{move.dimension}:{move.delta:+.6f}"
+        if score_rank(best_score) < score_rank(current_score):
+            break
+
+    avoided = generated_candidates - len(validated_indices)
+    metrics = {
+        "candidate_evaluations": len(validated_indices),
+        "generated_candidates": generated_candidates,
+        "ranker_scored_candidates": generated_candidates,
+        "milp_validated_candidates": len(validated_indices),
+        "milp_candidate_evaluations_avoided": avoided,
+        "milp_avoidance_rate": avoided / generated_candidates if generated_candidates else 0.0,
+        "ranker_eval_seconds": ranker_eval_seconds,
+        "milp_eval_seconds": milp_eval_seconds,
+        "ranker_top_k_sequence": ",".join(str(value) for value in top_k_sequence),
+        "ranker_tiers_evaluated": tiers_evaluated,
+        "ranker_noop_fallback_used": noop_fallback_used,
+    }
+    return best_boxes, best_score, best_action, metrics
+
+
 def run_fixed_step(
     *,
     oracle: BoxSetOracle,
@@ -474,6 +621,8 @@ def run_fixed_step(
     iterations: int,
     initial_score: MilpBoxSetScore | None = None,
     initial_phase: str = "initial",
+    candidate_trace: list[dict] | None = None,
+    source_run_id: str = "",
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -494,6 +643,14 @@ def run_fixed_step(
             current=current,
             current_score=current_score,
             step=step,
+            candidate_trace=candidate_trace,
+            candidate_trace_context={
+                "source_run_id": source_run_id,
+                "algorithm": "paper_fixed_step",
+                "phase": "fixed_step",
+                "stage": 1,
+                "iteration": iteration,
+            },
         )
         improved = score_rank(best_score) < score_rank(current_score)
         trace.append(
@@ -522,6 +679,8 @@ def run_staged_greedy(
     schedule: list[tuple[float, int]],
     initial_score: MilpBoxSetScore | None = None,
     initial_phase: str = "initial",
+    candidate_trace: list[dict] | None = None,
+    source_run_id: str = "",
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -546,6 +705,14 @@ def run_staged_greedy(
                 current=current,
                 current_score=current_score,
                 step=step,
+                candidate_trace=candidate_trace,
+                candidate_trace_context={
+                    "source_run_id": source_run_id,
+                    "algorithm": "staged_greedy",
+                    "phase": "staged_greedy",
+                    "stage": stage_idx,
+                    "iteration": global_iteration,
+                },
             )
             improved = score_rank(best_score) < score_rank(current_score)
             trace.append(
@@ -642,6 +809,79 @@ def run_surrogate_filtered_greedy(
     return sorted(current, key=lambda b: b.volume), current_score, trace
 
 
+def run_ranker_filtered_greedy(
+    *,
+    oracle: BoxSetOracle,
+    ranker: CandidateRanker,
+    orders: list,
+    boxes: list[Box],
+    schedule: list[tuple[float, int]],
+    top_k: int,
+    adaptive_top_k: list[int] | None,
+    noop_fallback: bool,
+    initial_score: MilpBoxSetScore | None = None,
+    initial_phase: str = "initial",
+) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
+    current = sorted(boxes, key=lambda b: b.box_id)
+    current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
+    trace = [
+        {
+            "phase": initial_phase,
+            "iteration": 0,
+            "stage": 0,
+            "step": schedule[0][0],
+            "action": "init",
+            "candidate_evaluations": 0,
+            "generated_candidates": 0,
+            "ranker_scored_candidates": 0,
+            "milp_validated_candidates": 0,
+            "milp_candidate_evaluations_avoided": 0,
+            "milp_avoidance_rate": 0.0,
+            "ranker_eval_seconds": 0.0,
+            "milp_eval_seconds": 0.0,
+            "ranker_top_k_sequence": "",
+            "ranker_tiers_evaluated": 0,
+            "ranker_noop_fallback_used": False,
+            **score_to_dict(current_score),
+        }
+    ]
+    global_iteration = 0
+    for stage_idx, (step, iterations) in enumerate(schedule, start=1):
+        for _ in range(iterations):
+            global_iteration += 1
+            best_boxes, best_score, action, selection_metrics = best_single_action_ranker_filtered(
+                oracle=oracle,
+                ranker=ranker,
+                orders=orders,
+                current=current,
+                current_score=current_score,
+                step=step,
+                stage=stage_idx,
+                iteration=global_iteration,
+                top_k=top_k,
+                adaptive_top_k=adaptive_top_k,
+                noop_fallback=noop_fallback,
+            )
+            improved = score_rank(best_score) < score_rank(current_score)
+            trace.append(
+                {
+                    "phase": "ranker_filtered_greedy",
+                    "iteration": global_iteration,
+                    "stage": stage_idx,
+                    "step": step,
+                    "action": action,
+                    "improved": improved,
+                    **selection_metrics,
+                    **score_to_dict(best_score),
+                }
+            )
+            if not improved:
+                break
+            current = best_boxes
+            current_score = best_score
+    return sorted(current, key=lambda b: b.volume), current_score, trace
+
+
 def write_trace(path: Path, trace: list[dict]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
@@ -666,15 +906,28 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "milp_candidate_evaluations_avoided",
         "milp_avoidance_rate",
         "surrogate_eval_seconds",
+        "ranker_scored_candidates",
+        "ranker_eval_seconds",
         "milp_eval_seconds",
         "surrogate_top_k_sequence",
         "surrogate_tiers_evaluated",
         "surrogate_noop_fallback_used",
+        "ranker_top_k_sequence",
+        "ranker_tiers_evaluated",
+        "ranker_noop_fallback_used",
     ]
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
         writer.writeheader()
         writer.writerows(trace)
+
+
+def write_candidate_trace(path: Path, rows: list[dict]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=CANDIDATE_TRACE_COLUMNS, extrasaction="ignore")
+        writer.writeheader()
+        writer.writerows(rows)
 
 
 def main() -> None:
@@ -684,12 +937,14 @@ def main() -> None:
             "Algorithms: paper_fixed_step uses the fixed paper action step; "
             "staged_greedy uses a manually adjusted step schedule; "
             "surrogate_filtered_greedy uses a learned surrogate to filter "
-            "candidate actions before MILP-verified acceptance."
+            "candidate actions before MILP-verified acceptance; "
+            "ranker_filtered_greedy uses a candidate-level learned ranker "
+            "with the same MILP-verified acceptance rule."
         )
     )
     parser.add_argument(
         "--algorithm",
-        choices=["paper_fixed_step", "staged_greedy", "surrogate_filtered_greedy"],
+        choices=["paper_fixed_step", "staged_greedy", "surrogate_filtered_greedy", "ranker_filtered_greedy"],
         required=True,
     )
     parser.add_argument("--k", type=int, default=10)
@@ -716,6 +971,12 @@ def main() -> None:
         type=Path,
         default=ROOT / "assets/loadability_model_pack/models/ensemble/ensemble_baseline_20260526.json",
         help="Surrogate model metadata path used by surrogate_filtered_greedy.",
+    )
+    parser.add_argument(
+        "--candidate-ranker-path",
+        type=Path,
+        default=None,
+        help="Candidate ranker joblib artifact used by ranker_filtered_greedy.",
     )
     parser.add_argument("--tau", type=float, default=0.95, help="Surrogate feasibility probability threshold.")
     parser.add_argument("--tau-high", type=float, default=0.99, help="Surrogate risk-shaping high threshold.")
@@ -752,6 +1013,33 @@ def main() -> None:
         choices=["paper_pf_surrogate", "risk_aware_surrogate"],
         default="paper_pf_surrogate",
         help="Surrogate ranking objective used only for candidate filtering.",
+    )
+    parser.add_argument(
+        "--ranker-top-k",
+        type=int,
+        default=10,
+        help="Number of ranker-ranked candidates per iteration to verify with MILP.",
+    )
+    parser.add_argument(
+        "--ranker-adaptive-top-k",
+        type=parse_int_list,
+        default=None,
+        help="Optional comma-separated ranker top-k widening sequence, e.g. 10,30.",
+    )
+    parser.add_argument(
+        "--ranker-noop-fallback",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="When all ranker tiers have no MILP improvement, validate remaining candidates before noop.",
+    )
+    parser.add_argument(
+        "--candidate-trace-csv",
+        type=Path,
+        default=None,
+        help=(
+            "Optional CSV path for exact candidate-level trace export. "
+            "Supported for paper_fixed_step and staged_greedy."
+        ),
     )
     parser.add_argument("--allow-bsp-derived-data", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--oracle-cache-dir", type=Path, default=None)
@@ -792,6 +1080,12 @@ def main() -> None:
         raise ValueError("--surrogate-adaptive-top-k values must be positive")
     if args.surrogate_candidate_batch_size is not None and args.surrogate_candidate_batch_size <= 0:
         raise ValueError("--surrogate-candidate-batch-size must be positive")
+    if args.ranker_top_k <= 0:
+        raise ValueError("--ranker-top-k must be positive")
+    if args.ranker_adaptive_top_k is not None and any(value <= 0 for value in args.ranker_adaptive_top_k):
+        raise ValueError("--ranker-adaptive-top-k values must be positive")
+    if args.candidate_trace_csv is not None and args.algorithm not in {"paper_fixed_step", "staged_greedy"}:
+        raise ValueError("--candidate-trace-csv is currently supported only for exact algorithms")
 
     orders = read_order_summaries(args.xml_path)
     if args.orders_limit is not None:
@@ -804,6 +1098,7 @@ def main() -> None:
             raise ValueError(f"--initial-boxes-json contains {len(initial_boxes)} boxes, expected --k={args.k}")
     oracle = make_oracle(args)
     surrogate = make_surrogate_evaluator(args, orders) if args.algorithm == "surrogate_filtered_greedy" else None
+    ranker = make_candidate_ranker(args) if args.algorithm == "ranker_filtered_greedy" else None
 
     run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S")
     run_dir = args.out_root / args.algorithm / run_id
@@ -829,6 +1124,7 @@ def main() -> None:
         "java_classpath_extra": args.java_classpath,
         "milp_time_limit_seconds": args.milp_time_limit_seconds,
         "model_path": str(args.model_path) if args.algorithm == "surrogate_filtered_greedy" else None,
+        "candidate_ranker_path": str(args.candidate_ranker_path) if args.algorithm == "ranker_filtered_greedy" else None,
         "tau": args.tau if args.algorithm == "surrogate_filtered_greedy" else None,
         "tau_high": args.tau_high if args.algorithm == "surrogate_filtered_greedy" else None,
         "lambda_risk": args.lambda_risk if args.algorithm == "surrogate_filtered_greedy" else None,
@@ -843,6 +1139,12 @@ def main() -> None:
             args.surrogate_candidate_batch_size if args.algorithm == "surrogate_filtered_greedy" else None
         ),
         "surrogate_rank_mode": args.surrogate_rank_mode if args.algorithm == "surrogate_filtered_greedy" else None,
+        "ranker_top_k": args.ranker_top_k if args.algorithm == "ranker_filtered_greedy" else None,
+        "ranker_adaptive_top_k": (
+            args.ranker_adaptive_top_k if args.algorithm == "ranker_filtered_greedy" else None
+        ),
+        "ranker_noop_fallback": args.ranker_noop_fallback if args.algorithm == "ranker_filtered_greedy" else None,
+        "candidate_trace_csv": str(args.candidate_trace_csv) if args.candidate_trace_csv is not None else None,
         "coverage_repair": args.coverage_repair,
         "repair_margins": args.repair_margins,
         "repair_max_rounds": args.repair_max_rounds,
@@ -853,6 +1155,7 @@ def main() -> None:
     write_json(run_dir / "initial_boxes.json", boxes_to_rows(initial_boxes))
 
     started = time.perf_counter()
+    candidate_trace_rows: list[dict] | None = [] if args.candidate_trace_csv is not None else None
     pre_search_trace: list[dict] = []
     search_boxes = initial_boxes
     search_initial_score: MilpBoxSetScore | None = None
@@ -889,6 +1192,8 @@ def main() -> None:
             iterations=args.iterations,
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
+            candidate_trace=candidate_trace_rows,
+            source_run_id=run_id,
         )
     elif args.algorithm == "staged_greedy":
         best_boxes, best_score, search_trace = run_staged_greedy(
@@ -898,8 +1203,10 @@ def main() -> None:
             schedule=args.schedule,
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
+            candidate_trace=candidate_trace_rows,
+            source_run_id=run_id,
         )
-    else:
+    elif args.algorithm == "surrogate_filtered_greedy":
         if surrogate is None:
             raise RuntimeError("surrogate evaluator was not initialized")
         best_boxes, best_score, search_trace = run_surrogate_filtered_greedy(
@@ -913,6 +1220,21 @@ def main() -> None:
             noop_fallback=args.surrogate_noop_fallback,
             rank_mode=args.surrogate_rank_mode,
             candidate_batch_size=args.surrogate_candidate_batch_size,
+            initial_score=search_initial_score,
+            initial_phase="search_initial" if pre_search_trace else "initial",
+        )
+    else:
+        if ranker is None:
+            raise RuntimeError("candidate ranker was not initialized")
+        best_boxes, best_score, search_trace = run_ranker_filtered_greedy(
+            oracle=oracle,
+            ranker=ranker,
+            orders=orders,
+            boxes=search_boxes,
+            schedule=args.schedule,
+            top_k=args.ranker_top_k,
+            adaptive_top_k=args.ranker_adaptive_top_k,
+            noop_fallback=args.ranker_noop_fallback,
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
         )
@@ -932,6 +1254,7 @@ def main() -> None:
         "candidate_evaluations": int(sum(row.get("candidate_evaluations", 0) for row in trace)),
         "generated_candidates": int(sum(row.get("generated_candidates", 0) for row in trace)),
         "surrogate_scored_candidates": int(sum(row.get("surrogate_scored_candidates", 0) for row in trace)),
+        "ranker_scored_candidates": int(sum(row.get("ranker_scored_candidates", 0) for row in trace)),
         "milp_validated_candidates": int(sum(row.get("milp_validated_candidates", 0) for row in trace)),
         "milp_candidate_evaluations_avoided": int(
             sum(row.get("milp_candidate_evaluations_avoided", 0) for row in trace)
@@ -943,16 +1266,25 @@ def main() -> None:
             else 0.0
         ),
         "surrogate_eval_seconds": float(sum(row.get("surrogate_eval_seconds", 0.0) for row in trace)),
+        "ranker_eval_seconds": float(sum(row.get("ranker_eval_seconds", 0.0) for row in trace)),
         "milp_eval_seconds": float(sum(row.get("milp_eval_seconds", 0.0) for row in trace)),
         "surrogate_tiers_evaluated": int(sum(row.get("surrogate_tiers_evaluated", 0) for row in trace)),
         "surrogate_noop_fallback_uses": int(
             sum(1 for row in trace if str(row.get("surrogate_noop_fallback_used", "")).lower() == "true")
+        ),
+        "ranker_tiers_evaluated": int(sum(row.get("ranker_tiers_evaluated", 0) for row in trace)),
+        "ranker_noop_fallback_uses": int(
+            sum(1 for row in trace if str(row.get("ranker_noop_fallback_used", "")).lower() == "true")
         ),
         "elapsed_seconds": elapsed_seconds,
         "oracle_cache": oracle.cache_info() if hasattr(oracle, "cache_info") else None,
         "run_dir": str(run_dir),
     }
     write_trace(run_dir / "trace.csv", trace)
+    if candidate_trace_rows is not None:
+        write_candidate_trace(args.candidate_trace_csv, candidate_trace_rows)
+        write_candidate_trace(run_dir / "candidate_trace.csv", candidate_trace_rows)
+        summary["candidate_trace_rows"] = len(candidate_trace_rows)
     write_json(run_dir / "best_boxes.json", boxes_to_rows(best_boxes))
     write_json(run_dir / "summary.json", summary)
     print(json.dumps(summary, ensure_ascii=False, indent=2))

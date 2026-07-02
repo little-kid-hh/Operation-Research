@@ -73,6 +73,14 @@ class WidthImprovesOracle:
         return _milp_score(5.0 if box.width < 3.0 else 11.0)
 
 
+class WidthShrinkRanker:
+    def predict_scores(self, rows):
+        return [
+            0.0 if row["move_dimension"] == "width" and row["move_direction"] == "shrink" else 100.0
+            for row in rows
+        ]
+
+
 class SurrogateFilterTest(unittest.TestCase):
     def test_filter_only_sends_top_k_candidates_to_milp(self) -> None:
         runner = _load_runner_module()
@@ -187,6 +195,70 @@ class SurrogateFilterTest(unittest.TestCase):
         self.assertEqual(metrics["milp_candidate_evaluations_avoided"], 3)
         self.assertEqual(metrics["surrogate_tiers_evaluated"], 2)
         self.assertFalse(metrics["surrogate_noop_fallback_used"])
+
+    def test_exact_candidate_trace_marks_accepted_move(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+        current = [Box(0, 3.0, 3.0, 3.0)]
+        oracle = WidthImprovesOracle()
+        candidate_trace = []
+
+        best_boxes, best_score, action, metrics = runner.best_single_action(
+            oracle=oracle,
+            orders=orders,
+            current=current,
+            current_score=_milp_score(10.0),
+            step=1.0,
+            candidate_trace=candidate_trace,
+            candidate_trace_context={
+                "source_run_id": "toy_run",
+                "algorithm": "paper_fixed_step",
+                "phase": "fixed_step",
+                "stage": 1,
+                "iteration": 1,
+            },
+        )
+
+        self.assertEqual(action, "0:width:-1.000000")
+        self.assertEqual(best_score.packaging_factor, 5.0)
+        self.assertEqual(best_boxes[0].width, 2.0)
+        self.assertEqual(metrics["generated_candidates"], 6)
+        self.assertEqual(len(candidate_trace), 6)
+        accepted = [row for row in candidate_trace if row["is_accepted"] == 1]
+        self.assertEqual(len(accepted), 1)
+        self.assertEqual(accepted[0]["move_dimension"], "width")
+        self.assertEqual(accepted[0]["move_direction"], "shrink")
+        self.assertEqual(accepted[0]["candidate_rank"], 1)
+        self.assertGreater(accepted[0]["candidate_pf_delta"], 0.0)
+
+    def test_ranker_filter_only_sends_top_k_candidates_to_milp(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+        current = [Box(0, 3.0, 3.0, 3.0)]
+        oracle = WidthImprovesOracle()
+
+        best_boxes, best_score, action, metrics = runner.best_single_action_ranker_filtered(
+            oracle=oracle,
+            ranker=WidthShrinkRanker(),
+            orders=orders,
+            current=current,
+            current_score=_milp_score(10.0),
+            step=1.0,
+            stage=1,
+            iteration=1,
+            top_k=1,
+            adaptive_top_k=None,
+            noop_fallback=False,
+        )
+
+        self.assertEqual(len(oracle.evaluated_boxes), 1)
+        self.assertEqual(action, "0:width:-1.000000")
+        self.assertEqual(best_score.packaging_factor, 5.0)
+        self.assertEqual(best_boxes[0].width, 2.0)
+        self.assertEqual(metrics["generated_candidates"], 6)
+        self.assertEqual(metrics["ranker_scored_candidates"], 6)
+        self.assertEqual(metrics["milp_validated_candidates"], 1)
+        self.assertEqual(metrics["milp_candidate_evaluations_avoided"], 5)
 
 
 if __name__ == "__main__":
