@@ -66,6 +66,18 @@ python3 BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
   --ranker-noop-fallback
 ```
 
+```bash
+PYTHONPATH=BoxDesignSurrogateRL \
+python3 BoxDesignSurrogateRL/scripts/run_query_budgeted_ranker_frontier.py \
+  --xml-path BoxDesignSurrogateRL/results/splits_calibration/<split>/or2023_bsp_unique_orders_dev.xml \
+  --initial-boxes-json BoxDesignSurrogateRL/results/<exact_0p5_run>/best_boxes.json \
+  --candidate-ranker-path BoxDesignSurrogateRL/results/<ranker_run>/candidate_ranker.joblib \
+  --exact-baseline-summary BoxDesignSurrogateRL/results/<exact_0p25_run>/summary.json \
+  --ranker-budget-sequence 10 \
+  --ranker-budget-sequence 10,30 \
+  --run-audit
+```
+
 The default oracle is `--oracle java`, which invokes
 `org.example.GeneratePerminPackageLabels` through Java/Gurobi. This supports
 arbitrary generated box dimensions and is the correct oracle for searching new
@@ -180,6 +192,33 @@ The primary ranker diagnostics are:
 
 These diagnostics test whether the learned filter would have kept the
 candidate that exact greedy would have selected.
+
+There are two supported ranker modes:
+
+- **Exact-preserving filter mode**: use `--ranker-noop-fallback`. The ranker
+  checks small top-k tiers first, but if they contain no improving move, the
+  runner validates the remaining candidates before declaring no-op. This should
+  match exact `staged_greedy` at the same step schedule, but real runtime gains
+  can be small when the Java MILP oracle cache already reuses many order-box
+  labels.
+- **Query-budgeted mode**: use `--no-ranker-noop-fallback`. The ranker validates
+  only the configured top-k tiers and accepts a move only after exact MILP
+  verification. This cannot accept a surrogate-only false improvement, but it
+  can stop before exact local convergence if the ranker misses the best
+  improving candidate. Therefore it must be reported with an exact audit:
+  restart `staged_greedy` from the query-budgeted final boxes, then report the
+  PF audit gap and the additional uncached oracle cost.
+
+The helper entrypoint `scripts/run_query_budgeted_ranker_frontier.py` runs this
+budget/audit protocol across multiple top-k sequences and writes
+`frontier_summary.csv`, `frontier_summary.json`, and `raw_summaries.json`.
+Each top-k sequence gets an independent oracle cache, while the ranker run and
+its exact audit share that sequence's cache. This keeps different budget points
+comparable while measuring the true incremental cost of the audit.
+The scientific comparison should emphasize `oracle_cache.uncached_boxes`,
+`oracle_cache.subprocess_seconds`, and end-to-end elapsed time, not only
+`milp_validated_candidates`, because the online Java MILP oracle caches
+order-box feasibility labels across candidate box sets.
 
 ## Outputs
 
