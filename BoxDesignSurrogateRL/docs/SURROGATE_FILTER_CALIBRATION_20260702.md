@@ -41,6 +41,17 @@ Windows/Gurobi machine. The purpose is to separate three questions:
 | Exact staged greedy | 1.769646 | 323 | 19200 | 19200 | 0.0% | 0.0 | 1252.2 | 969.0 | 1286.1 | No, still improving at iteration 320 |
 | Surrogate adaptive `10,30` + no-op fallback | 1.786019 | 323 | 19200 | 6120 | 68.1% | 374.3 | 736.6 | 648.6 | 1145.9 | No, still improving at iteration 320 |
 
+### Convergence-gated dev100 protocol
+
+This protocol first runs exact `0.5` until exact no-op, then starts the `0.25`
+stage from the converged `0.5` checkpoint.
+
+| Stage | Method | PF | Trace rows | Generated candidates | MILP-validated candidates | Avoidance rate | Surrogate seconds | MILP eval seconds | Oracle subprocess seconds | Elapsed seconds | Converged? |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `0.5` | Exact staged greedy | 1.760638 | 223 | 13200 | 13200 | 0.0% | 0.0 | 841.5 | 657.8 | 875.6 | Yes, exact no-op at iteration 220 |
+| `0.25` from exact `0.5` checkpoint | Exact staged greedy | 1.746790 | 13 | 720 | 720 | 0.0% | 0.0 | 66.2 | 54.9 | 68.7 | Yes, exact no-op at iteration 12 |
+| `0.25` from exact `0.5` checkpoint | Surrogate adaptive `10,30` + no-op fallback | 1.746790 | 13 | 720 | 310 | 56.9% | 14.3 | 47.0 | 42.5 | 63.7 | Yes, exact no-op at iteration 12 |
+
 All runs finished with `coverage_rate=1.0`, `uncovered_orders=0`, and
 `unknown_pairs=0`.
 
@@ -90,17 +101,26 @@ while validating only 6120 candidates. The MILP-candidate reduction is large
 seconds), mainly because surrogate scoring took 374.3 seconds and the Java
 oracle subprocess overhead remains high.
 
+The convergence-gated protocol changes the interpretation of the staged
+baseline. In the `0.5:80,0.25:240` run, the `0.5` stage had not converged:
+iteration 80 was still an improving exact move. Running exact `0.5` alone to
+no-op required 220 iterations and reached PF 1.7606. Starting `0.25` from that
+checkpoint converged in only 12 iterations, reaching PF 1.7468. The surrogate
+adaptive `10,30` plus fallback matched the exact `0.25` continuation's final PF
+while validating 310 instead of 720 fine-stage candidates.
+
 ## Next Steps
 
 1. Add a missed-candidate audit mode: periodically validate the full candidate
    set and record the exact rank of the best surrogate-kept candidate.
-2. Reduce surrogate scoring and Java oracle overhead; otherwise MILP-call
+2. Treat convergence-gated coarse-to-fine as the main dev protocol: exact
+   `0.5` to no-op, then compare exact vs. surrogate-filtered fine stages from
+   the same checkpoint.
+3. Reduce surrogate scoring and Java oracle overhead; otherwise MILP-call
    reduction does not translate cleanly into wall-clock speedup.
-3. Train or calibrate a candidate-ranking surrogate using MILP-labeled greedy
+4. Train or calibrate a candidate-ranking surrogate using MILP-labeled greedy
    candidate data, not only order-box feasibility labels.
-4. Re-run dev100 with top-k values such as 30, 40, and 50 after the audit is
+5. Re-run dev100 with top-k values such as 30, 40, and 50 after the audit is
    available, then choose the smallest top-k that keeps PF close to exact.
-5. Extend the exact dev100 run beyond `0.25:240` until a true no-improvement step
-   or a documented convergence cap.
 6. Only after dev100 behavior is understood, scale to dev500 and full OR2023
    with fixed acceptance criteria.
