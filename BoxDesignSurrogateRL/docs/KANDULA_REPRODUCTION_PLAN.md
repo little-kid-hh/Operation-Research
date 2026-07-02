@@ -4,6 +4,10 @@ This is a framework reproduction, not an exact numerical reproduction of
 Kandula et al. The original paper uses proprietary e-commerce SKU/order demand
 data and implementation details that are not available in this workspace.
 
+This document targets **Problem A: Kandula-style framework reproduction**, as
+fixed in `BoxDesignSurrogateRL/docs/FORMAL_PROBLEM.md`. It is separate from the
+main **Problem B: OR2023 exact-MILP box design** protocol.
+
 ## Available Local Data
 
 We use the OR 2023 / Fontaine-Minner BSP data:
@@ -80,3 +84,6 @@ packaging-factor objective in Kandula et al.
 The project should report all stages separately, because Kandula's paper also
 emphasizes the incremental value of initialization, learned improvement, and
 tree search.
+
+Problem A numbers must not be directly compared against Problem B exact-MILP
+numbers. They answer different feasibility questions.

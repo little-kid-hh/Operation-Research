@@ -4,6 +4,11 @@ This document is the locked protocol for turning the OR2023 box-design work into
 a scientifically comparable study. Older aggregate-proxy results remain useful
 for development, but they are not main-result evidence.
 
+This protocol targets **Problem B: OR2023 exact-MILP box design**, as fixed in
+`BoxDesignSurrogateRL/docs/FORMAL_PROBLEM.md`. Kandula-style framework
+reproduction is a separate **Problem A** track and must not be mixed with these
+exact-MILP results.
+
 ## Dataset Scope
 
 Primary unit: OR2023 BSP unique order geometries.
@@ -134,6 +139,14 @@ mean assigned feasible box volume / mean order item volume
 
 Coverage is a hard gate. PF improvements are not meaningful if uncovered orders
 or unknown labels differ.
+
+The exact-MILP search ranking is:
+
+```text
+1. minimize uncovered_orders
+2. minimize unknown_pairs
+3. minimize MILP packaging factor
+```
 
 Always report:
 

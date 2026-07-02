@@ -2,6 +2,8 @@
 
 This is the current clean entrypoint for comparing two box-design algorithms on
 OR2023 while using MILP feasibility instead of the earlier aggregate proxy.
+It implements **Problem B: OR2023 exact-MILP box design** from
+`BoxDesignSurrogateRL/docs/FORMAL_PROBLEM.md`.
 
 ## Entrypoint
 
