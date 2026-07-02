@@ -30,6 +30,7 @@ Windows/Gurobi machine. The purpose is to separate three questions:
 | Surrogate top-30, before dedup | 2.152415 | 38 | 2100 | 1050 | 50.0% | 315.3 | 98.8 | 110.0 | 448.0 | Stopped early by surrogate-filter no-op |
 | Surrogate top-30, dedup box predictions | 2.152415 | 38 | 2100 | 1050 | 50.0% | 40.7 | 98.2 | 109.8 | 173.8 | Stopped early by surrogate-filter no-op |
 | Surrogate adaptive `10,30` + no-op fallback | 2.000377 | 123 | 7200 | 2410 | 66.5% | 142.4 | 331.6 | 313.5 | 508.0 | No, still improving at iteration 120 |
+| Surrogate top-30 + no-op fallback | 2.000377 | 123 | 7200 | 3810 | 47.1% | 139.8 | 384.4 | 344.7 | 557.8 | No, still improving at iteration 120 |
 
 All runs finished with `coverage_rate=1.0`, `uncovered_orders=0`, and
 `unknown_pairs=0`.
@@ -64,17 +65,22 @@ oracle process overhead and remaining surrogate scoring time, while the next
 modeling question is whether a better ranking surrogate can reduce fallback
 uses without losing PF.
 
+Fixed top-30 plus fallback reached the same PF trajectory as adaptive
+`10,30` plus fallback, but it validated 3810 candidates and took 557.8 seconds.
+The adaptive variant validated only 2410 candidates and took 508.0 seconds, so
+there is no dev100 evidence that always validating top-30 before accepting a
+move improves quality. The current default calibration candidate is therefore
+adaptive `10,30` plus no-op fallback.
+
 ## Next Steps
 
 1. Add a missed-candidate audit mode: periodically validate the full candidate
    set and record the exact rank of the best surrogate-kept candidate.
-2. Compare fixed top-30 + fallback against adaptive `10,30` + fallback to
-   isolate whether early top-10 acceptance loses measurable PF.
-3. Train or calibrate a candidate-ranking surrogate using MILP-labeled greedy
+2. Train or calibrate a candidate-ranking surrogate using MILP-labeled greedy
    candidate data, not only order-box feasibility labels.
-4. Re-run dev100 with top-k values such as 30, 40, and 50 after the audit is
+3. Re-run dev100 with top-k values such as 30, 40, and 50 after the audit is
    available, then choose the smallest top-k that keeps PF close to exact.
-5. Extend the exact dev100 run beyond `0.25:80` until a true no-improvement step
+4. Extend the exact dev100 run beyond `0.25:80` until a true no-improvement step
    or a documented convergence cap.
-6. Only after dev100 behavior is understood, scale to dev500 and full OR2023
+5. Only after dev100 behavior is understood, scale to dev500 and full OR2023
    with fixed acceptance criteria.
