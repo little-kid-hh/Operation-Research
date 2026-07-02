@@ -1100,7 +1100,7 @@ def main() -> None:
     surrogate = make_surrogate_evaluator(args, orders) if args.algorithm == "surrogate_filtered_greedy" else None
     ranker = make_candidate_ranker(args) if args.algorithm == "ranker_filtered_greedy" else None
 
-    run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S")
+    run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S_%f")
     run_dir = args.out_root / args.algorithm / run_id
     run_dir.mkdir(parents=True, exist_ok=False)
 
