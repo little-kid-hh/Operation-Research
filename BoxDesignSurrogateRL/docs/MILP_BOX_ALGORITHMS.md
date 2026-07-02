@@ -88,6 +88,11 @@ The surrogate is therefore a candidate filter, not the final feasibility
 oracle. Final `packaging_factor`, `coverage_rate`, `uncovered_orders`, and
 `unknown_pairs` remain exact-MILP metrics.
 
+The batch surrogate evaluator deduplicates repeated box dimensions across the
+candidate batch before calling `predict_proba`, then reconstructs each
+candidate score from the shared probability matrix. This avoids repeatedly
+scoring unchanged boxes in local-search neighborhoods.
+
 The first supported ranking mode is:
 
 ```text

@@ -468,18 +468,33 @@ class BatchSurrogateEvaluator(SurrogateEvaluator):
                 )
             return out
 
-        n_candidates = len(candidates)
         n_orders = len(prepared.orders)
-        n_boxes = box_counts.pop()
-        frames = [prepared.make_feature_frame(list(candidate)) for candidate in candidates]
-        x_df = pd.concat(frames, ignore_index=True)
-        raw_probs = _positive_probability(self.model.predict_proba(x_df))
-        probs = raw_probs.reshape(n_candidates, n_orders, n_boxes)
+        box_counts.pop()
+        unique_boxes: list[Box] = []
+        unique_by_dims: dict[tuple[float, float, float], int] = {}
+        candidate_indices: list[list[int]] = []
+        for candidate in candidates:
+            indices = []
+            for box in candidate:
+                key = (float(box.length), float(box.width), float(box.height))
+                idx = unique_by_dims.get(key)
+                if idx is None:
+                    idx = len(unique_boxes)
+                    unique_by_dims[key] = idx
+                    unique_boxes.append(box)
+                indices.append(idx)
+            candidate_indices.append(indices)
+
+        x_df = prepared.make_feature_frame(unique_boxes)
+        unique_probs = _positive_probability(self.model.predict_proba(x_df)).reshape(
+            n_orders,
+            len(unique_boxes),
+        )
         return [
             self._evaluation_from_probs(
                 prepared,
                 list(candidate),
-                probs[idx],
+                unique_probs[:, candidate_indices[idx]],
                 assignment_mode=assignment_mode,
             )
             for idx, candidate in enumerate(candidates)

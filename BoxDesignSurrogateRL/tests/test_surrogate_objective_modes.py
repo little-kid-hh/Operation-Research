@@ -16,6 +16,15 @@ class LengthProbabilityModel:
         return np.column_stack([1.0 - probs, probs])
 
 
+class CountingLengthProbabilityModel(LengthProbabilityModel):
+    def __init__(self) -> None:
+        self.row_counts: list[int] = []
+
+    def predict_proba(self, x_df):
+        self.row_counts.append(len(x_df))
+        return super().predict_proba(x_df)
+
+
 class SurrogateObjectiveModeTest(unittest.TestCase):
     def setUp(self) -> None:
         self.orders = [summarize_items("unit", "order0", [(1.0, 1.0, 1.0)])]
@@ -107,6 +116,23 @@ class SurrogateObjectiveModeTest(unittest.TestCase):
                 [assignment.box_id for assignment in left.assignments],
                 [assignment.box_id for assignment in right.assignments],
             )
+
+    def test_candidate_batch_evaluation_deduplicates_box_dimensions(self) -> None:
+        model = CountingLengthProbabilityModel()
+        evaluator = BatchSurrogateEvaluator.from_evaluator(
+            SurrogateEvaluator(model=model, tau=0.95, tau_high=0.99),
+            self.orders,
+        )
+        candidates = [
+            [Box(0, 2.0, 2.0, 2.0), Box(1, 4.0, 4.0, 4.0)],
+            [Box(0, 1.5, 1.5, 1.5), Box(1, 4.0, 4.0, 4.0)],
+            [Box(0, 2.0, 2.0, 2.0), Box(1, 3.0, 3.0, 3.0)],
+        ]
+
+        results = evaluator.evaluate_many_box_sets(candidates, assignment_mode="min_volume")
+
+        self.assertEqual(len(results), 3)
+        self.assertEqual(model.row_counts, [4])
 
 
 if __name__ == "__main__":
