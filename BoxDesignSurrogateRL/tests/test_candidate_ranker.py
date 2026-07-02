@@ -5,7 +5,7 @@ import unittest
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor
+from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestClassifier, RandomForestRegressor
 from sklearn.impute import SimpleImputer
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder
@@ -15,6 +15,7 @@ from box_design_surrogate.candidate_ranker import (
     CANDIDATE_NUMERIC_FEATURES,
     CandidateRanker,
     FastCandidatePipeline,
+    positive_class_probability,
 )
 
 
@@ -98,6 +99,29 @@ class CandidateRankerFastPathTest(unittest.TestCase):
         self.assert_fast_matches_pipeline(
             RandomForestRegressor(n_estimators=10, random_state=0)
         )
+
+    def test_classifier_score_mode_returns_negative_positive_probability(self) -> None:
+        rows = make_rows()
+        frame = pd.DataFrame(rows)
+        x_df = frame[CANDIDATE_NUMERIC_FEATURES + CANDIDATE_CATEGORICAL_FEATURES]
+        y = np.asarray([1 if idx % 4 == 0 else 0 for idx, _ in enumerate(rows)])
+        pipeline = make_pipeline(RandomForestClassifier(n_estimators=10, random_state=0))
+        pipeline.fit(x_df, y)
+
+        expected = -positive_class_probability(pipeline, x_df)
+        ranker = CandidateRanker(
+            pipeline=pipeline,
+            numeric_features=CANDIDATE_NUMERIC_FEATURES,
+            categorical_features=CANDIDATE_CATEGORICAL_FEATURES,
+            metadata={"score_mode": "negative_positive_probability"},
+            fast_predictor=FastCandidatePipeline.from_pipeline(
+                pipeline,
+                numeric_features=CANDIDATE_NUMERIC_FEATURES,
+                categorical_features=CANDIDATE_CATEGORICAL_FEATURES,
+            ),
+        )
+
+        np.testing.assert_allclose(ranker.predict_scores(rows), expected, rtol=0.0, atol=1e-12)
 
 
 if __name__ == "__main__":

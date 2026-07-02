@@ -17,7 +17,12 @@ import joblib
 import numpy as np
 import pandas as pd
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor
+from sklearn.ensemble import (
+    HistGradientBoostingClassifier,
+    HistGradientBoostingRegressor,
+    RandomForestClassifier,
+    RandomForestRegressor,
+)
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import GroupShuffleSplit
 from sklearn.pipeline import Pipeline
@@ -26,8 +31,12 @@ from sklearn.preprocessing import OneHotEncoder
 from box_design_surrogate.candidate_ranker import (
     CANDIDATE_CATEGORICAL_FEATURES,
     CANDIDATE_NUMERIC_FEATURES,
+    positive_class_probability,
     write_ranker_metadata,
 )
+
+
+CLASSIFICATION_TARGET_MODES = {"exact_best_classifier", "accepted_classifier"}
 
 
 def parse_int_list(value: str) -> list[int]:
@@ -163,7 +172,36 @@ def target_values(data: pd.DataFrame, target_mode: str) -> np.ndarray:
         return data["candidate_objective_gap_to_best"].astype(float).to_numpy()
     if mode == "rank":
         return data["candidate_rank_log_target"].astype(float).to_numpy()
+    if mode == "exact_best_classifier":
+        return data["is_exact_best"].astype(int).to_numpy()
+    if mode == "accepted_classifier":
+        return data["is_accepted"].astype(int).to_numpy()
     raise ValueError(f"unknown --target-mode {target_mode!r}")
+
+
+def score_mode_for_target(target_mode: str) -> str:
+    return "negative_positive_probability" if target_mode in CLASSIFICATION_TARGET_MODES else "predict"
+
+
+def prediction_scores(pipeline: Pipeline, data: pd.DataFrame, target_mode: str) -> np.ndarray:
+    x_df = data[CANDIDATE_NUMERIC_FEATURES + CANDIDATE_CATEGORICAL_FEATURES]
+    if score_mode_for_target(target_mode) == "negative_positive_probability":
+        return -positive_class_probability(pipeline, x_df).ravel()
+    return np.asarray(pipeline.predict(x_df), dtype=np.float64).ravel()
+
+
+def training_sample_weights(
+    data: pd.DataFrame,
+    target_mode: str,
+    *,
+    positive_weight: float,
+) -> np.ndarray | None:
+    if target_mode not in CLASSIFICATION_TARGET_MODES:
+        return None
+    y = target_values(data, target_mode).astype(int)
+    if not np.any(y == 1):
+        return None
+    return np.where(y == 1, float(positive_weight), 1.0).astype(np.float64)
 
 
 def split_by_step(
@@ -186,6 +224,7 @@ def make_pipeline(
     model_name: str,
     random_state: int,
     *,
+    target_mode: str,
     hgbt_max_iter: int,
     hgbt_learning_rate: float,
 ) -> Pipeline:
@@ -209,22 +248,39 @@ def make_pipeline(
     )
     name = model_name.strip().lower()
     if name == "hgbt":
-        regressor = HistGradientBoostingRegressor(
-            learning_rate=hgbt_learning_rate,
-            max_iter=hgbt_max_iter,
-            l2_regularization=1e-3,
-            random_state=random_state,
-        )
+        if target_mode in CLASSIFICATION_TARGET_MODES:
+            model = HistGradientBoostingClassifier(
+                learning_rate=hgbt_learning_rate,
+                max_iter=hgbt_max_iter,
+                l2_regularization=1e-3,
+                random_state=random_state,
+            )
+        else:
+            model = HistGradientBoostingRegressor(
+                learning_rate=hgbt_learning_rate,
+                max_iter=hgbt_max_iter,
+                l2_regularization=1e-3,
+                random_state=random_state,
+            )
     elif name == "rf":
-        regressor = RandomForestRegressor(
-            n_estimators=300,
-            min_samples_leaf=2,
-            n_jobs=-1,
-            random_state=random_state,
-        )
+        if target_mode in CLASSIFICATION_TARGET_MODES:
+            model = RandomForestClassifier(
+                n_estimators=300,
+                min_samples_leaf=2,
+                class_weight="balanced_subsample",
+                n_jobs=-1,
+                random_state=random_state,
+            )
+        else:
+            model = RandomForestRegressor(
+                n_estimators=300,
+                min_samples_leaf=2,
+                n_jobs=-1,
+                random_state=random_state,
+            )
     else:
         raise ValueError(f"unknown --model {model_name!r}; expected hgbt or rf")
-    return Pipeline(steps=[("preprocess", preprocessor), ("model", regressor)])
+    return Pipeline(steps=[("preprocess", preprocessor), ("model", model)])
 
 
 def score_tuple(row: pd.Series) -> tuple[int, int, float]:
@@ -370,12 +426,30 @@ def main() -> None:
     parser.add_argument("--top-k", type=parse_int_list, default=parse_int_list("5,10,30"))
     parser.add_argument(
         "--target-mode",
-        choices=["objective", "objective_gap", "rank"],
+        choices=[
+            "objective",
+            "objective_gap",
+            "rank",
+            "exact_best_classifier",
+            "accepted_classifier",
+        ],
         default="objective",
         help=(
             "Training target. objective reproduces the original absolute score "
             "regression; objective_gap predicts each candidate's exact gap to "
-            "the step-best candidate; rank predicts log(1 + exact_rank - 1)."
+            "the step-best candidate; rank predicts log(1 + exact_rank - 1); "
+            "exact_best_classifier predicts whether a candidate is the exact "
+            "within-step best; accepted_classifier predicts whether it is the "
+            "accepted exact-improving move."
+        ),
+    )
+    parser.add_argument(
+        "--positive-weight",
+        type=float,
+        default=30.0,
+        help=(
+            "Positive-class sample weight for classifier targets. Ignored for "
+            "regression targets."
         ),
     )
     parser.add_argument("--test-fraction", type=float, default=0.25)
@@ -390,6 +464,8 @@ def main() -> None:
         raise ValueError("--hgbt-max-iter must be positive")
     if args.hgbt_learning_rate <= 0.0:
         raise ValueError("--hgbt-learning-rate must be positive")
+    if args.positive_weight <= 0.0:
+        raise ValueError("--positive-weight must be positive")
 
     data = ensure_feature_columns(
         add_training_columns(
@@ -419,17 +495,23 @@ def main() -> None:
     pipeline = make_pipeline(
         args.model,
         args.random_state,
+        target_mode=args.target_mode,
         hgbt_max_iter=args.hgbt_max_iter,
         hgbt_learning_rate=args.hgbt_learning_rate,
     )
+    sample_weights = training_sample_weights(
+        train_data,
+        args.target_mode,
+        positive_weight=args.positive_weight,
+    )
+    fit_kwargs = {"model__sample_weight": sample_weights} if sample_weights is not None else {}
     pipeline.fit(
         train_data[CANDIDATE_NUMERIC_FEATURES + CANDIDATE_CATEGORICAL_FEATURES],
         target_values(train_data, args.target_mode),
+        **fit_kwargs,
     )
 
-    eval_data["predicted_objective"] = pipeline.predict(
-        eval_data[CANDIDATE_NUMERIC_FEATURES + CANDIDATE_CATEGORICAL_FEATURES]
-    )
+    eval_data["predicted_objective"] = prediction_scores(pipeline, eval_data, args.target_mode)
     metrics = evaluate_predictions(eval_data, args.top_k)
     metrics.update(
         {
@@ -439,9 +521,11 @@ def main() -> None:
             "eval_groups": int(eval_data["step_group_id"].nunique()),
             "model": args.model,
             "target_mode": args.target_mode,
+            "score_mode": score_mode_for_target(args.target_mode),
             "model_params": {
                 "hgbt_max_iter": args.hgbt_max_iter if args.model == "hgbt" else None,
                 "hgbt_learning_rate": args.hgbt_learning_rate if args.model == "hgbt" else None,
+                "positive_weight": args.positive_weight if args.target_mode in CLASSIFICATION_TARGET_MODES else None,
             },
             "top_k": args.top_k,
             "trace_csv": [str(path) for path in args.trace_csv],
@@ -459,6 +543,7 @@ def main() -> None:
         "model_params": {
             "hgbt_max_iter": args.hgbt_max_iter if args.model == "hgbt" else None,
             "hgbt_learning_rate": args.hgbt_learning_rate if args.model == "hgbt" else None,
+            "positive_weight": args.positive_weight if args.target_mode in CLASSIFICATION_TARGET_MODES else None,
         },
         "numeric_features": CANDIDATE_NUMERIC_FEATURES,
         "categorical_features": CANDIDATE_CATEGORICAL_FEATURES,
@@ -468,7 +553,10 @@ def main() -> None:
             "objective": "absolute scalarized exact candidate objective",
             "objective_gap": "within-step candidate_objective minus exact step-best objective",
             "rank": "log1p(candidate_rank - 1), where lower rank is better",
+            "exact_best_classifier": "binary classifier for the exact within-step best candidate",
+            "accepted_classifier": "binary classifier for the accepted exact-improving candidate",
         }[args.target_mode],
+        "score_mode": score_mode_for_target(args.target_mode),
         "objective_scalarization": {
             "formula": "uncovered_weight * uncovered_orders + unknown_weight * unknown_pairs + packaging_factor",
             "uncovered_weight": args.uncovered_weight,

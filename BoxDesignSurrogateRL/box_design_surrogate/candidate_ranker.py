@@ -90,6 +90,22 @@ CANDIDATE_TRACE_COLUMNS = [
 ]
 
 
+def positive_class_probability(predictor: Any, x: Any) -> np.ndarray:
+    probabilities = np.asarray(predictor.predict_proba(x), dtype=np.float64)
+    classes = getattr(predictor, "classes_", None)
+    if classes is None and hasattr(predictor, "named_steps"):
+        model = getattr(predictor, "named_steps", {}).get("model")
+        classes = getattr(model, "classes_", None)
+    if classes is not None:
+        matches = np.where(np.asarray(classes) == 1)[0]
+        if len(matches) == 0:
+            return np.zeros(probabilities.shape[0], dtype=np.float64)
+        return probabilities[:, int(matches[0])]
+    if probabilities.shape[1] <= 1:
+        return np.zeros(probabilities.shape[0], dtype=np.float64)
+    return probabilities[:, 1]
+
+
 def score_key(score: MilpBoxSetScore) -> tuple[int, int, float]:
     return score.uncovered_orders, score.unknown_pairs, score.packaging_factor
 
@@ -317,8 +333,9 @@ class CandidateRanker:
     def predict_scores(self, rows: list[dict[str, Any]]) -> np.ndarray:
         if not rows:
             return np.asarray([], dtype=np.float64)
+        score_mode = str(self.metadata.get("score_mode", "predict"))
         if self.fast_predictor is not None:
-            return self.fast_predictor.predict(rows)
+            return self.fast_predictor.predict_scores(rows, score_mode=score_mode)
         return self._predict_scores_slow(rows)
 
     def _predict_scores_slow(self, rows: list[dict[str, Any]]) -> np.ndarray:
@@ -330,6 +347,8 @@ class CandidateRanker:
             if col not in frame.columns:
                 frame[col] = ""
         x_df = frame[self.numeric_features + self.categorical_features]
+        if str(self.metadata.get("score_mode", "predict")) == "negative_positive_probability":
+            return -positive_class_probability(self.pipeline, x_df).ravel()
         return np.asarray(self.pipeline.predict(x_df), dtype=np.float64).ravel()
 
 
@@ -387,9 +406,14 @@ class FastCandidatePipeline:
         except Exception:
             return None
 
-    def predict(self, rows: list[dict[str, Any]]) -> np.ndarray:
+    def predict_scores(self, rows: list[dict[str, Any]], *, score_mode: str = "predict") -> np.ndarray:
         x = self.transform(rows)
+        if score_mode == "negative_positive_probability":
+            return -positive_class_probability(self.model, x).ravel()
         return np.asarray(self.model.predict(x), dtype=np.float64).ravel()
+
+    def predict(self, rows: list[dict[str, Any]]) -> np.ndarray:
+        return self.predict_scores(rows, score_mode="predict")
 
     def transform(self, rows: list[dict[str, Any]]) -> np.ndarray:
         n_rows = len(rows)

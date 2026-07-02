@@ -224,6 +224,19 @@ The scientific comparison should emphasize `oracle_cache.uncached_boxes`,
 `milp_validated_candidates`, because the online Java MILP oracle caches
 order-box feasibility labels across candidate box sets.
 
+The candidate ranker can be trained with either pointwise regression targets
+or direct classifier targets. The classifier targets are:
+
+```text
+--target-mode exact_best_classifier
+--target-mode accepted_classifier
+```
+
+These train a probability model for the exact within-step best candidate or the
+accepted exact-improving candidate. At runtime the ranker orders candidates by
+negative positive-class probability, then the runner still validates candidates
+with the exact MILP oracle before accepting any move.
+
 ## Time-Budgeted Runs
 
 Long held-out or full-data exact runs can take much longer than the dev fine
