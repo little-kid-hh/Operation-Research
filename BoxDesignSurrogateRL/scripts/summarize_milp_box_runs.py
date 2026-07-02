@@ -51,6 +51,9 @@ def load_run(path: Path) -> dict[str, Any]:
         "milp_time_limit_seconds": summary.get("milp_time_limit_seconds"),
         "fixed_step": summary.get("fixed_step"),
         "schedule": json.dumps(summary.get("schedule", []), sort_keys=True),
+        "surrogate_top_k": summary.get("surrogate_top_k"),
+        "surrogate_rank_mode": summary.get("surrogate_rank_mode"),
+        "surrogate_candidate_batch_size": summary.get("surrogate_candidate_batch_size"),
         "initial_pf": initial.get("packaging_factor"),
         "best_pf": best.get("packaging_factor"),
         "initial_uncovered": initial.get("uncovered_orders"),
@@ -63,12 +66,23 @@ def load_run(path: Path) -> dict[str, Any]:
         "mean_order_volume": best.get("mean_order_volume"),
         "coverage_rate": best.get("coverage_rate"),
         "candidate_evaluations": summary.get("candidate_evaluations"),
+        "generated_candidates": summary.get("generated_candidates"),
+        "surrogate_scored_candidates": summary.get("surrogate_scored_candidates"),
+        "milp_validated_candidates": summary.get("milp_validated_candidates"),
+        "milp_candidate_evaluations_avoided": summary.get("milp_candidate_evaluations_avoided"),
+        "milp_avoidance_rate": summary.get("milp_avoidance_rate"),
+        "surrogate_eval_seconds": summary.get("surrogate_eval_seconds"),
+        "milp_eval_seconds": summary.get("milp_eval_seconds"),
         "trace_rows": summary.get("trace_rows"),
         "elapsed_seconds": summary.get("elapsed_seconds"),
         "cache_entries": cache.get("entries"),
         "cache_hits": cache.get("hits"),
         "cache_misses": cache.get("misses"),
         "disk_cache_hits": cache.get("disk_hits"),
+        "oracle_evaluate_calls": cache.get("evaluate_calls"),
+        "oracle_uncached_batches": cache.get("uncached_batches"),
+        "oracle_uncached_boxes": cache.get("uncached_boxes"),
+        "oracle_subprocess_seconds": cache.get("subprocess_seconds"),
     }
 
 
@@ -131,6 +145,20 @@ def paired_deltas(runs: list[dict[str, Any]], baseline: str, candidate: str) -> 
                 "baseline_mean_box_volume": b["mean_box_volume"],
                 "candidate_mean_box_volume": c["mean_box_volume"],
                 "delta_mean_box_volume": c["mean_box_volume"] - b["mean_box_volume"],
+                "baseline_generated_candidates": b.get("generated_candidates"),
+                "candidate_generated_candidates": c.get("generated_candidates"),
+                "baseline_milp_validated_candidates": b.get("milp_validated_candidates"),
+                "candidate_milp_validated_candidates": c.get("milp_validated_candidates"),
+                "baseline_oracle_uncached_boxes": b.get("oracle_uncached_boxes"),
+                "candidate_oracle_uncached_boxes": c.get("oracle_uncached_boxes"),
+                "baseline_oracle_subprocess_seconds": b.get("oracle_subprocess_seconds"),
+                "candidate_oracle_subprocess_seconds": c.get("oracle_subprocess_seconds"),
+                "delta_oracle_subprocess_seconds": (
+                    c["oracle_subprocess_seconds"] - b["oracle_subprocess_seconds"]
+                    if c.get("oracle_subprocess_seconds") is not None
+                    and b.get("oracle_subprocess_seconds") is not None
+                    else None
+                ),
                 "baseline_run_dir": b["run_dir"],
                 "candidate_run_dir": c["run_dir"],
             }
@@ -183,6 +211,13 @@ def _summarize_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
     unknown_pairs = _numeric_values(runs, "best_unknown_pairs")
     orders_with_unknown = _numeric_values(runs, "best_orders_with_unknown")
     candidate_evaluations = _numeric_values(runs, "candidate_evaluations")
+    generated_candidates = _numeric_values(runs, "generated_candidates")
+    milp_validated_candidates = _numeric_values(runs, "milp_validated_candidates")
+    milp_avoidance_rate = _numeric_values(runs, "milp_avoidance_rate")
+    surrogate_eval_seconds = _numeric_values(runs, "surrogate_eval_seconds")
+    milp_eval_seconds = _numeric_values(runs, "milp_eval_seconds")
+    oracle_uncached_boxes = _numeric_values(runs, "oracle_uncached_boxes")
+    oracle_subprocess_seconds = _numeric_values(runs, "oracle_subprocess_seconds")
     elapsed_seconds = _numeric_values(runs, "elapsed_seconds")
     return {
         "n": len(runs),
@@ -199,6 +234,13 @@ def _summarize_runs(runs: list[dict[str, Any]]) -> dict[str, Any]:
         "orders_with_unknown_mean": _mean(orders_with_unknown),
         "orders_with_unknown_max": max(orders_with_unknown) if orders_with_unknown else None,
         "candidate_evaluations_mean": _mean(candidate_evaluations),
+        "generated_candidates_mean": _mean(generated_candidates),
+        "milp_validated_candidates_mean": _mean(milp_validated_candidates),
+        "milp_avoidance_rate_mean": _mean(milp_avoidance_rate),
+        "surrogate_eval_seconds_mean": _mean(surrogate_eval_seconds),
+        "milp_eval_seconds_mean": _mean(milp_eval_seconds),
+        "oracle_uncached_boxes_mean": _mean(oracle_uncached_boxes),
+        "oracle_subprocess_seconds_mean": _mean(oracle_subprocess_seconds),
         "elapsed_seconds_mean": _mean(elapsed_seconds),
     }
 

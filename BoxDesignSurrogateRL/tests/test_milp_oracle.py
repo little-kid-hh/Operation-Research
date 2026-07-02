@@ -227,15 +227,51 @@ class MilpOracleTest(unittest.TestCase):
 
         oracle.evaluate(orders, boxes)
         self.assertEqual(oracle.uncached_calls, 1)
-        self.assertEqual(oracle.cache_info(), {"entries": 2, "hits": 0, "misses": 2, "disk_hits": 0})
+        self.assertEqual(
+            oracle.cache_info(),
+            {
+                "entries": 2,
+                "hits": 0,
+                "misses": 2,
+                "disk_hits": 0,
+                "evaluate_calls": 1,
+                "uncached_batches": 1,
+                "uncached_boxes": 2,
+                "subprocess_seconds": 0.0,
+            },
+        )
 
         oracle.evaluate(orders, boxes)
         self.assertEqual(oracle.uncached_calls, 1)
-        self.assertEqual(oracle.cache_info(), {"entries": 2, "hits": 2, "misses": 2, "disk_hits": 0})
+        self.assertEqual(
+            oracle.cache_info(),
+            {
+                "entries": 2,
+                "hits": 2,
+                "misses": 2,
+                "disk_hits": 0,
+                "evaluate_calls": 2,
+                "uncached_batches": 1,
+                "uncached_boxes": 2,
+                "subprocess_seconds": 0.0,
+            },
+        )
 
         oracle.evaluate(orders, [boxes[0], Box(2, 4.0, 4.0, 4.0)])
         self.assertEqual(oracle.uncached_calls, 2)
-        self.assertEqual(oracle.cache_info(), {"entries": 3, "hits": 3, "misses": 3, "disk_hits": 0})
+        self.assertEqual(
+            oracle.cache_info(),
+            {
+                "entries": 3,
+                "hits": 3,
+                "misses": 3,
+                "disk_hits": 0,
+                "evaluate_calls": 3,
+                "uncached_batches": 2,
+                "uncached_boxes": 3,
+                "subprocess_seconds": 0.0,
+            },
+        )
 
 
 if __name__ == "__main__":

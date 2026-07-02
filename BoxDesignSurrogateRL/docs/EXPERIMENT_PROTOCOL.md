@@ -34,6 +34,8 @@ The main A/B comparison must hold fixed:
 - same coverage-repair setting, if enabled;
 - matched search budget, reported as actual candidate evaluations and oracle
   cache misses.
+- for surrogate-filtered methods, the same generated candidate set before
+  filtering, plus reported actual MILP-validated candidates.
 
 ### Algorithm A: Paper-Action Fixed-Step Greedy
 
@@ -65,6 +67,24 @@ python BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
 
 This uses the same coordinate action set and MILP oracle as Algorithm A. The
 only intended algorithmic difference is the step schedule.
+
+### Algorithm C: MILP-Verified Surrogate-Filtered Greedy
+
+Entrypoint:
+
+```bash
+python BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
+  --algorithm surrogate_filtered_greedy \
+  --schedule 0.25:300 \
+  --surrogate-top-k 10 \
+  --surrogate-rank-mode paper_pf_surrogate
+```
+
+This algorithm generates the same coordinate candidates as `staged_greedy`, but
+uses a learned feasibility surrogate only to choose which candidates should be
+sent to MILP. A move is accepted only when the exact MILP score improves the
+current exact MILP score. Reports must not present surrogate scores as final
+quality metrics.
 
 ## Common Coverage Repair
 
@@ -161,6 +181,12 @@ Always report:
 - assignment counts per box;
 - elapsed seconds;
 - oracle cache entries, hits, misses, disk hits;
+- generated candidate count;
+- MILP-validated candidate count;
+- avoided MILP candidate evaluations;
+- oracle uncached batches and boxes;
+- surrogate inference time, if used;
+- exact-oracle subprocess time;
 - candidate-evaluation budget.
 
 ## Statistical Reporting
@@ -189,6 +215,16 @@ Do not claim Algorithm B beats Algorithm A unless all are true:
 - zero unknown labels in final reported evaluations;
 - staged schedule chosen on dev and frozen before test;
 - final order-box assignments are exactly MILP verified.
+
+For surrogate-filtered methods, additionally require:
+
+- the generated candidate set matches the exact-MILP fine-step baseline;
+- final reported PF, coverage, and unknown counts come from exact MILP;
+- `milp_validated_candidates`, `milp_candidate_evaluations_avoided`, and
+  `oracle_uncached_boxes` are reported;
+- rejected candidates are audited on dev before using the filter in a main
+  result, with special attention to false negatives among candidates that would
+  improve exact PF.
 
 ## Development Run Ladder
 

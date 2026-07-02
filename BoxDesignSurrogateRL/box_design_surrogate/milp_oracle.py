@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import tempfile
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
@@ -173,10 +174,15 @@ class JavaMilpOracle:
         self.cache_hits = 0
         self.cache_misses = 0
         self.disk_cache_hits = 0
+        self.evaluate_calls = 0
+        self.uncached_batches = 0
+        self.uncached_boxes = 0
+        self.subprocess_seconds = 0.0
         if self.cache_dir is not None:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
 
     def evaluate(self, orders: list[OrderSummary], boxes: list[Box]) -> MilpBoxSetScore:
+        self.evaluate_calls += 1
         self._validate_environment()
         self._validate_orders_for_xml(orders)
         signature = self._order_signature(orders)
@@ -203,6 +209,8 @@ class JavaMilpOracle:
             statuses[:, j] = np.asarray(cached, dtype=np.int8)
 
         if unknown_boxes:
+            self.uncached_batches += 1
+            self.uncached_boxes += len(unknown_boxes)
             unknown_statuses = self._evaluate_uncached(orders, unknown_boxes)
             for local_j, (global_j, dims_key) in enumerate(zip(unknown_columns, unknown_keys)):
                 statuses[:, global_j] = unknown_statuses[:, local_j]
@@ -211,12 +219,16 @@ class JavaMilpOracle:
                 self._write_disk_cache(signature, dims_key, status_col)
         return score_milp_feasibility_matrix(orders, boxes, statuses == 1, unknown=statuses < 0)
 
-    def cache_info(self) -> dict[str, int]:
+    def cache_info(self) -> dict[str, int | float]:
         return {
             "entries": len(self._feasibility_cache),
             "hits": self.cache_hits,
             "misses": self.cache_misses,
             "disk_hits": self.disk_cache_hits,
+            "evaluate_calls": self.evaluate_calls,
+            "uncached_batches": self.uncached_batches,
+            "uncached_boxes": self.uncached_boxes,
+            "subprocess_seconds": self.subprocess_seconds,
         }
 
     def _evaluate_uncached(self, orders: list[OrderSummary], boxes: list[Box]) -> np.ndarray:
@@ -246,6 +258,7 @@ class JavaMilpOracle:
                 "-1",
                 "true" if self.allow_bsp_derived_data else "false",
             ]
+            subprocess_started = time.perf_counter()
             try:
                 subprocess.run(cmd, check=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except subprocess.CalledProcessError as exc:
@@ -253,6 +266,8 @@ class JavaMilpOracle:
                     "Java MILP oracle failed with exit code "
                     f"{exc.returncode}\nSTDOUT:\n{exc.stdout}\nSTDERR:\n{exc.stderr}"
                 ) from exc
+            finally:
+                self.subprocess_seconds += time.perf_counter() - subprocess_started
             return self._read_output_statuses(output_path, orders, boxes)
 
     def _validate_environment(self) -> None:

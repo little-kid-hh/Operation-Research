@@ -26,6 +26,16 @@ python3 BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
   --schedule 0.5:2,0.25:2
 ```
 
+```bash
+PYTHONPATH=BoxDesignSurrogateRL \
+python3 BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
+  --algorithm surrogate_filtered_greedy \
+  --orders-limit 20 \
+  --k 10 \
+  --schedule 0.25:20 \
+  --surrogate-top-k 10
+```
+
 The default oracle is `--oracle java`, which invokes
 `org.example.GeneratePerminPackageLabels` through Java/Gurobi. This supports
 arbitrary generated box dimensions and is the correct oracle for searching new
@@ -62,6 +72,33 @@ two iterations at step `0.25`.
 
 This is the tuned greedy variant, not the original paper baseline.
 
+## Algorithm C: `surrogate_filtered_greedy`
+
+This algorithm uses the same coordinate action set as `staged_greedy`, but it
+does not send every generated candidate directly to MILP. For each iteration:
+
+1. generate all `6K` coordinate-move candidates;
+2. score all generated candidates with the learned feasibility surrogate;
+3. keep the top `--surrogate-top-k` candidates under the configured surrogate
+   ranking mode;
+4. evaluate only those kept candidates with the exact MILP oracle;
+5. accept a move only if the MILP score improves the current MILP score.
+
+The surrogate is therefore a candidate filter, not the final feasibility
+oracle. Final `packaging_factor`, `coverage_rate`, `uncovered_orders`, and
+`unknown_pairs` remain exact-MILP metrics.
+
+The first supported ranking mode is:
+
+```text
+--surrogate-rank-mode paper_pf_surrogate
+```
+
+which ranks candidates by surrogate-covered assigned box volume with a hard
+surrogate feasibility threshold. `risk_aware_surrogate` is available for
+diagnostics, but should not be the primary claim until its thresholding and
+calibration are frozen.
+
 ## Outputs
 
 Each run writes a timestamped directory under:
@@ -87,6 +124,18 @@ Main metrics:
 - `mean_box_volume`: mean volume of the selected feasible box per order, with a
   large penalty for uncovered orders.
 - `mean_order_volume`: mean total item volume per order.
+
+Runtime and filtering metrics:
+
+- `generated_candidates`: full candidate set size before surrogate filtering.
+- `milp_validated_candidates`: candidates actually evaluated by exact MILP.
+- `milp_candidate_evaluations_avoided`: generated candidates skipped by the
+  surrogate filter.
+- `milp_avoidance_rate`: avoided divided by generated candidates.
+- `surrogate_eval_seconds`: time spent scoring candidates with the surrogate.
+- `milp_eval_seconds`: Python-side elapsed time around exact oracle calls.
+- `oracle_cache`: includes cache hits/misses, uncached Java/Gurobi batches,
+  uncached boxes, and subprocess wall time.
 
 ## Environment Notes
 

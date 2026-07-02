@@ -11,14 +11,14 @@ import time
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = ROOT.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from box_design_surrogate.evaluator import Box
+from box_design_surrogate.evaluator import BatchSurrogateEvaluator, Box, BoxSetEvaluation, SurrogateEvaluator
 from box_design_surrogate.features import read_order_summaries
 from box_design_surrogate.kandula_repro import initial_boxes_kmeans, order_requirement
 from box_design_surrogate.milp_oracle import (
@@ -31,6 +31,17 @@ from box_design_surrogate.search import apply_move, coordinate_moves
 
 class BoxSetOracle(Protocol):
     def evaluate(self, orders: list, boxes: list[Box]) -> MilpBoxSetScore:
+        ...
+
+
+class CandidateSurrogate(Protocol):
+    def evaluate_many_box_sets(
+        self,
+        candidates: list[list[Box]],
+        *,
+        assignment_mode: str = "risk_adjusted",
+        candidate_batch_size: int | None = None,
+    ) -> list[BoxSetEvaluation]:
         ...
 
 
@@ -167,6 +178,41 @@ def make_oracle(args: argparse.Namespace) -> BoxSetOracle:
     )
 
 
+def make_surrogate_evaluator(args: argparse.Namespace, orders: list) -> BatchSurrogateEvaluator:
+    hybrid_root = REPO_ROOT / "HybridSVM"
+    if str(hybrid_root) not in sys.path:
+        sys.path.insert(0, str(hybrid_root))
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from src.ensemble_train import load_ensemble_pipeline
+
+    model = load_ensemble_pipeline(args.model_path)
+    patch_sklearn_model_compat(model)
+    evaluator = SurrogateEvaluator(
+        model=model,
+        tau=args.tau,
+        tau_high=args.tau_high,
+        lambda_risk=args.lambda_risk,
+    )
+    return BatchSurrogateEvaluator.from_evaluator(evaluator, orders)
+
+
+def patch_sklearn_model_compat(model: object) -> None:
+    """Patch narrow sklearn persistence gaps seen across minor versions."""
+
+    estimators = []
+    base_models = getattr(model, "base_models", None)
+    if isinstance(base_models, dict):
+        estimators.extend(base_models.values())
+    meta_model = getattr(model, "meta_model", None)
+    if meta_model is not None:
+        estimators.append(meta_model)
+
+    for estimator in estimators:
+        if estimator.__class__.__name__ == "LogisticRegression" and not hasattr(estimator, "multi_class"):
+            setattr(estimator, "multi_class", "auto")
+
+
 def replace_box(boxes: list[Box], replacement: Box) -> list[Box]:
     return [replacement if box.box_id == replacement.box_id else box for box in boxes]
 
@@ -259,20 +305,125 @@ def best_single_action(
     current: list[Box],
     current_score: MilpBoxSetScore,
     step: float,
-) -> tuple[list[Box], MilpBoxSetScore, str, int]:
+) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
     best_boxes = current
     best_score = current_score
     best_action = "noop"
     candidate_evaluations = 0
+    milp_eval_seconds = 0.0
     for move in coordinate_moves(current, step):
         candidate = apply_move(current, move)
         candidate_evaluations += 1
+        eval_started = time.perf_counter()
         score = oracle.evaluate(orders, candidate)
+        milp_eval_seconds += time.perf_counter() - eval_started
         if score_rank(score) < score_rank(best_score):
             best_boxes = candidate
             best_score = score
             best_action = f"{move.box_id}:{move.dimension}:{move.delta:+.6f}"
-    return best_boxes, best_score, best_action, candidate_evaluations
+    metrics = {
+        "candidate_evaluations": candidate_evaluations,
+        "generated_candidates": candidate_evaluations,
+        "surrogate_scored_candidates": 0,
+        "milp_validated_candidates": candidate_evaluations,
+        "milp_candidate_evaluations_avoided": 0,
+        "milp_avoidance_rate": 0.0,
+        "surrogate_eval_seconds": 0.0,
+        "milp_eval_seconds": milp_eval_seconds,
+    }
+    return best_boxes, best_score, best_action, metrics
+
+
+def surrogate_rank(evaluation: BoxSetEvaluation, rank_mode: str) -> tuple[float, ...]:
+    if rank_mode == "paper_pf_surrogate":
+        return (
+            float(evaluation.uncovered_orders),
+            float(evaluation.total_base_cost),
+            -float(evaluation.mean_assigned_probability),
+        )
+    if rank_mode == "risk_aware_surrogate":
+        return (
+            float(evaluation.uncovered_orders),
+            float(evaluation.total_adjusted_cost),
+            float(evaluation.total_base_cost),
+            -float(evaluation.mean_assigned_probability),
+        )
+    raise ValueError(f"unknown surrogate rank mode: {rank_mode}")
+
+
+def best_single_action_surrogate_filtered(
+    *,
+    oracle: BoxSetOracle,
+    surrogate: CandidateSurrogate,
+    orders: list,
+    current: list[Box],
+    current_score: MilpBoxSetScore,
+    step: float,
+    top_k: int,
+    rank_mode: str,
+    candidate_batch_size: int | None,
+) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
+    moves = list(coordinate_moves(current, step))
+    candidates = [apply_move(current, move) for move in moves]
+    generated_candidates = len(candidates)
+    if generated_candidates == 0:
+        return current, current_score, "noop", {
+            "candidate_evaluations": 0,
+            "generated_candidates": 0,
+            "surrogate_scored_candidates": 0,
+            "milp_validated_candidates": 0,
+            "milp_candidate_evaluations_avoided": 0,
+            "milp_avoidance_rate": 0.0,
+            "surrogate_eval_seconds": 0.0,
+            "milp_eval_seconds": 0.0,
+        }
+
+    assignment_mode = "min_volume" if rank_mode == "paper_pf_surrogate" else "risk_adjusted"
+    surrogate_started = time.perf_counter()
+    surrogate_evaluations = surrogate.evaluate_many_box_sets(
+        candidates,
+        assignment_mode=assignment_mode,
+        candidate_batch_size=candidate_batch_size,
+    )
+    surrogate_eval_seconds = time.perf_counter() - surrogate_started
+    if len(surrogate_evaluations) != generated_candidates:
+        raise RuntimeError(
+            "surrogate returned an unexpected number of candidate evaluations: "
+            f"{len(surrogate_evaluations)} for {generated_candidates} candidates"
+        )
+
+    keep = min(top_k, generated_candidates)
+    ranked_indices = sorted(
+        range(generated_candidates),
+        key=lambda idx: (surrogate_rank(surrogate_evaluations[idx], rank_mode), idx),
+    )[:keep]
+
+    best_boxes = current
+    best_score = current_score
+    best_action = "noop"
+    milp_eval_seconds = 0.0
+    for idx in ranked_indices:
+        eval_started = time.perf_counter()
+        score = oracle.evaluate(orders, candidates[idx])
+        milp_eval_seconds += time.perf_counter() - eval_started
+        if score_rank(score) < score_rank(best_score):
+            best_boxes = candidates[idx]
+            best_score = score
+            move = moves[idx]
+            best_action = f"{move.box_id}:{move.dimension}:{move.delta:+.6f}"
+
+    avoided = generated_candidates - len(ranked_indices)
+    metrics = {
+        "candidate_evaluations": len(ranked_indices),
+        "generated_candidates": generated_candidates,
+        "surrogate_scored_candidates": generated_candidates,
+        "milp_validated_candidates": len(ranked_indices),
+        "milp_candidate_evaluations_avoided": avoided,
+        "milp_avoidance_rate": avoided / generated_candidates if generated_candidates else 0.0,
+        "surrogate_eval_seconds": surrogate_eval_seconds,
+        "milp_eval_seconds": milp_eval_seconds,
+    }
+    return best_boxes, best_score, best_action, metrics
 
 
 def run_fixed_step(
@@ -298,7 +449,7 @@ def run_fixed_step(
         }
     ]
     for iteration in range(1, iterations + 1):
-        best_boxes, best_score, action, candidate_evaluations = best_single_action(
+        best_boxes, best_score, action, selection_metrics = best_single_action(
             oracle=oracle,
             orders=orders,
             current=current,
@@ -313,7 +464,7 @@ def run_fixed_step(
                 "step": step,
                 "action": action,
                 "improved": improved,
-                "candidate_evaluations": candidate_evaluations,
+                **selection_metrics,
                 **score_to_dict(best_score),
             }
         )
@@ -350,7 +501,7 @@ def run_staged_greedy(
     for stage_idx, (step, iterations) in enumerate(schedule, start=1):
         for _ in range(iterations):
             global_iteration += 1
-            best_boxes, best_score, action, candidate_evaluations = best_single_action(
+            best_boxes, best_score, action, selection_metrics = best_single_action(
                 oracle=oracle,
                 orders=orders,
                 current=current,
@@ -366,7 +517,75 @@ def run_staged_greedy(
                     "step": step,
                     "action": action,
                     "improved": improved,
-                    "candidate_evaluations": candidate_evaluations,
+                    **selection_metrics,
+                    **score_to_dict(best_score),
+                }
+            )
+            if not improved:
+                break
+            current = best_boxes
+            current_score = best_score
+    return sorted(current, key=lambda b: b.volume), current_score, trace
+
+
+def run_surrogate_filtered_greedy(
+    *,
+    oracle: BoxSetOracle,
+    surrogate: CandidateSurrogate,
+    orders: list,
+    boxes: list[Box],
+    schedule: list[tuple[float, int]],
+    top_k: int,
+    rank_mode: str,
+    candidate_batch_size: int | None,
+    initial_score: MilpBoxSetScore | None = None,
+    initial_phase: str = "initial",
+) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
+    current = sorted(boxes, key=lambda b: b.box_id)
+    current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
+    trace = [
+        {
+            "phase": initial_phase,
+            "iteration": 0,
+            "stage": 0,
+            "step": schedule[0][0],
+            "action": "init",
+            "candidate_evaluations": 0,
+            "generated_candidates": 0,
+            "surrogate_scored_candidates": 0,
+            "milp_validated_candidates": 0,
+            "milp_candidate_evaluations_avoided": 0,
+            "milp_avoidance_rate": 0.0,
+            "surrogate_eval_seconds": 0.0,
+            "milp_eval_seconds": 0.0,
+            **score_to_dict(current_score),
+        }
+    ]
+    global_iteration = 0
+    for stage_idx, (step, iterations) in enumerate(schedule, start=1):
+        for _ in range(iterations):
+            global_iteration += 1
+            best_boxes, best_score, action, selection_metrics = best_single_action_surrogate_filtered(
+                oracle=oracle,
+                surrogate=surrogate,
+                orders=orders,
+                current=current,
+                current_score=current_score,
+                step=step,
+                top_k=top_k,
+                rank_mode=rank_mode,
+                candidate_batch_size=candidate_batch_size,
+            )
+            improved = score_rank(best_score) < score_rank(current_score)
+            trace.append(
+                {
+                    "phase": "surrogate_filtered_greedy",
+                    "iteration": global_iteration,
+                    "stage": stage_idx,
+                    "step": step,
+                    "action": action,
+                    "improved": improved,
+                    **selection_metrics,
                     **score_to_dict(best_score),
                 }
             )
@@ -395,6 +614,13 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "unknown_pairs",
         "orders_with_unknown",
         "candidate_evaluations",
+        "generated_candidates",
+        "surrogate_scored_candidates",
+        "milp_validated_candidates",
+        "milp_candidate_evaluations_avoided",
+        "milp_avoidance_rate",
+        "surrogate_eval_seconds",
+        "milp_eval_seconds",
     ]
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
@@ -407,10 +633,16 @@ def main() -> None:
         description=(
             "MILP-backed OR2023 box search entrypoint. "
             "Algorithms: paper_fixed_step uses the fixed paper action step; "
-            "staged_greedy uses a manually adjusted step schedule."
+            "staged_greedy uses a manually adjusted step schedule; "
+            "surrogate_filtered_greedy uses a learned surrogate to filter "
+            "candidate actions before MILP-verified acceptance."
         )
     )
-    parser.add_argument("--algorithm", choices=["paper_fixed_step", "staged_greedy"], required=True)
+    parser.add_argument(
+        "--algorithm",
+        choices=["paper_fixed_step", "staged_greedy", "surrogate_filtered_greedy"],
+        required=True,
+    )
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--orders-limit", type=int, default=20)
@@ -430,6 +662,33 @@ def main() -> None:
     parser.add_argument("--java-classes", type=Path, default=REPO_ROOT / "MILP_3DBPP/target/classes")
     parser.add_argument("--java-classpath", default="")
     parser.add_argument("--milp-time-limit-seconds", type=float, default=30.0)
+    parser.add_argument(
+        "--model-path",
+        type=Path,
+        default=ROOT / "assets/loadability_model_pack/models/ensemble/ensemble_baseline_20260526.json",
+        help="Surrogate model metadata path used by surrogate_filtered_greedy.",
+    )
+    parser.add_argument("--tau", type=float, default=0.95, help="Surrogate feasibility probability threshold.")
+    parser.add_argument("--tau-high", type=float, default=0.99, help="Surrogate risk-shaping high threshold.")
+    parser.add_argument("--lambda-risk", type=float, default=1000.0, help="Surrogate risk penalty weight.")
+    parser.add_argument(
+        "--surrogate-top-k",
+        type=int,
+        default=10,
+        help="Number of surrogate-ranked candidates per iteration to verify with MILP.",
+    )
+    parser.add_argument(
+        "--surrogate-candidate-batch-size",
+        type=int,
+        default=None,
+        help="Optional batch size for surrogate candidate scoring.",
+    )
+    parser.add_argument(
+        "--surrogate-rank-mode",
+        choices=["paper_pf_surrogate", "risk_aware_surrogate"],
+        default="paper_pf_surrogate",
+        help="Surrogate ranking objective used only for candidate filtering.",
+    )
     parser.add_argument("--allow-bsp-derived-data", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--oracle-cache-dir", type=Path, default=None)
     parser.add_argument("--out-root", type=Path, default=ROOT / "results/milp_box_algorithms")
@@ -463,6 +722,10 @@ def main() -> None:
         raise ValueError("--repair-max-rounds must be non-negative")
     if args.orders_limit is not None and args.orders_limit < args.k:
         raise ValueError("--orders-limit must be >= --k for k-means initialization")
+    if args.surrogate_top_k <= 0:
+        raise ValueError("--surrogate-top-k must be positive")
+    if args.surrogate_candidate_batch_size is not None and args.surrogate_candidate_batch_size <= 0:
+        raise ValueError("--surrogate-candidate-batch-size must be positive")
 
     orders = read_order_summaries(args.xml_path)
     if args.orders_limit is not None:
@@ -474,6 +737,7 @@ def main() -> None:
         if len(initial_boxes) != args.k:
             raise ValueError(f"--initial-boxes-json contains {len(initial_boxes)} boxes, expected --k={args.k}")
     oracle = make_oracle(args)
+    surrogate = make_surrogate_evaluator(args, orders) if args.algorithm == "surrogate_filtered_greedy" else None
 
     run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S")
     run_dir = args.out_root / args.algorithm / run_id
@@ -498,6 +762,15 @@ def main() -> None:
         "java_classes": str(args.java_classes),
         "java_classpath_extra": args.java_classpath,
         "milp_time_limit_seconds": args.milp_time_limit_seconds,
+        "model_path": str(args.model_path) if args.algorithm == "surrogate_filtered_greedy" else None,
+        "tau": args.tau if args.algorithm == "surrogate_filtered_greedy" else None,
+        "tau_high": args.tau_high if args.algorithm == "surrogate_filtered_greedy" else None,
+        "lambda_risk": args.lambda_risk if args.algorithm == "surrogate_filtered_greedy" else None,
+        "surrogate_top_k": args.surrogate_top_k if args.algorithm == "surrogate_filtered_greedy" else None,
+        "surrogate_candidate_batch_size": (
+            args.surrogate_candidate_batch_size if args.algorithm == "surrogate_filtered_greedy" else None
+        ),
+        "surrogate_rank_mode": args.surrogate_rank_mode if args.algorithm == "surrogate_filtered_greedy" else None,
         "coverage_repair": args.coverage_repair,
         "repair_margins": args.repair_margins,
         "repair_max_rounds": args.repair_max_rounds,
@@ -545,12 +818,27 @@ def main() -> None:
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
         )
-    else:
+    elif args.algorithm == "staged_greedy":
         best_boxes, best_score, search_trace = run_staged_greedy(
             oracle=oracle,
             orders=orders,
             boxes=search_boxes,
             schedule=args.schedule,
+            initial_score=search_initial_score,
+            initial_phase="search_initial" if pre_search_trace else "initial",
+        )
+    else:
+        if surrogate is None:
+            raise RuntimeError("surrogate evaluator was not initialized")
+        best_boxes, best_score, search_trace = run_surrogate_filtered_greedy(
+            oracle=oracle,
+            surrogate=surrogate,
+            orders=orders,
+            boxes=search_boxes,
+            schedule=args.schedule,
+            top_k=args.surrogate_top_k,
+            rank_mode=args.surrogate_rank_mode,
+            candidate_batch_size=args.surrogate_candidate_batch_size,
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
         )
@@ -568,6 +856,20 @@ def main() -> None:
         "best_score": score_to_dict(best_score),
         "trace_rows": len(trace),
         "candidate_evaluations": int(sum(row.get("candidate_evaluations", 0) for row in trace)),
+        "generated_candidates": int(sum(row.get("generated_candidates", 0) for row in trace)),
+        "surrogate_scored_candidates": int(sum(row.get("surrogate_scored_candidates", 0) for row in trace)),
+        "milp_validated_candidates": int(sum(row.get("milp_validated_candidates", 0) for row in trace)),
+        "milp_candidate_evaluations_avoided": int(
+            sum(row.get("milp_candidate_evaluations_avoided", 0) for row in trace)
+        ),
+        "milp_avoidance_rate": (
+            float(sum(row.get("milp_candidate_evaluations_avoided", 0) for row in trace))
+            / float(sum(row.get("generated_candidates", 0) for row in trace))
+            if sum(row.get("generated_candidates", 0) for row in trace)
+            else 0.0
+        ),
+        "surrogate_eval_seconds": float(sum(row.get("surrogate_eval_seconds", 0.0) for row in trace)),
+        "milp_eval_seconds": float(sum(row.get("milp_eval_seconds", 0.0) for row in trace)),
         "elapsed_seconds": elapsed_seconds,
         "oracle_cache": oracle.cache_info() if hasattr(oracle, "cache_info") else None,
         "run_dir": str(run_dir),
