@@ -23,6 +23,8 @@ Windows/Gurobi machine. The purpose is to separate three questions:
 
 ## Results
 
+### Short dev100 budget: `0.5:40,0.25:80`
+
 | Method | PF | Trace rows | Generated candidates | MILP-validated candidates | Avoidance rate | Surrogate seconds | MILP eval seconds | Oracle subprocess seconds | Elapsed seconds | Converged? |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
 | Exact staged greedy | 1.989142 | 123 | 7200 | 7200 | 0.0% | 0.0 | 521.8 | 432.8 | 555.6 | No, still improving at iteration 120 |
@@ -31,6 +33,13 @@ Windows/Gurobi machine. The purpose is to separate three questions:
 | Surrogate top-30, dedup box predictions | 2.152415 | 38 | 2100 | 1050 | 50.0% | 40.7 | 98.2 | 109.8 | 173.8 | Stopped early by surrogate-filter no-op |
 | Surrogate adaptive `10,30` + no-op fallback | 2.000377 | 123 | 7200 | 2410 | 66.5% | 142.4 | 331.6 | 313.5 | 508.0 | No, still improving at iteration 120 |
 | Surrogate top-30 + no-op fallback | 2.000377 | 123 | 7200 | 3810 | 47.1% | 139.8 | 384.4 | 344.7 | 557.8 | No, still improving at iteration 120 |
+
+### Longer dev100 budget: `0.5:80,0.25:240`
+
+| Method | PF | Trace rows | Generated candidates | MILP-validated candidates | Avoidance rate | Surrogate seconds | MILP eval seconds | Oracle subprocess seconds | Elapsed seconds | Converged? |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| Exact staged greedy | 1.769646 | 323 | 19200 | 19200 | 0.0% | 0.0 | 1252.2 | 969.0 | 1286.1 | No, still improving at iteration 320 |
+| Surrogate adaptive `10,30` + no-op fallback | 1.786019 | 323 | 19200 | 6120 | 68.1% | 374.3 | 736.6 | 648.6 | 1145.9 | No, still improving at iteration 320 |
 
 All runs finished with `coverage_rate=1.0`, `uncovered_orders=0`, and
 `unknown_pairs=0`.
@@ -72,15 +81,26 @@ there is no dev100 evidence that always validating top-30 before accepting a
 move improves quality. The current default calibration candidate is therefore
 adaptive `10,30` plus no-op fallback.
 
+The longer schedule supports the scaling argument more strongly. Both exact and
+adaptive runs continued improving through the final `0.25` iteration, so neither
+should be called converged. Exact reached PF 1.7696 after validating 19200
+candidates. Adaptive `10,30` plus fallback reached PF 1.7860, a gap of 0.0164,
+while validating only 6120 candidates. The MILP-candidate reduction is large
+(68.1%), but elapsed wall-clock reduction is modest (1286.1 seconds to 1145.9
+seconds), mainly because surrogate scoring took 374.3 seconds and the Java
+oracle subprocess overhead remains high.
+
 ## Next Steps
 
 1. Add a missed-candidate audit mode: periodically validate the full candidate
    set and record the exact rank of the best surrogate-kept candidate.
-2. Train or calibrate a candidate-ranking surrogate using MILP-labeled greedy
+2. Reduce surrogate scoring and Java oracle overhead; otherwise MILP-call
+   reduction does not translate cleanly into wall-clock speedup.
+3. Train or calibrate a candidate-ranking surrogate using MILP-labeled greedy
    candidate data, not only order-box feasibility labels.
-3. Re-run dev100 with top-k values such as 30, 40, and 50 after the audit is
+4. Re-run dev100 with top-k values such as 30, 40, and 50 after the audit is
    available, then choose the smallest top-k that keeps PF close to exact.
-4. Extend the exact dev100 run beyond `0.25:80` until a true no-improvement step
+5. Extend the exact dev100 run beyond `0.25:240` until a true no-improvement step
    or a documented convergence cap.
-5. Only after dev100 behavior is understood, scale to dev500 and full OR2023
+6. Only after dev100 behavior is understood, scale to dev500 and full OR2023
    with fixed acceptance criteria.
