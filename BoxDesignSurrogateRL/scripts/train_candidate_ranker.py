@@ -140,7 +140,13 @@ def split_by_step(
     return np.asarray(train_idx), np.asarray(eval_idx)
 
 
-def make_pipeline(model_name: str, random_state: int) -> Pipeline:
+def make_pipeline(
+    model_name: str,
+    random_state: int,
+    *,
+    hgbt_max_iter: int,
+    hgbt_learning_rate: float,
+) -> Pipeline:
     numeric_transformer = Pipeline(
         steps=[
             ("imputer", SimpleImputer(strategy="median")),
@@ -162,8 +168,8 @@ def make_pipeline(model_name: str, random_state: int) -> Pipeline:
     name = model_name.strip().lower()
     if name == "hgbt":
         regressor = HistGradientBoostingRegressor(
-            learning_rate=0.05,
-            max_iter=300,
+            learning_rate=hgbt_learning_rate,
+            max_iter=hgbt_max_iter,
             l2_regularization=1e-3,
             random_state=random_state,
         )
@@ -268,6 +274,18 @@ def main() -> None:
     parser.add_argument("--trace-csv", type=Path, nargs="+", required=True)
     parser.add_argument("--out-dir", type=Path, required=True)
     parser.add_argument("--model", choices=["hgbt", "rf"], default="hgbt")
+    parser.add_argument(
+        "--hgbt-max-iter",
+        type=int,
+        default=300,
+        help="Number of boosting iterations for --model hgbt.",
+    )
+    parser.add_argument(
+        "--hgbt-learning-rate",
+        type=float,
+        default=0.05,
+        help="Learning rate for --model hgbt.",
+    )
     parser.add_argument("--top-k", type=parse_int_list, default=parse_int_list("5,10,30"))
     parser.add_argument("--test-fraction", type=float, default=0.25)
     parser.add_argument("--random-state", type=int, default=0)
@@ -277,6 +295,10 @@ def main() -> None:
 
     if not 0.0 <= args.test_fraction < 1.0:
         raise ValueError("--test-fraction must be in [0, 1)")
+    if args.hgbt_max_iter <= 0:
+        raise ValueError("--hgbt-max-iter must be positive")
+    if args.hgbt_learning_rate <= 0.0:
+        raise ValueError("--hgbt-learning-rate must be positive")
 
     data = add_training_columns(
         load_trace_csvs(args.trace_csv),
@@ -298,7 +320,12 @@ def main() -> None:
     train_data = data.iloc[train_idx].copy()
     eval_data = data.iloc[eval_idx].copy()
 
-    pipeline = make_pipeline(args.model, args.random_state)
+    pipeline = make_pipeline(
+        args.model,
+        args.random_state,
+        hgbt_max_iter=args.hgbt_max_iter,
+        hgbt_learning_rate=args.hgbt_learning_rate,
+    )
     pipeline.fit(
         train_data[CANDIDATE_NUMERIC_FEATURES + CANDIDATE_CATEGORICAL_FEATURES],
         train_data["candidate_objective"].astype(float).to_numpy(),
@@ -315,6 +342,10 @@ def main() -> None:
             "train_groups": int(train_data["step_group_id"].nunique()),
             "eval_groups": int(eval_data["step_group_id"].nunique()),
             "model": args.model,
+            "model_params": {
+                "hgbt_max_iter": args.hgbt_max_iter if args.model == "hgbt" else None,
+                "hgbt_learning_rate": args.hgbt_learning_rate if args.model == "hgbt" else None,
+            },
             "top_k": args.top_k,
             "trace_csv": [str(path) for path in args.trace_csv],
         }
@@ -327,6 +358,10 @@ def main() -> None:
     metadata = {
         "run_id": run_id,
         "model": args.model,
+        "model_params": {
+            "hgbt_max_iter": args.hgbt_max_iter if args.model == "hgbt" else None,
+            "hgbt_learning_rate": args.hgbt_learning_rate if args.model == "hgbt" else None,
+        },
         "numeric_features": CANDIDATE_NUMERIC_FEATURES,
         "categorical_features": CANDIDATE_CATEGORICAL_FEATURES,
         "target": "candidate_objective",

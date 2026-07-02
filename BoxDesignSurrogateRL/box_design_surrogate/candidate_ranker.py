@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -289,22 +289,39 @@ class CandidateRanker:
     numeric_features: list[str]
     categorical_features: list[str]
     metadata: dict[str, Any]
+    fast_predictor: "FastCandidatePipeline | None" = field(default=None, repr=False)
 
     @classmethod
     def load(cls, path: Path) -> "CandidateRanker":
         payload = joblib.load(path)
         if not isinstance(payload, dict) or "pipeline" not in payload:
             raise TypeError(f"Expected candidate ranker artifact dict in {path}")
+        numeric_features = list(payload.get("numeric_features", CANDIDATE_NUMERIC_FEATURES))
+        categorical_features = list(payload.get("categorical_features", CANDIDATE_CATEGORICAL_FEATURES))
+        pipeline = payload["pipeline"]
+        fast_predictor = FastCandidatePipeline.from_pipeline(
+            pipeline,
+            numeric_features=numeric_features,
+            categorical_features=categorical_features,
+        )
+        if fast_predictor is not None and _skip_fast_candidate_pipeline(fast_predictor.model):
+            fast_predictor = None
         return cls(
-            pipeline=payload["pipeline"],
-            numeric_features=list(payload.get("numeric_features", CANDIDATE_NUMERIC_FEATURES)),
-            categorical_features=list(payload.get("categorical_features", CANDIDATE_CATEGORICAL_FEATURES)),
+            pipeline=pipeline,
+            numeric_features=numeric_features,
+            categorical_features=categorical_features,
             metadata=dict(payload.get("metadata", {})),
+            fast_predictor=fast_predictor,
         )
 
     def predict_scores(self, rows: list[dict[str, Any]]) -> np.ndarray:
         if not rows:
             return np.asarray([], dtype=np.float64)
+        if self.fast_predictor is not None:
+            return self.fast_predictor.predict(rows)
+        return self._predict_scores_slow(rows)
+
+    def _predict_scores_slow(self, rows: list[dict[str, Any]]) -> np.ndarray:
         frame = pd.DataFrame(rows)
         for col in self.numeric_features:
             if col not in frame.columns:
@@ -314,6 +331,120 @@ class CandidateRanker:
                 frame[col] = ""
         x_df = frame[self.numeric_features + self.categorical_features]
         return np.asarray(self.pipeline.predict(x_df), dtype=np.float64).ravel()
+
+
+@dataclass(frozen=True)
+class FastCandidatePipeline:
+    model: Any
+    numeric_features: tuple[str, ...]
+    categorical_features: tuple[str, ...]
+    numeric_fill_values: np.ndarray
+    categorical_fill_values: tuple[str, ...]
+    categorical_values: tuple[tuple[str, ...], ...]
+    categorical_offsets: tuple[int, ...]
+    categorical_value_maps: tuple[dict[str, int], ...]
+
+    @classmethod
+    def from_pipeline(
+        cls,
+        pipeline: Any,
+        *,
+        numeric_features: list[str],
+        categorical_features: list[str],
+    ) -> "FastCandidatePipeline | None":
+        try:
+            steps = dict(pipeline.steps)
+            preprocessor = steps["preprocess"]
+            model = steps["model"]
+            transformers = {name: (transformer, cols) for name, transformer, cols in preprocessor.transformers_}
+            num_transformer, num_cols = transformers["num"]
+            cat_transformer, cat_cols = transformers["cat"]
+            if list(num_cols) != list(numeric_features) or list(cat_cols) != list(categorical_features):
+                return None
+            num_steps = dict(num_transformer.steps)
+            cat_steps = dict(cat_transformer.steps)
+            num_imputer = num_steps["imputer"]
+            cat_imputer = cat_steps["imputer"]
+            onehot = cat_steps["onehot"]
+            return cls(
+                model=model,
+                numeric_features=tuple(numeric_features),
+                categorical_features=tuple(categorical_features),
+                numeric_fill_values=np.asarray(num_imputer.statistics_, dtype=np.float64),
+                categorical_fill_values=tuple(str(value) for value in cat_imputer.statistics_),
+                categorical_values=tuple(tuple(str(value) for value in cats) for cats in onehot.categories_),
+                categorical_offsets=tuple(
+                    int(value)
+                    for value in np.cumsum(
+                        [0, *[len(cats) for cats in onehot.categories_[:-1]]]
+                    )
+                ),
+                categorical_value_maps=tuple(
+                    {str(value): idx for idx, value in enumerate(cats)}
+                    for cats in onehot.categories_
+                ),
+            )
+        except Exception:
+            return None
+
+    def predict(self, rows: list[dict[str, Any]]) -> np.ndarray:
+        x = self.transform(rows)
+        return np.asarray(self.model.predict(x), dtype=np.float64).ravel()
+
+    def transform(self, rows: list[dict[str, Any]]) -> np.ndarray:
+        n_rows = len(rows)
+        try:
+            numeric = np.asarray(
+                [
+                    [row[feature] if feature in row else 0.0 for feature in self.numeric_features]
+                    for row in rows
+                ],
+                dtype=np.float64,
+            )
+        except (TypeError, ValueError):
+            numeric = np.empty((n_rows, len(self.numeric_features)), dtype=np.float64)
+            for row_idx, row in enumerate(rows):
+                for col_idx, feature in enumerate(self.numeric_features):
+                    try:
+                        value = row[feature] if feature in row else 0.0
+                        numeric[row_idx, col_idx] = float(value)
+                    except (TypeError, ValueError):
+                        numeric[row_idx, col_idx] = np.nan
+        if numeric.size:
+            missing = ~np.isfinite(numeric)
+            if np.any(missing):
+                numeric[missing] = np.take(self.numeric_fill_values, np.where(missing)[1])
+
+        categorical_width = sum(len(values) for values in self.categorical_values)
+        categorical = np.zeros((n_rows, categorical_width), dtype=np.float64)
+        for row_idx, row in enumerate(rows):
+            for col_idx, feature in enumerate(self.categorical_features):
+                raw_value = row[feature] if feature in row else ""
+                if raw_value is None or (isinstance(raw_value, float) and not np.isfinite(raw_value)):
+                    value = self.categorical_fill_values[col_idx]
+                else:
+                    value = str(raw_value)
+                encoded_idx = self.categorical_value_maps[col_idx].get(value)
+                if encoded_idx is not None:
+                    categorical[row_idx, self.categorical_offsets[col_idx] + encoded_idx] = 1.0
+
+        if numeric.size and categorical.size:
+            return np.column_stack([numeric, categorical])
+        if numeric.size:
+            return numeric
+        return categorical
+
+
+def _skip_fast_candidate_pipeline(model: Any) -> bool:
+    """Avoid known negative fast-path cases.
+
+    The sklearn HistGradientBoostingRegressor spends nearly all predictor time
+    inside its own predict implementation. In real candidate batches, bypassing
+    ColumnTransformer saved under 2 ms but made model.predict slower on the
+    resulting ndarray, so the end-to-end path was not consistently faster.
+    """
+
+    return type(model).__name__ == "HistGradientBoostingRegressor"
 
 
 def write_ranker_metadata(path: Path, payload: dict[str, Any]) -> None:
