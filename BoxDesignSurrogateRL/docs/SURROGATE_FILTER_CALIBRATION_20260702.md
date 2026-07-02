@@ -51,9 +51,17 @@ stage from the converged `0.5` checkpoint.
 | `0.5` | Exact staged greedy | 1.760638 | 223 | 13200 | 13200 | 0.0% | 0.0 | 841.5 | 657.8 | 875.6 | Yes, exact no-op at iteration 220 |
 | `0.25` from exact `0.5` checkpoint | Exact staged greedy | 1.746790 | 13 | 720 | 720 | 0.0% | 0.0 | 66.2 | 54.9 | 68.7 | Yes, exact no-op at iteration 12 |
 | `0.25` from exact `0.5` checkpoint | Surrogate adaptive `10,30` + no-op fallback | 1.746790 | 13 | 720 | 310 | 56.9% | 14.3 | 47.0 | 42.5 | 63.7 | Yes, exact no-op at iteration 12 |
+| `0.1` from exact `0.25` checkpoint | Exact staged greedy | 1.739964 | 17 | 960 | 960 | 0.0% | 0.0 | 79.4 | 65.0 | 82.0 | Yes, exact no-op at iteration 16 |
+| `0.1` from exact `0.25` checkpoint | Surrogate adaptive `10,30` + no-op fallback | 1.739964 | 17 | 960 | 470 | 51.0% | 20.4 | 61.5 | 53.9 | 84.3 | Yes, exact no-op at iteration 16 |
 
 All runs finished with `coverage_rate=1.0`, `uncovered_orders=0`, and
 `unknown_pairs=0`.
+
+The dev100 XML dimensions are integer-valued: 100% of item dimensions and
+100% of order max sorted dimensions are multiples of 1.0. Therefore the
+motivation for `0.1` is not raw order-dimension granularity. Its value comes
+from finer box-adjustment lattice points around continuous box dimensions after
+KMeans/repair/local-search moves.
 
 ## Interpretation
 
@@ -109,13 +117,20 @@ checkpoint converged in only 12 iterations, reaching PF 1.7468. The surrogate
 adaptive `10,30` plus fallback matched the exact `0.25` continuation's final PF
 while validating 310 instead of 720 fine-stage candidates.
 
+Continuing from the exact `0.25` checkpoint with `0.1` is meaningful on dev100:
+exact PF improves further from 1.7468 to 1.7400 before exact no-op. Surrogate
+adaptive `10,30` plus fallback again matches the exact final PF while validating
+470 instead of 960 candidates. Wall-clock is slightly slower for the surrogate
+run at this small scale because surrogate scoring overhead dominates the saved
+MILP validations.
+
 ## Next Steps
 
 1. Add a missed-candidate audit mode: periodically validate the full candidate
    set and record the exact rank of the best surrogate-kept candidate.
 2. Treat convergence-gated coarse-to-fine as the main dev protocol: exact
-   `0.5` to no-op, then compare exact vs. surrogate-filtered fine stages from
-   the same checkpoint.
+   `0.5` to no-op, then compare exact vs. surrogate-filtered `0.25` and `0.1`
+   fine stages from the same checkpoint.
 3. Reduce surrogate scoring and Java oracle overhead; otherwise MILP-call
    reduction does not translate cleanly into wall-clock speedup.
 4. Train or calibrate a candidate-ranking surrogate using MILP-labeled greedy
