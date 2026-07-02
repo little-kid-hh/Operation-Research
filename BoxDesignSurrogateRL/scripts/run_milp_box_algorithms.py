@@ -274,6 +274,23 @@ def replace_box(boxes: list[Box], replacement: Box) -> list[Box]:
     return [replacement if box.box_id == replacement.box_id else box for box in boxes]
 
 
+def prefetch_candidate_statuses(
+    *,
+    oracle: BoxSetOracle,
+    orders: list,
+    candidates: list[list[Box]],
+    enabled: bool,
+) -> None:
+    if not enabled or not candidates or not hasattr(oracle, "prefetch_box_statuses"):
+        return
+    unique: dict[tuple[float, float, float], Box] = {}
+    for candidate in candidates:
+        for box in candidate:
+            key = (round(float(box.length), 6), round(float(box.width), 6), round(float(box.height), 6))
+            unique.setdefault(key, box)
+    oracle.prefetch_box_statuses(orders, list(unique.values()))  # type: ignore[attr-defined]
+
+
 def expand_box_for_order(box: Box, order, margin: float) -> Box:
     req_l, req_m, req_s, total_volume = order_requirement(order)
     length = max(box.length, req_l * margin)
@@ -364,6 +381,7 @@ def best_single_action(
     step: float,
     candidate_trace: list[dict] | None = None,
     candidate_trace_context: dict[str, Any] | None = None,
+    prefetch_candidate_statuses_enabled: bool = False,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
     best_boxes = current
     best_score = current_score
@@ -376,6 +394,13 @@ def best_single_action(
     for move in moves:
         candidate = apply_move(current, move)
         candidates.append(candidate)
+    prefetch_candidate_statuses(
+        oracle=oracle,
+        orders=orders,
+        candidates=candidates,
+        enabled=prefetch_candidate_statuses_enabled,
+    )
+    for move, candidate in zip(moves, candidates):
         candidate_evaluations += 1
         eval_started = time.perf_counter()
         score = oracle.evaluate(orders, candidate)
@@ -445,6 +470,7 @@ def best_single_action_surrogate_filtered(
     noop_fallback: bool,
     rank_mode: str,
     candidate_batch_size: int | None,
+    prefetch_candidate_statuses_enabled: bool = False,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
     moves = list(coordinate_moves(current, step))
     candidates = [apply_move(current, move) for move in moves]
@@ -507,6 +533,12 @@ def best_single_action_surrogate_filtered(
         tiers_evaluated += 1
         if tier_keep == generated_candidates and len(validated_indices) > 0:
             noop_fallback_used = True
+        prefetch_candidate_statuses(
+            oracle=oracle,
+            orders=orders,
+            candidates=[candidates[idx] for idx in new_indices],
+            enabled=prefetch_candidate_statuses_enabled,
+        )
         for idx in new_indices:
             validated_indices.add(idx)
             eval_started = time.perf_counter()
@@ -550,6 +582,7 @@ def best_single_action_ranker_filtered(
     top_k: int,
     adaptive_top_k: list[int] | None,
     noop_fallback: bool,
+    prefetch_candidate_statuses_enabled: bool = False,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
     moves = list(coordinate_moves(current, step))
     candidates = [apply_move(current, move) for move in moves]
@@ -618,6 +651,12 @@ def best_single_action_ranker_filtered(
         tiers_evaluated += 1
         if tier_keep == generated_candidates and len(validated_indices) > 0:
             noop_fallback_used = True
+        prefetch_candidate_statuses(
+            oracle=oracle,
+            orders=orders,
+            candidates=[candidates[idx] for idx in new_indices],
+            enabled=prefetch_candidate_statuses_enabled,
+        )
         for idx in new_indices:
             validated_indices.add(idx)
             eval_started = time.perf_counter()
@@ -660,6 +699,7 @@ def run_fixed_step(
     candidate_trace: list[dict] | None = None,
     source_run_id: str = "",
     deadline: float | None = None,
+    prefetch_candidate_statuses_enabled: bool = False,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -699,6 +739,7 @@ def run_fixed_step(
                 "stage": 1,
                 "iteration": iteration,
             },
+            prefetch_candidate_statuses_enabled=prefetch_candidate_statuses_enabled,
         )
         improved = score_rank(best_score) < score_rank(current_score)
         trace.append(
@@ -730,6 +771,7 @@ def run_staged_greedy(
     candidate_trace: list[dict] | None = None,
     source_run_id: str = "",
     deadline: float | None = None,
+    prefetch_candidate_statuses_enabled: bool = False,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -773,6 +815,7 @@ def run_staged_greedy(
                     "stage": stage_idx,
                     "iteration": global_iteration,
                 },
+                prefetch_candidate_statuses_enabled=prefetch_candidate_statuses_enabled,
             )
             improved = score_rank(best_score) < score_rank(current_score)
             trace.append(
@@ -809,6 +852,7 @@ def run_surrogate_filtered_greedy(
     initial_score: MilpBoxSetScore | None = None,
     initial_phase: str = "initial",
     deadline: float | None = None,
+    prefetch_candidate_statuses_enabled: bool = False,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -860,6 +904,7 @@ def run_surrogate_filtered_greedy(
                 noop_fallback=noop_fallback,
                 rank_mode=rank_mode,
                 candidate_batch_size=candidate_batch_size,
+                prefetch_candidate_statuses_enabled=prefetch_candidate_statuses_enabled,
             )
             improved = score_rank(best_score) < score_rank(current_score)
             trace.append(
@@ -894,6 +939,7 @@ def run_ranker_filtered_greedy(
     initial_score: MilpBoxSetScore | None = None,
     initial_phase: str = "initial",
     deadline: float | None = None,
+    prefetch_candidate_statuses_enabled: bool = False,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -945,6 +991,7 @@ def run_ranker_filtered_greedy(
                 top_k=top_k,
                 adaptive_top_k=adaptive_top_k,
                 noop_fallback=noop_fallback,
+                prefetch_candidate_statuses_enabled=prefetch_candidate_statuses_enabled,
             )
             improved = score_rank(best_score) < score_rank(current_score)
             trace.append(
@@ -1118,6 +1165,17 @@ def main() -> None:
         help="When all ranker tiers have no MILP improvement, validate remaining candidates before noop.",
     )
     parser.add_argument(
+        "--prefetch-candidate-statuses",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Before validating a candidate set or tier, batch-prefetch exact "
+            "MILP statuses for unique candidate box dimensions when the oracle "
+            "supports it. This changes subprocess batching, not the accepted "
+            "objective rule."
+        ),
+    )
+    parser.add_argument(
         "--candidate-trace-csv",
         type=Path,
         default=None,
@@ -1241,6 +1299,7 @@ def main() -> None:
             args.ranker_adaptive_top_k if args.algorithm == "ranker_filtered_greedy" else None
         ),
         "ranker_noop_fallback": args.ranker_noop_fallback if args.algorithm == "ranker_filtered_greedy" else None,
+        "prefetch_candidate_statuses": args.prefetch_candidate_statuses,
         "candidate_trace_csv": str(args.candidate_trace_csv) if args.candidate_trace_csv is not None else None,
         "coverage_repair": args.coverage_repair,
         "repair_margins": args.repair_margins,
@@ -1294,6 +1353,7 @@ def main() -> None:
             candidate_trace=candidate_trace_rows,
             source_run_id=run_id,
             deadline=deadline,
+            prefetch_candidate_statuses_enabled=args.prefetch_candidate_statuses,
         )
     elif args.algorithm == "staged_greedy":
         best_boxes, best_score, search_trace = run_staged_greedy(
@@ -1306,6 +1366,7 @@ def main() -> None:
             candidate_trace=candidate_trace_rows,
             source_run_id=run_id,
             deadline=deadline,
+            prefetch_candidate_statuses_enabled=args.prefetch_candidate_statuses,
         )
     elif args.algorithm == "surrogate_filtered_greedy":
         if surrogate is None:
@@ -1324,6 +1385,7 @@ def main() -> None:
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
             deadline=deadline,
+            prefetch_candidate_statuses_enabled=args.prefetch_candidate_statuses,
         )
     else:
         if ranker is None:
@@ -1340,6 +1402,7 @@ def main() -> None:
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
             deadline=deadline,
+            prefetch_candidate_statuses_enabled=args.prefetch_candidate_statuses,
         )
     trace = pre_search_trace + search_trace
     elapsed_seconds = time.perf_counter() - started

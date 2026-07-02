@@ -239,6 +239,27 @@ The budget is therefore not a hard interrupt inside a Java/Gurobi candidate
 batch; elapsed time can exceed the requested value by the duration of the
 current iteration.
 
+## Candidate Status Prefetching
+
+The Java oracle caches exact order-box feasibility by order signature and box
+dimensions. Use:
+
+```text
+--prefetch-candidate-statuses
+```
+
+to batch-prefetch exact statuses for all unique box dimensions in the candidate
+set or filtered tier before per-candidate scoring. This does not change the
+accepted objective, feasibility oracle, or exact-MILP acceptance rule; it only
+changes how many Java/Gurobi subprocess batches are launched to populate the
+same cache.
+
+Report this switch explicitly. Fair comparisons should either keep it fixed
+across exact and filtered methods, or present a separate implementation-level
+ablation. The main method claims should still prioritize exact final PF,
+coverage, uncached oracle boxes, oracle subprocess time, and end-to-end wall
+time.
+
 ## Outputs
 
 Each run writes a timestamped directory under:

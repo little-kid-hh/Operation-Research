@@ -58,6 +58,7 @@ def load_run(path: Path) -> dict[str, Any]:
         "surrogate_noop_fallback": summary.get("surrogate_noop_fallback"),
         "surrogate_rank_mode": summary.get("surrogate_rank_mode"),
         "surrogate_candidate_batch_size": summary.get("surrogate_candidate_batch_size"),
+        "prefetch_candidate_statuses": summary.get("prefetch_candidate_statuses"),
         "initial_pf": initial.get("packaging_factor"),
         "best_pf": best.get("packaging_factor"),
         "initial_uncovered": initial.get("uncovered_orders"),

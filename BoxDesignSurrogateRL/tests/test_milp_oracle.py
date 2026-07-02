@@ -235,6 +235,10 @@ class MilpOracleTest(unittest.TestCase):
                 "misses": 2,
                 "disk_hits": 0,
                 "evaluate_calls": 1,
+                "prefetch_calls": 0,
+                "prefetch_cache_hits": 0,
+                "prefetch_disk_hits": 0,
+                "prefetch_misses": 0,
                 "uncached_batches": 1,
                 "uncached_boxes": 2,
                 "subprocess_seconds": 0.0,
@@ -251,6 +255,10 @@ class MilpOracleTest(unittest.TestCase):
                 "misses": 2,
                 "disk_hits": 0,
                 "evaluate_calls": 2,
+                "prefetch_calls": 0,
+                "prefetch_cache_hits": 0,
+                "prefetch_disk_hits": 0,
+                "prefetch_misses": 0,
                 "uncached_batches": 1,
                 "uncached_boxes": 2,
                 "subprocess_seconds": 0.0,
@@ -267,8 +275,78 @@ class MilpOracleTest(unittest.TestCase):
                 "misses": 3,
                 "disk_hits": 0,
                 "evaluate_calls": 3,
+                "prefetch_calls": 0,
+                "prefetch_cache_hits": 0,
+                "prefetch_disk_hits": 0,
+                "prefetch_misses": 0,
                 "uncached_batches": 2,
                 "uncached_boxes": 3,
+                "subprocess_seconds": 0.0,
+            },
+        )
+
+    def test_java_oracle_prefetches_unique_box_dimensions(self) -> None:
+        class FakeJavaOracle(JavaMilpOracle):
+            def __init__(self) -> None:
+                super().__init__(xml_path=Path("toy.xml"), java_classpath="unused")
+                self.uncached_calls = 0
+
+            def _validate_environment(self) -> None:
+                return None
+
+            def _evaluate_uncached(self, orders, boxes):
+                self.uncached_calls += 1
+                return np.ones((len(orders), len(boxes)), dtype=bool)
+
+        orders = [
+            summarize_items("toy.xml", "10", [(1.0, 1.0, 1.0)]),
+            summarize_items("toy.xml", "20", [(2.0, 1.0, 1.0)]),
+        ]
+        oracle = FakeJavaOracle()
+        duplicate_boxes = [
+            Box(0, 2.0, 2.0, 2.0),
+            Box(1, 2.0, 2.0, 2.0),
+            Box(2, 3.0, 3.0, 3.0),
+        ]
+
+        oracle.prefetch_box_statuses(orders, duplicate_boxes)
+
+        self.assertEqual(oracle.uncached_calls, 1)
+        self.assertEqual(
+            oracle.cache_info(),
+            {
+                "entries": 2,
+                "hits": 0,
+                "misses": 2,
+                "disk_hits": 0,
+                "evaluate_calls": 0,
+                "prefetch_calls": 1,
+                "prefetch_cache_hits": 0,
+                "prefetch_disk_hits": 0,
+                "prefetch_misses": 2,
+                "uncached_batches": 1,
+                "uncached_boxes": 2,
+                "subprocess_seconds": 0.0,
+            },
+        )
+
+        oracle.evaluate(orders, [Box(10, 2.0, 2.0, 2.0), Box(11, 3.0, 3.0, 3.0)])
+
+        self.assertEqual(oracle.uncached_calls, 1)
+        self.assertEqual(
+            oracle.cache_info(),
+            {
+                "entries": 2,
+                "hits": 2,
+                "misses": 2,
+                "disk_hits": 0,
+                "evaluate_calls": 1,
+                "prefetch_calls": 1,
+                "prefetch_cache_hits": 0,
+                "prefetch_disk_hits": 0,
+                "prefetch_misses": 2,
+                "uncached_batches": 1,
+                "uncached_boxes": 2,
                 "subprocess_seconds": 0.0,
             },
         )

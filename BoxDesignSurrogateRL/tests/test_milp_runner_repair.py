@@ -40,6 +40,16 @@ class AggregateOracle:
         return score_milp_feasibility_matrix(orders, boxes, np.asarray(feasible, dtype=bool))
 
 
+class PrefetchAggregateOracle(AggregateOracle):
+    def __init__(self) -> None:
+        self.prefetch_calls = 0
+        self.prefetched_box_counts: list[int] = []
+
+    def prefetch_box_statuses(self, orders, boxes) -> None:
+        self.prefetch_calls += 1
+        self.prefetched_box_counts.append(len(boxes))
+
+
 class MilpRunnerRepairTest(unittest.TestCase):
     def test_boxes_from_json_loads_checkpoint_boxes(self) -> None:
         runner = _load_runner_module()
@@ -100,6 +110,29 @@ class MilpRunnerRepairTest(unittest.TestCase):
         self.assertEqual(trace[-1]["action"], "time_limit")
         self.assertEqual(trace[-1]["stop_reason"], "time_limit")
         self.assertEqual(trace[-1]["candidate_evaluations"], 0)
+
+    def test_best_single_action_prefetches_candidates_and_keeps_move_alignment(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+        boxes = [Box(0, 2.0, 2.0, 2.0)]
+        oracle = PrefetchAggregateOracle()
+        current_score = oracle.evaluate(orders, boxes)
+
+        best_boxes, best_score, action, metrics = runner.best_single_action(
+            oracle=oracle,
+            orders=orders,
+            current=boxes,
+            current_score=current_score,
+            step=0.25,
+            prefetch_candidate_statuses_enabled=True,
+        )
+
+        self.assertEqual(oracle.prefetch_calls, 1)
+        self.assertEqual(oracle.prefetched_box_counts, [6])
+        self.assertEqual(action, "0:length:-0.250000")
+        self.assertLess(best_score.packaging_factor, current_score.packaging_factor)
+        self.assertEqual(best_boxes[0].length, 1.75)
+        self.assertEqual(metrics["candidate_evaluations"], 6)
 
 
 if __name__ == "__main__":

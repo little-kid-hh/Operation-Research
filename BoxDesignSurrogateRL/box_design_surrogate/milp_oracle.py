@@ -175,6 +175,10 @@ class JavaMilpOracle:
         self.cache_misses = 0
         self.disk_cache_hits = 0
         self.evaluate_calls = 0
+        self.prefetch_calls = 0
+        self.prefetch_cache_hits = 0
+        self.prefetch_disk_hits = 0
+        self.prefetch_misses = 0
         self.uncached_batches = 0
         self.uncached_boxes = 0
         self.subprocess_seconds = 0.0
@@ -219,6 +223,59 @@ class JavaMilpOracle:
                 self._write_disk_cache(signature, dims_key, status_col)
         return score_milp_feasibility_matrix(orders, boxes, statuses == 1, unknown=statuses < 0)
 
+    def prefetch_box_statuses(self, orders: list[OrderSummary], boxes: list[Box]) -> None:
+        """Populate feasibility cache for arbitrary box dimensions.
+
+        The local-search runner can call this before scoring a group of
+        candidate box sets. Cache keys depend on the order signature and box
+        dimensions, not on candidate-local box ids, so dimensions are deduped
+        and sent to Java in one batch.
+        """
+
+        self.prefetch_calls += 1
+        if not boxes:
+            return
+        self._validate_environment()
+        self._validate_orders_for_xml(orders)
+        signature = self._order_signature(orders)
+
+        unique_by_dims: dict[tuple[float, float, float], tuple[float, float, float]] = {}
+        for box in boxes:
+            dims_key = self._box_dims_key(box)
+            unique_by_dims.setdefault(dims_key, dims_key)
+
+        unknown_dims: list[tuple[float, float, float]] = []
+        for dims_key in unique_by_dims:
+            cache_key = (signature, dims_key)
+            cached = self._feasibility_cache.get(cache_key)
+            if cached is not None:
+                self.prefetch_cache_hits += 1
+                continue
+            cached = self._read_disk_cache(signature, dims_key)
+            if cached is not None:
+                self._feasibility_cache[cache_key] = cached
+                self.disk_cache_hits += 1
+                self.prefetch_disk_hits += 1
+                continue
+            unknown_dims.append(dims_key)
+
+        if not unknown_dims:
+            return
+
+        self.cache_misses += len(unknown_dims)
+        self.prefetch_misses += len(unknown_dims)
+        self.uncached_batches += 1
+        self.uncached_boxes += len(unknown_dims)
+        synthetic_boxes = [
+            Box(box_id=idx, length=dims[0], width=dims[1], height=dims[2])
+            for idx, dims in enumerate(unknown_dims)
+        ]
+        unknown_statuses = self._evaluate_uncached(orders, synthetic_boxes)
+        for local_j, dims_key in enumerate(unknown_dims):
+            status_col = tuple(int(x) for x in unknown_statuses[:, local_j])
+            self._feasibility_cache[(signature, dims_key)] = status_col
+            self._write_disk_cache(signature, dims_key, status_col)
+
     def cache_info(self) -> dict[str, int | float]:
         return {
             "entries": len(self._feasibility_cache),
@@ -226,6 +283,10 @@ class JavaMilpOracle:
             "misses": self.cache_misses,
             "disk_hits": self.disk_cache_hits,
             "evaluate_calls": self.evaluate_calls,
+            "prefetch_calls": self.prefetch_calls,
+            "prefetch_cache_hits": self.prefetch_cache_hits,
+            "prefetch_disk_hits": self.prefetch_disk_hits,
+            "prefetch_misses": self.prefetch_misses,
             "uncached_batches": self.uncached_batches,
             "uncached_boxes": self.uncached_boxes,
             "subprocess_seconds": self.subprocess_seconds,
