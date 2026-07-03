@@ -83,3 +83,22 @@ the learned ranker transfers to independent test orders as a better
 time-budgeted search policy. The stronger dev500 claim remains separate:
 there, RF accepted top50 reaches the exact staged PF and exact audit confirms
 the same local optimum with fewer uncached boxes and lower end-to-end time.
+
+## Follow-Up Exact Convergence Check
+
+The matching exact staged convergence baseline and shared-cache ranker plus
+exact audit were later run for test100:
+
+```text
+Exact convergence:
+BoxDesignSurrogateRL/results/test100_exact_convergence_20260703/staged_greedy/run_20260703_165709_188504
+
+Shared-cache ranker plus audit:
+BoxDesignSurrogateRL/results/test100_shared_cache_ranker_frontier_20260703/frontier_20260703_173350
+```
+
+Both reached PF `1.8121077375` with 100% coverage. The shared-cache ranker
+path used fewer validations (`26190` vs `31140`), fewer uncached boxes (`2374`
+vs `2647`), lower subprocess time (`1366.4305s` vs `1560.0587s`), and lower
+wall-clock time (`1842.0075s` vs `2164.8369s`). See
+`CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`.

@@ -202,6 +202,25 @@ reduction, 10.4% uncached-box reduction, 10.7% subprocess-time reduction, and
 was slightly more expensive, so the shared-cache frontier is the cleaner cost
 accounting.
 
+The same shared-cache convergence-path protocol was then replicated on the
+first 100 held-out test orders:
+
+```text
+Exact convergence:
+BoxDesignSurrogateRL/results/test100_exact_convergence_20260703/staged_greedy/run_20260703_165709_188504
+
+Shared-cache ranker plus audit:
+BoxDesignSurrogateRL/results/test100_shared_cache_ranker_frontier_20260703/frontier_20260703_173350
+```
+
+Exact staged converged to PF `1.8121077375` with 100% coverage after 31140
+candidate validations, 2647 uncached boxes, 1560.0587 Java/Gurobi subprocess
+seconds, and 2164.8369 elapsed seconds. The shared-cache ranker 180s run plus
+exact audit reached the same final PF and coverage with 26190 validations,
+2374 uncached boxes, 1366.4305 subprocess seconds, and 1842.0075 elapsed
+seconds. This is a 15.9% validation reduction, 10.3% uncached-box reduction,
+12.4% subprocess-time reduction, and 14.9% wall-clock reduction on test100.
+
 ## Coverage-Controlled Held-Out Probe
 
 The test250 slice was also run after applying the same `geometric_expand`
@@ -233,9 +252,10 @@ The current evidence supports these claims:
 3. On held-out time-budget probes, the ranker transfers as a better anytime
    search policy: it spends the same budget on moves that reduce PF more
    quickly.
-4. On held-out test50, the shared-cache ranker 180s path plus exact audit
-   reaches essentially the same converged quality as exact staged from the same
-   initial boxes, with lower measured oracle and wall-clock cost.
+4. On held-out test50 and test100, the shared-cache ranker 180s path plus exact
+   audit reaches the same or essentially the same converged quality as exact
+   staged from the same initial boxes, with lower measured oracle and
+   wall-clock cost.
 5. On repaired test250, where coverage is controlled at 100% for both methods,
    the ranker improves PF and reduces uncached oracle cost.
 
@@ -262,9 +282,9 @@ into a publishable result:
 
 1. Replicate dev500 exact-audited runs across additional seeds or independent
    dev splits.
-2. Replicate the shared-cache ranker plus exact-audit protocol on another
-   held-out slice, starting with test100, before treating the test50
-   convergence-path result as a general held-out result.
+2. Extend the shared-cache ranker plus exact-audit protocol to a
+   coverage-controlled larger slice, starting from repaired test250 or a
+   train-split initial box set, before claiming larger held-out generality.
 3. Standardize coverage handling before larger held-out comparisons: either
    train initial boxes on the corresponding train split or apply the same
    explicit repair step to both methods.
@@ -283,6 +303,7 @@ into a publishable result:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_EXACT_AUDIT_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_TIMEBUDGET_20260703.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_TIMEBUDGET_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_TIMEBUDGET_20260703.md`
 - `BoxDesignSurrogateRL/docs/MILP_BOX_ALGORITHMS.md`

@@ -107,6 +107,15 @@ time-budget quality to a slice-level convergence-path result with lower
 incremental oracle cost, while remaining single-slice evidence. See
 `CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`.
 
+The same shared-cache convergence-path protocol was replicated on test100.
+Exact staged convergence reached PF `1.8121077375` with 100% coverage after
+31140 validations and 2164.8369 elapsed seconds. The ranker 180s path plus
+exact audit reached the same PF and coverage with 26190 validations and
+1842.0075 elapsed seconds. This supports the convergence-path claim on two
+held-out slice sizes, test50 and test100, while still not proving full OR2023
+or multi-seed superiority. See
+`CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`.
+
 For a main paper table, report dev500 exact-audited results separately from
 held-out time-budget results. For larger held-out comparisons, use coverage
 repair or train an initial box set on the train split so PF is not dominated by
