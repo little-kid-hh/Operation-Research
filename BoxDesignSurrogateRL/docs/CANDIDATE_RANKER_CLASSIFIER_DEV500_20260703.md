@@ -121,7 +121,9 @@ verified by MILP, the method avoids surrogate-only false improvements.
 This result is currently dev500, seed 0, fine stage `0.25` only. It supports a
 promising paper claim on query-efficient exact-MILP local search, but it still
 needs replicated seeds and a larger/full OR2023 run before being treated as a
-main result. Follow-up independent test-split time-budget probes are recorded
-in `CANDIDATE_RANKER_CLASSIFIER_TEST50_TIMEBUDGET_20260703.md` and
-`CANDIDATE_RANKER_CLASSIFIER_TEST100_TIMEBUDGET_20260703.md`; those support
-an anytime-quality transfer claim, not an uncached-query reduction claim.
+main result. Follow-up independent test-split time-budget probes are summarized
+in `CANDIDATE_RANKER_CLASSIFIER_HELDOUT_SUMMARY_20260703.md`, with detailed
+test50, test100, and test250 records in the corresponding
+`CANDIDATE_RANKER_CLASSIFIER_TEST*_TIMEBUDGET_20260703.md` files. Those
+support an anytime-quality transfer claim, not a universal uncached-query
+reduction claim.
