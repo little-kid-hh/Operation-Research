@@ -176,6 +176,24 @@ converged exact-equivalence result. The audit summary reported `disk_hits=0`,
 so its oracle cost should be interpreted as a standalone cold-cache convergence
 audit rather than an incremental audit sharing the ranker run's cache.
 
+The matching exact staged convergence baseline from the same initial boxes was
+then run without a wall-clock limit:
+
+```text
+BoxDesignSurrogateRL/results/test50_exact_convergence_20260703/staged_greedy/run_20260703_160207_147284
+```
+
+It converged to PF `1.7182177961` with 100% coverage after 22080 exact
+candidate validations, 1892 uncached boxes, 756.5954 Java/Gurobi subprocess
+seconds, and 1166.3584 elapsed seconds. The ranker 180s run plus its cold-cache
+exact audit reached essentially the same final PF (`1.7180912327`) with 17130
+validations, 1718 uncached boxes, 690.5948 subprocess seconds, and 1002.2353
+elapsed seconds. This is a 22.4% validation reduction, 9.2% uncached-box
+reduction, 8.7% subprocess-time reduction, and 14.1% wall-clock reduction on
+test50. Because the ranker and audit were separate cold-cache runs, these
+combined ranker costs are conservative rather than shared-cache incremental
+costs.
+
 ## Coverage-Controlled Held-Out Probe
 
 The test250 slice was also run after applying the same `geometric_expand`
@@ -207,7 +225,10 @@ The current evidence supports these claims:
 3. On held-out time-budget probes, the ranker transfers as a better anytime
    search policy: it spends the same budget on moves that reduce PF more
    quickly.
-4. On repaired test250, where coverage is controlled at 100% for both methods,
+4. On held-out test50, the ranker 180s path plus exact audit reaches essentially
+   the same converged quality as exact staged from the same initial boxes, with
+   lower measured oracle and wall-clock cost in a conservative cold-cache sum.
+5. On repaired test250, where coverage is controlled at 100% for both methods,
    the ranker improves PF and reduces uncached oracle cost.
 
 ## Claims Not Yet Supported
@@ -253,6 +274,7 @@ into a publishable result:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_HELDOUT_SUMMARY_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_TIMEBUDGET_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_EXACT_AUDIT_20260703.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_TIMEBUDGET_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_TIMEBUDGET_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_TIMEBUDGET_20260703.md`

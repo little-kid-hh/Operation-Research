@@ -219,6 +219,8 @@ budget/audit protocol across multiple top-k sequences and writes
 Each top-k sequence gets an independent oracle cache, while the ranker run and
 its exact audit share that sequence's cache. This keeps different budget points
 comparable while measuring the true incremental cost of the audit.
+Use `--ranker-max-elapsed-seconds` and `--audit-max-elapsed-seconds` when the
+ranker and audit stages need separate graceful wall-clock budgets.
 The scientific comparison should emphasize `oracle_cache.uncached_boxes`,
 `oracle_cache.subprocess_seconds`, and end-to-end elapsed time, not only
 `milp_validated_candidates`, because the online Java MILP oracle caches

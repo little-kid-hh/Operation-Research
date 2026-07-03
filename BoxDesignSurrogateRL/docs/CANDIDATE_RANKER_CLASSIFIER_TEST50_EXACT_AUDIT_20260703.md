@@ -66,6 +66,26 @@ It should not be reported as:
 > The learned ranker reaches the same held-out exact local optimum with less
 > oracle work.
 
+## Follow-Up Exact Convergence Baseline
+
+The matching exact staged convergence baseline from the same initial boxes was
+run after this audit:
+
+```text
+BoxDesignSurrogateRL/results/test50_exact_convergence_20260703/staged_greedy/run_20260703_160207_147284
+```
+
+It reached PF `1.7182177961` with 100% coverage after 22080 exact candidate
+validations and 1166.3584 elapsed seconds. The ranker 180s path plus this
+cold-cache audit reached PF `1.7180912327` with 17130 combined validations and
+1002.2353 combined elapsed seconds. That follow-up result shows that, on this
+test50 slice, the ranker path plus exact audit reaches essentially the same
+converged quality as exact staged from the original initial boxes with lower
+measured cost.
+
+The convergence comparison is recorded separately in
+`CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`.
+
 ## Cost Caveat
 
 The audit summary reports `disk_hits=0`, so this run should be treated as a

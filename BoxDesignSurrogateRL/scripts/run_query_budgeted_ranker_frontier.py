@@ -81,6 +81,7 @@ def add_common_runner_args(
     *,
     initial_boxes_json: Path,
     oracle_cache_dir: Path,
+    max_elapsed_seconds: float | None = None,
 ) -> None:
     cmd.extend(
         [
@@ -112,6 +113,8 @@ def add_common_runner_args(
             args.code_version,
         ]
     )
+    if max_elapsed_seconds is not None:
+        cmd.extend(["--max-elapsed-seconds", str(max_elapsed_seconds)])
     if args.prefetch_candidate_statuses:
         cmd.append("--prefetch-candidate-statuses")
 
@@ -152,6 +155,8 @@ def make_row(
         "ranker_oracle_uncached_boxes": ranker_uncached,
         "ranker_oracle_subprocess_seconds": ranker_subprocess,
         "ranker_elapsed_seconds": ranker_elapsed,
+        "ranker_stop_reason": ranker_summary.get("stop_reason"),
+        "ranker_max_elapsed_seconds": ranker_summary.get("max_elapsed_seconds"),
         "audit_config_label": audit_summary.get("config_label") if audit_summary else None,
         "audit_prefetch_candidate_statuses": audit_summary.get("prefetch_candidate_statuses") if audit_summary else None,
         "audit_run_dir": audit_summary.get("run_dir") if audit_summary else None,
@@ -163,6 +168,8 @@ def make_row(
         "audit_oracle_subprocess_seconds": audit_subprocess,
         "audit_prefetch_eval_seconds": audit_prefetch_elapsed,
         "audit_elapsed_seconds": audit_elapsed,
+        "audit_stop_reason": audit_summary.get("stop_reason") if audit_summary else None,
+        "audit_max_elapsed_seconds": audit_summary.get("max_elapsed_seconds") if audit_summary else None,
         "combined_oracle_uncached_boxes": (
             ranker_uncached + audit_uncached
             if ranker_uncached is not None and audit_uncached is not None
@@ -218,6 +225,18 @@ def main() -> None:
     parser.add_argument("--exact-baseline-summary", type=Path, default=None)
     parser.add_argument("--ranker-budget-sequence", action="append", type=parse_budget_sequence, default=None)
     parser.add_argument("--run-audit", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--ranker-max-elapsed-seconds",
+        type=float,
+        default=None,
+        help="Optional graceful wall-clock budget passed only to the ranker run.",
+    )
+    parser.add_argument(
+        "--audit-max-elapsed-seconds",
+        type=float,
+        default=None,
+        help="Optional graceful wall-clock budget passed only to the exact audit run.",
+    )
     parser.add_argument("--orders-limit", type=int, default=500)
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
@@ -231,6 +250,11 @@ def main() -> None:
     parser.add_argument("--prefetch-candidate-statuses", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--code-version", default="")
     args = parser.parse_args()
+
+    if args.ranker_max_elapsed_seconds is not None and args.ranker_max_elapsed_seconds <= 0.0:
+        raise ValueError("--ranker-max-elapsed-seconds must be positive when supplied")
+    if args.audit_max_elapsed_seconds is not None and args.audit_max_elapsed_seconds <= 0.0:
+        raise ValueError("--audit-max-elapsed-seconds must be positive when supplied")
 
     sequences = args.ranker_budget_sequence or ["10,30"]
     run_id = datetime.now().strftime("frontier_%Y%m%d_%H%M%S")
@@ -253,6 +277,7 @@ def main() -> None:
             args,
             initial_boxes_json=args.initial_boxes_json,
             oracle_cache_dir=sequence_cache_dir,
+            max_elapsed_seconds=args.ranker_max_elapsed_seconds,
         )
         ranker_cmd.extend(
             [
@@ -278,6 +303,7 @@ def main() -> None:
                 args,
                 initial_boxes_json=ranker_run_dir / "best_boxes.json",
                 oracle_cache_dir=sequence_cache_dir,
+                max_elapsed_seconds=args.audit_max_elapsed_seconds,
             )
             audit_cmd.extend(["--config-label", audit_label])
             audit_summary = run_summary(audit_cmd, env=env)
