@@ -100,11 +100,11 @@ held-out exact convergence. See
 
 The corresponding exact staged convergence baseline from the same initial
 boxes reached PF `1.7182177961` with 100% coverage after 22080 exact candidate
-validations and 1166.3584 elapsed seconds. The ranker 180s path plus cold-cache
-exact audit reached essentially the same final PF with 17130 validations and
-1002.2353 elapsed seconds. This strengthens the test50 claim from pure
-time-budget quality to a slice-level convergence-path result, while remaining
-single-slice evidence. See
+validations and 1166.3584 elapsed seconds. A shared-cache ranker 180s path plus
+exact audit reached essentially the same final PF with 16980 validations and
+981.7580 elapsed seconds. This strengthens the test50 claim from pure
+time-budget quality to a slice-level convergence-path result with lower
+incremental oracle cost, while remaining single-slice evidence. See
 `CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`.
 
 For a main paper table, report dev500 exact-audited results separately from

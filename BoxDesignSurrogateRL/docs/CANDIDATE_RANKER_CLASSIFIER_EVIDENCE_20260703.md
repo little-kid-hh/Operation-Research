@@ -185,14 +185,22 @@ BoxDesignSurrogateRL/results/test50_exact_convergence_20260703/staged_greedy/run
 
 It converged to PF `1.7182177961` with 100% coverage after 22080 exact
 candidate validations, 1892 uncached boxes, 756.5954 Java/Gurobi subprocess
-seconds, and 1166.3584 elapsed seconds. The ranker 180s run plus its cold-cache
-exact audit reached essentially the same final PF (`1.7180912327`) with 17130
-validations, 1718 uncached boxes, 690.5948 subprocess seconds, and 1002.2353
-elapsed seconds. This is a 22.4% validation reduction, 9.2% uncached-box
-reduction, 8.7% subprocess-time reduction, and 14.1% wall-clock reduction on
-test50. Because the ranker and audit were separate cold-cache runs, these
-combined ranker costs are conservative rather than shared-cache incremental
-costs.
+seconds, and 1166.3584 elapsed seconds.
+
+A shared-cache ranker plus exact-audit frontier was then run so the ranker
+stage and audit stage reused the same oracle cache:
+
+```text
+BoxDesignSurrogateRL/results/test50_shared_cache_ranker_frontier_20260703/frontier_20260703_163254
+```
+
+The shared-cache ranker 180s run plus exact audit reached essentially the same
+final PF (`1.7180912327`) with 16980 validations, 1695 uncached boxes, 675.3390
+subprocess seconds, and 981.7580 elapsed seconds. This is a 23.1% validation
+reduction, 10.4% uncached-box reduction, 10.7% subprocess-time reduction, and
+15.8% wall-clock reduction on test50. The earlier cold-cache ranker/audit sum
+was slightly more expensive, so the shared-cache frontier is the cleaner cost
+accounting.
 
 ## Coverage-Controlled Held-Out Probe
 
@@ -225,9 +233,9 @@ The current evidence supports these claims:
 3. On held-out time-budget probes, the ranker transfers as a better anytime
    search policy: it spends the same budget on moves that reduce PF more
    quickly.
-4. On held-out test50, the ranker 180s path plus exact audit reaches essentially
-   the same converged quality as exact staged from the same initial boxes, with
-   lower measured oracle and wall-clock cost in a conservative cold-cache sum.
+4. On held-out test50, the shared-cache ranker 180s path plus exact audit
+   reaches essentially the same converged quality as exact staged from the same
+   initial boxes, with lower measured oracle and wall-clock cost.
 5. On repaired test250, where coverage is controlled at 100% for both methods,
    the ranker improves PF and reduces uncached oracle cost.
 
@@ -239,8 +247,8 @@ The current evidence does not yet support these claims:
    MILP baseline.
 2. Multi-seed statistical significance.
 3. Universal reduction in uncached MILP labels on every held-out slice.
-4. Converged exact-equivalence on held-out test slices without running exact
-   audits from the ranker final boxes.
+4. Converged exact-equivalence across held-out test slices without running
+   shared-cache exact audits from the ranker final boxes.
 5. A claim that a feasibility predictor alone can solve the optimization
    problem.
 
@@ -254,10 +262,9 @@ into a publishable result:
 
 1. Replicate dev500 exact-audited runs across additional seeds or independent
    dev splits.
-2. For held-out audits, first fix the cache-accounting protocol. The test50
-   cold-cache exact audit shows the ranker time-budget endpoint is not
-   converged, so future audits should be run through the frontier helper when
-   incremental cache-sharing cost matters.
+2. Replicate the shared-cache ranker plus exact-audit protocol on another
+   held-out slice, starting with test100, before treating the test50
+   convergence-path result as a general held-out result.
 3. Standardize coverage handling before larger held-out comparisons: either
    train initial boxes on the corresponding train split or apply the same
    explicit repair step to both methods.

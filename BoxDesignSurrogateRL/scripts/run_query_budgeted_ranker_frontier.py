@@ -129,6 +129,12 @@ def make_row(
     baseline_pf = score_value(baseline_summary, "packaging_factor") if baseline_summary else None
     ranker_pf = score_value(ranker_summary, "packaging_factor")
     audit_pf = score_value(audit_summary, "packaging_factor") if audit_summary else None
+    ranker_generated = ranker_summary.get("generated_candidates")
+    ranker_validated = ranker_summary.get("milp_validated_candidates")
+    ranker_avoided = ranker_summary.get("milp_candidate_evaluations_avoided")
+    audit_generated = audit_summary.get("generated_candidates") if audit_summary else None
+    audit_validated = audit_summary.get("milp_validated_candidates") if audit_summary else None
+    audit_avoided = audit_summary.get("milp_candidate_evaluations_avoided") if audit_summary else None
     ranker_uncached = cache_value(ranker_summary, "uncached_boxes")
     audit_uncached = cache_value(audit_summary, "uncached_boxes") if audit_summary else None
     ranker_subprocess = cache_value(ranker_summary, "subprocess_seconds")
@@ -147,8 +153,8 @@ def make_row(
         "ranker_pf_gap_vs_baseline": ranker_pf - baseline_pf if ranker_pf is not None and baseline_pf is not None else None,
         "ranker_coverage": score_value(ranker_summary, "coverage_rate"),
         "ranker_uncovered": score_value(ranker_summary, "uncovered_orders"),
-        "ranker_generated_candidates": ranker_summary.get("generated_candidates"),
-        "ranker_milp_validated_candidates": ranker_summary.get("milp_validated_candidates"),
+        "ranker_generated_candidates": ranker_generated,
+        "ranker_milp_validated_candidates": ranker_validated,
         "ranker_candidate_avoidance_rate": ranker_summary.get("milp_avoidance_rate"),
         "ranker_eval_seconds": ranker_summary.get("ranker_eval_seconds"),
         "ranker_prefetch_eval_seconds": ranker_prefetch_elapsed,
@@ -164,6 +170,9 @@ def make_row(
         "audit_pf_gap_vs_baseline": audit_pf - baseline_pf if audit_pf is not None and baseline_pf is not None else None,
         "audit_coverage": score_value(audit_summary, "coverage_rate") if audit_summary else None,
         "audit_uncovered": score_value(audit_summary, "uncovered_orders") if audit_summary else None,
+        "audit_generated_candidates": audit_generated,
+        "audit_milp_validated_candidates": audit_validated,
+        "audit_candidate_avoidance_rate": audit_summary.get("milp_avoidance_rate") if audit_summary else None,
         "audit_oracle_uncached_boxes": audit_uncached,
         "audit_oracle_subprocess_seconds": audit_subprocess,
         "audit_prefetch_eval_seconds": audit_prefetch_elapsed,
@@ -174,6 +183,21 @@ def make_row(
             ranker_uncached + audit_uncached
             if ranker_uncached is not None and audit_uncached is not None
             else ranker_uncached
+        ),
+        "combined_generated_candidates": (
+            ranker_generated + audit_generated
+            if ranker_generated is not None and audit_generated is not None
+            else ranker_generated
+        ),
+        "combined_milp_validated_candidates": (
+            ranker_validated + audit_validated
+            if ranker_validated is not None and audit_validated is not None
+            else ranker_validated
+        ),
+        "combined_milp_candidate_evaluations_avoided": (
+            ranker_avoided + audit_avoided
+            if ranker_avoided is not None and audit_avoided is not None
+            else ranker_avoided
         ),
         "combined_oracle_subprocess_seconds": (
             ranker_subprocess + audit_subprocess

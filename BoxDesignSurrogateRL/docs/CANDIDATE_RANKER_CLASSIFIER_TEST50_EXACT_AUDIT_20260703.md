@@ -83,6 +83,17 @@ test50 slice, the ranker path plus exact audit reaches essentially the same
 converged quality as exact staged from the original initial boxes with lower
 measured cost.
 
+An additional shared-cache frontier run then used the same oracle cache for the
+ranker stage and exact audit:
+
+```text
+BoxDesignSurrogateRL/results/test50_shared_cache_ranker_frontier_20260703/frontier_20260703_163254
+```
+
+That run reached the same audited PF with 16980 combined validations and
+981.7580 combined elapsed seconds. The shared-cache result supersedes the
+cold-cache sum as the cleaner incremental cost accounting.
+
 The convergence comparison is recorded separately in
 `CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`.
 
@@ -96,11 +107,7 @@ incremental-audit cost accounting less ambiguous.
 
 ## Next Step
 
-Do not run test100 exact audit blindly until the audit protocol is fixed:
-
-1. ensure future runs record `oracle_cache_dir`;
-2. choose whether held-out audits are cold-cache convergence audits or
-   incremental audits sharing a ranker cache;
-3. if incremental cost is needed, run the ranker and audit through
-   `scripts/run_query_budgeted_ranker_frontier.py` so both stages share the
-   same oracle cache by construction.
+The cache-accounting protocol is now fixed for future held-out audits: use
+`scripts/run_query_budgeted_ranker_frontier.py` with
+`--ranker-max-elapsed-seconds` when a time-budgeted ranker stage should be
+followed by an exact audit sharing the same oracle cache.
