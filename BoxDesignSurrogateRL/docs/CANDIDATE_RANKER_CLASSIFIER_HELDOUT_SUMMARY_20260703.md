@@ -91,6 +91,13 @@ RF accepted top50 reaches the exact staged PF, and exact audit confirms no
 remaining local-search improvement while using fewer uncached boxes and lower
 wall-clock time.
 
+A later cold-cache exact audit from the test50 ranker final boxes improved PF
+from `2.0875865358` to `1.7180912327` with 100% coverage, using 16140 exact
+candidate validations and 821.3924 elapsed seconds. This confirms that the
+test50 held-out result should be interpreted as an anytime advantage, not as
+held-out exact convergence. See
+`CANDIDATE_RANKER_CLASSIFIER_TEST50_EXACT_AUDIT_20260703.md`.
+
 For a main paper table, report dev500 exact-audited results separately from
 held-out time-budget results. For larger held-out comparisons, use coverage
 repair or train an initial box set on the train split so PF is not dominated by

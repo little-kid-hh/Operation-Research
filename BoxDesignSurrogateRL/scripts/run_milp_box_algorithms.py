@@ -1294,6 +1294,7 @@ def main() -> None:
         "java_classes": str(args.java_classes),
         "java_classpath_extra": args.java_classpath,
         "milp_time_limit_seconds": args.milp_time_limit_seconds,
+        "oracle_cache_dir": str(args.oracle_cache_dir) if args.oracle_cache_dir is not None else None,
         "model_path": str(args.model_path) if args.algorithm == "surrogate_filtered_greedy" else None,
         "candidate_ranker_path": str(args.candidate_ranker_path) if args.algorithm == "ranker_filtered_greedy" else None,
         "tau": args.tau if args.algorithm == "surrogate_filtered_greedy" else None,

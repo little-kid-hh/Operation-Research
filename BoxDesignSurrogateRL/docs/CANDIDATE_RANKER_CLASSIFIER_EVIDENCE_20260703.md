@@ -162,6 +162,20 @@ makes faster progress through more iterations, it touches about the same or
 slightly more distinct uncached order-box dimensions. Therefore these two runs
 are quality wins, not uncached-query wins.
 
+An exact staged-greedy audit was later run from the test50 ranker final boxes
+without a wall-clock limit:
+
+```text
+BoxDesignSurrogateRL/results/test50_classifier_exact_audit_20260703/staged_greedy/run_20260703_154327_814314
+```
+
+The audit improved PF from `2.0875865358` to `1.7180912327` with 100% coverage,
+using 16140 exact candidate validations and 821.3924 elapsed seconds. This
+confirms that the held-out test50 result is an anytime advantage, not a
+converged exact-equivalence result. The audit summary reported `disk_hits=0`,
+so its oracle cost should be interpreted as a standalone cold-cache convergence
+audit rather than an incremental audit sharing the ranker run's cache.
+
 ## Coverage-Controlled Held-Out Probe
 
 The test250 slice was also run after applying the same `geometric_expand`
@@ -219,8 +233,10 @@ into a publishable result:
 
 1. Replicate dev500 exact-audited runs across additional seeds or independent
    dev splits.
-2. Run exact audits from the ranker final boxes on held-out test50/test100
-   where the time-budget results show large PF improvements.
+2. For held-out audits, first fix the cache-accounting protocol. The test50
+   cold-cache exact audit shows the ranker time-budget endpoint is not
+   converged, so future audits should be run through the frontier helper when
+   incremental cache-sharing cost matters.
 3. Standardize coverage handling before larger held-out comparisons: either
    train initial boxes on the corresponding train split or apply the same
    explicit repair step to both methods.
@@ -236,6 +252,7 @@ into a publishable result:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_HELDOUT_SUMMARY_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_TIMEBUDGET_20260703.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_EXACT_AUDIT_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_TIMEBUDGET_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_TIMEBUDGET_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_TIMEBUDGET_20260703.md`
