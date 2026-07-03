@@ -81,3 +81,7 @@ anytime result, not a converged exact-equivalence result.
 The uncovered orders indicate that full held-out evaluation needs either a
 coverage-repair phase or an initial box set trained on the corresponding
 training split before PF-only comparisons are meaningful.
+
+A follow-up run with the same `geometric_expand` coverage repair for both
+methods is recorded in
+`CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_TIMEBUDGET_20260703.md`.

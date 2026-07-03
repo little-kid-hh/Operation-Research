@@ -16,8 +16,11 @@ All runs use:
 - K=10;
 - Java/Gurobi MILP oracle, `label_6ori`;
 - `--max-elapsed-seconds 180`;
-- no candidate-status prefetch;
-- no coverage repair.
+- no candidate-status prefetch.
+
+The main summary table below uses no coverage repair. A separate repaired
+test250 check follows because the unrepaired test250 slice leaves two orders
+uncovered for both methods.
 
 Classifier ranker:
 
@@ -35,6 +38,22 @@ BoxDesignSurrogateRL/results/candidate_ranker_classifier_dev300_to_dev500_202607
 | test100 | RF accepted top50 | 2.1038561898 | 1.000 | 0 | 970 | 237 | 144.4647 | 181.9608 |
 | test250 | exact staged | 11.9165101124 | 0.992 | 2 | 960 | 145 | 162.1439 | 184.3934 |
 | test250 | RF accepted top50 | 11.3901214442 | 0.992 | 2 | 600 | 132 | 158.4936 | 180.3225 |
+
+## Repaired Test250 Check
+
+Both methods were rerun on test250 with the same `geometric_expand` coverage
+repair before fine-stage search. This gives a cleaner 100% coverage comparison:
+
+| held-out slice | method | PF at stop | coverage | uncovered | validations | uncached boxes | subprocess sec | elapsed sec |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| test250 repaired | exact staged | 2.4763186692 | 1.000 | 0 | 60 | 176 | 189.1293 | 198.6728 |
+| test250 repaired | RF accepted top50 | 2.4559321217 | 1.000 | 0 | 120 | 152 | 169.6840 | 180.9510 |
+
+The repaired test250 result preserves the classifier advantage under equal
+100% coverage and also reduces uncached boxes, uncached batches, subprocess
+time, and elapsed time. The exact run exceeds 180 seconds because the runner
+exits only at iteration boundaries and coverage repair is included in elapsed
+time.
 
 ## Takeaways
 
@@ -56,6 +75,9 @@ The oracle-efficiency picture is mixed:
 - test250 shows both better time-budgeted PF and modestly fewer uncached boxes,
   uncached batches, subprocess seconds, and elapsed seconds, but coverage is
   below 100% for both methods.
+- test250 repaired is the cleanest held-out coverage-controlled comparison so
+  far: both methods finish with 100% coverage, and the classifier has lower PF
+  and lower oracle cost.
 
 ## Claim Boundary
 
@@ -70,6 +92,6 @@ remaining local-search improvement while using fewer uncached boxes and lower
 wall-clock time.
 
 For a main paper table, report dev500 exact-audited results separately from
-held-out time-budget results. For larger held-out comparisons, add coverage
+held-out time-budget results. For larger held-out comparisons, use coverage
 repair or train an initial box set on the train split so PF is not dominated by
 uncovered-order penalties.
