@@ -264,8 +264,9 @@ with much smaller efficiency gains than test50/test100.
 
 After adding `--orders-offset` support to the Python runner and fixing the
 Java MILP oracle windowing, the shared-cache convergence-path protocol was
-replicated on two non-prefix held-out windows from the OR2023 test split. Both
-runs use `geometric_expand` coverage repair for exact staged and ranker+audit.
+replicated on three non-prefix held-out windows from the OR2023 test split.
+All runs use `geometric_expand` coverage repair for exact staged and
+ranker+audit.
 
 | held-out window | method | final PF | coverage | uncovered | validations | uncached boxes | subprocess sec | elapsed sec |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -273,6 +274,8 @@ runs use `geometric_expand` coverage repair for exact staged and ranker+audit.
 | test[100,200) repaired | RF top50 180s + exact audit | 2.0757308361 | 1.000 | 0 | 26200 | 2416 | 1419.6851 | 1944.8361 |
 | test[200,300) repaired | exact staged | 1.9098141289 | 1.000 | 0 | 43020 | 3714 | 2114.5624 | 2954.3013 |
 | test[200,300) repaired | RF top50 180s + exact audit | 1.9098141289 | 1.000 | 0 | 39220 | 3485 | 1955.3046 | 2729.9786 |
+| test[300,400) repaired | exact staged | 1.8590426956 | 1.000 | 0 | 28560 | 2478 | 1275.1553 | 1830.4731 |
+| test[300,400) repaired | RF top50 180s + exact audit | 1.8590426956 | 1.000 | 0 | 25460 | 2301 | 1143.9761 | 1596.6522 |
 
 For test[100,200), the ranker path reaches the exact same final PF and
 coverage with 9.6% fewer validations, 4.2% fewer uncached boxes, 3.4% lower
@@ -284,7 +287,11 @@ subprocess time, and 7.6% lower wall-clock time. This second window is harder
 than offset100: exact staged requires 43020 candidate validations and 2954.3
 wall-clock seconds.
 
-These two non-prefix windows are stronger evidence than nested prefix slices
+For test[300,400), the ranker path also reaches the exact same final PF and
+coverage with 10.9% fewer validations, 7.1% fewer uncached boxes, 10.3% lower
+subprocess time, and 12.8% lower wall-clock time.
+
+These three non-prefix windows are stronger evidence than nested prefix slices
 because they do not repeatedly evaluate only the earliest orders in the XML
 ordering.
 
@@ -305,9 +312,10 @@ The current evidence supports these claims:
    180s path plus exact audit reaches the same or essentially the same
    converged quality as exact staged from the same initial boxes, with lower
    measured oracle and wall-clock cost.
-5. On non-prefix held-out windows test[100,200) and test[200,300), the same
-   shared-cache ranker-plus-audit protocol reaches identical final PF and
-   coverage with lower measured oracle and wall-clock cost.
+5. On non-prefix held-out windows test[100,200), test[200,300), and
+   test[300,400), the same shared-cache ranker-plus-audit protocol reaches
+   identical final PF and coverage with lower measured oracle and wall-clock
+   cost.
 6. The cost reduction is substantial on test50/test100, modest on repaired
    test250, and positive on both non-prefix windows, so the current evidence
    supports a consistent efficiency advantage, not a uniform large speedup
