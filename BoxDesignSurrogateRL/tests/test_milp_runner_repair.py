@@ -51,6 +51,16 @@ class PrefetchAggregateOracle(AggregateOracle):
 
 
 class MilpRunnerRepairTest(unittest.TestCase):
+    def test_select_order_window_supports_offsets(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", str(idx), [(1.0, 1.0, 1.0)]) for idx in range(5)]
+
+        selected = runner.select_order_window(orders, offset=2, limit=2)
+
+        self.assertEqual([order.order_id for order in selected], ["2", "3"])
+        with self.assertRaisesRegex(ValueError, "selected order window is empty"):
+            runner.select_order_window(orders, offset=5, limit=2)
+
     def test_boxes_from_json_loads_checkpoint_boxes(self) -> None:
         runner = _load_runner_module()
         payload = [

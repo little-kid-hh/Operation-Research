@@ -254,6 +254,20 @@ def make_candidate_ranker(args: argparse.Namespace) -> CandidateRanker:
     return CandidateRanker.load(args.candidate_ranker_path)
 
 
+def select_order_window(orders: list, *, offset: int = 0, limit: int | None = None) -> list:
+    if offset < 0:
+        raise ValueError("--orders-offset must be non-negative")
+    if limit is not None and limit < 0:
+        raise ValueError("--orders-limit must be non-negative when supplied")
+    selected = orders[offset:] if limit is None else orders[offset : offset + limit]
+    if not selected:
+        raise ValueError(
+            "selected order window is empty: "
+            f"orders_offset={offset}, orders_limit={limit}, available_orders={len(orders)}"
+        )
+    return selected
+
+
 def patch_sklearn_model_compat(model: object) -> None:
     """Patch narrow sklearn persistence gaps seen across minor versions."""
 
@@ -1097,6 +1111,12 @@ def main() -> None:
     )
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
+    parser.add_argument(
+        "--orders-offset",
+        type=int,
+        default=0,
+        help="Number of orders to skip before applying --orders-limit; enables non-overlapping windows.",
+    )
     parser.add_argument("--orders-limit", type=int, default=20)
     parser.add_argument("--fixed-step", type=float, default=0.5)
     parser.add_argument("--iterations", type=int, default=3)
@@ -1243,6 +1263,8 @@ def main() -> None:
         raise ValueError("--repair-max-rounds must be non-negative")
     if args.max_elapsed_seconds is not None and args.max_elapsed_seconds <= 0.0:
         raise ValueError("--max-elapsed-seconds must be positive when supplied")
+    if args.orders_offset < 0:
+        raise ValueError("--orders-offset must be non-negative")
     if args.orders_limit is not None and args.orders_limit < args.k:
         raise ValueError("--orders-limit must be >= --k for k-means initialization")
     if args.surrogate_top_k <= 0:
@@ -1258,10 +1280,11 @@ def main() -> None:
     if args.candidate_trace_csv is not None and args.algorithm not in {"paper_fixed_step", "staged_greedy"}:
         raise ValueError("--candidate-trace-csv is currently supported only for exact algorithms")
 
-    orders = read_order_summaries(args.xml_path)
-    if args.orders_limit is not None:
-        orders = orders[: args.orders_limit]
+    all_orders = read_order_summaries(args.xml_path)
+    orders = select_order_window(all_orders, offset=args.orders_offset, limit=args.orders_limit)
     if args.initial_boxes_json is None:
+        if len(orders) < args.k:
+            raise ValueError(f"selected order window contains {len(orders)} orders, expected at least --k={args.k}")
         initial_boxes = initial_boxes_kmeans(orders, args.k, random_state=args.seed)
     else:
         initial_boxes = boxes_from_json(args.initial_boxes_json)
@@ -1280,7 +1303,11 @@ def main() -> None:
         "comparison_label": args.comparison_label,
         "config_label": args.config_label,
         "dataset": "OR2023 unique orders",
+        "available_orders": len(all_orders),
+        "orders_offset": args.orders_offset,
         "orders_limit": args.orders_limit,
+        "selected_orders": len(orders),
+        "orders_end_exclusive": args.orders_offset + len(orders),
         "k": args.k,
         "seed": args.seed,
         "oracle": args.oracle,

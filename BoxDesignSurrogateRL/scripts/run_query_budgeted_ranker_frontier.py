@@ -87,6 +87,8 @@ def add_common_runner_args(
         [
             "--orders-limit",
             str(args.orders_limit),
+            "--orders-offset",
+            str(args.orders_offset),
             "--k",
             str(args.k),
             "--seed",
@@ -262,6 +264,12 @@ def main() -> None:
         help="Optional graceful wall-clock budget passed only to the exact audit run.",
     )
     parser.add_argument("--orders-limit", type=int, default=500)
+    parser.add_argument(
+        "--orders-offset",
+        type=int,
+        default=0,
+        help="Number of orders to skip before applying --orders-limit; enables non-overlapping held-out windows.",
+    )
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--schedule", default="0.25:1000")
@@ -279,6 +287,8 @@ def main() -> None:
         raise ValueError("--ranker-max-elapsed-seconds must be positive when supplied")
     if args.audit_max_elapsed_seconds is not None and args.audit_max_elapsed_seconds <= 0.0:
         raise ValueError("--audit-max-elapsed-seconds must be positive when supplied")
+    if args.orders_offset < 0:
+        raise ValueError("--orders-offset must be non-negative")
 
     sequences = args.ranker_budget_sequence or ["10,30"]
     run_id = datetime.now().strftime("frontier_%Y%m%d_%H%M%S")

@@ -255,6 +255,15 @@ The budget is therefore not a hard interrupt inside a Java/Gurobi candidate
 batch; elapsed time can exceed the requested value by the duration of the
 current iteration.
 
+## Order Windows
+
+Use `--orders-offset` together with `--orders-limit` to run non-overlapping
+held-out windows from the same XML file. For example, `--orders-offset 100
+--orders-limit 100` evaluates orders with zero-based indices `[100, 200)`.
+The runner records `available_orders`, `orders_offset`, `orders_limit`,
+`selected_orders`, and `orders_end_exclusive` in `manifest.json` and
+`summary.json`.
+
 ## Candidate Status Prefetching
 
 The Java oracle caches exact order-box feasibility by order signature and box
