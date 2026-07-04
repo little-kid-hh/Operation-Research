@@ -181,7 +181,7 @@ def make_total_row(rows: list[dict[str, Any]], *, label: str = "total") -> dict[
         "label": label,
         "exact_pf": "window-wise",
         "ranker_audit_pf": "window-wise",
-        "pf_delta": max_abs_numeric(row.get("pf_delta") for row in rows),
+        "pf_delta": total_pf_delta_label(row.get("pf_delta") for row in rows),
         "coverage": min_numeric(row.get("ranker_audit_coverage") for row in rows),
         "exact_coverage": min_numeric(row.get("exact_coverage") for row in rows),
         "ranker_audit_coverage": min_numeric(row.get("ranker_audit_coverage") for row in rows),
@@ -240,9 +240,13 @@ def min_numeric(values: Any) -> float | int | None:
     return min(nums) if nums else None
 
 
-def max_abs_numeric(values: Any) -> float | None:
-    nums = [abs(float(value)) for value in values if isinstance(value, int | float) and not isinstance(value, bool)]
-    return max(nums) if nums else None
+def total_pf_delta_label(values: Any) -> float | str | None:
+    nums = [float(value) for value in values if isinstance(value, int | float) and not isinstance(value, bool)]
+    if not nums:
+        return None
+    if max(abs(value) for value in nums) < 1e-12:
+        return 0.0
+    return "window-wise"
 
 
 def write_csv(path: Path, rows: list[dict[str, Any]]) -> None:

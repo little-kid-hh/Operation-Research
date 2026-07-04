@@ -19,6 +19,12 @@ The claim supported by current evidence is:
 This is a window-wise 500-order test-split and seed-0 claim. It is not yet a
 full-OR2023 or multi-seed statistical claim.
 
+An initial seed-specific replicate has also been run on test[0,100) with
+seed-1 k-means initial boxes. Ranker+audit improves PF from `1.8908695471` to
+`1.8892309108` while reducing validations by 24.5%, uncached boxes by 13.6%,
+subprocess time by 13.3%, and wall-clock time by 13.7%. This is positive
+initial-condition evidence, but not yet a multi-seed statistical result.
+
 ## Main Convergence And Audit Table
 
 All rows use K=10, the Java/Gurobi MILP oracle with `label_6ori`, and exact
@@ -129,6 +135,9 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/scripts/summarize_ranker_window_results.py`
 - `BoxDesignSurrogateRL/docs/TEST500_WINDOW_RANKER_RESULT_MANIFEST_20260705.json`
 - `BoxDesignSurrogateRL/docs/TEST500_WINDOW_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET0_CONVERGENCE_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`

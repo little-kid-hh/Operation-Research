@@ -61,18 +61,6 @@ def window_label(offset: int, limit: int) -> str:
     return f"test[{offset},{offset + limit})"
 
 
-def safe_slug(value: str) -> str:
-    return (
-        value.replace("[", "")
-        .replace("]", "")
-        .replace("(", "")
-        .replace(")", "")
-        .replace(",", "_")
-        .replace(":", "_")
-        .replace("/", "_")
-    )
-
-
 def exact_command(
     *,
     args: argparse.Namespace,
@@ -255,11 +243,11 @@ def main() -> None:
     for seed in args.seeds:
         for offset in args.orders_offsets:
             label = f"seed{seed}:{window_label(offset, args.orders_limit)}"
-            slug = f"seed{seed}_{safe_slug(window_label(offset, args.orders_limit))}"
-            exact_out_root = protocol_dir / slug / "exact"
-            frontier_out_root = protocol_dir / slug / "ranker_frontier"
-            exact_cache_dir = protocol_dir / slug / "oracle_cache_exact"
-            frontier_cache_dir = protocol_dir / slug / "oracle_cache_ranker"
+            slug = f"s{seed}_o{offset}"
+            exact_out_root = protocol_dir / slug / "e"
+            frontier_out_root = protocol_dir / slug / "r"
+            exact_cache_dir = protocol_dir / "c" / f"e{seed}_{offset}"
+            frontier_cache_dir = protocol_dir / "c" / f"r{seed}_{offset}"
 
             exact_cmd = exact_command(
                 args=args,

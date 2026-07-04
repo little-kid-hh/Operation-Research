@@ -316,6 +316,26 @@ because they do not repeatedly evaluate only the earliest orders in the XML
 ordering. Together with the prefix test[0,100) run, they provide window-wise
 coverage of the full 500-order test split.
 
+## Seed-Specific Initial-Condition Replicate
+
+The first true seed-specific initial-condition replicate was run on
+test[0,100). This run omits `--initial-boxes-json`, so exact staged generates
+the initial K=10 box set by k-means with `--seed 1`; the ranker+audit path then
+reuses that exact run's `initial_boxes.json`.
+
+| held-out window | method | final PF | coverage | uncovered | validations | uncached boxes | subprocess sec | elapsed sec |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| seed1:test[0,100) | exact staged | 1.8908695471 | 1.000 | 0 | 10620 | 976 | 511.3663 | 696.5627 |
+| seed1:test[0,100) | RF top50 180s + exact audit | 1.8892309108 | 1.000 | 0 | 8020 | 843 | 443.1656 | 601.0076 |
+
+The ranker path reaches slightly better final PF than exact staged from the
+same seed-1 initial boxes, with 24.5% fewer validations, 13.6% fewer uncached
+boxes, 13.3% lower subprocess time, and 13.7% lower wall-clock time.
+
+This is positive initial-condition evidence, but it is only one additional
+seed-window replicate. It should not be described as statistical significance
+until the protocol is repeated across additional windows and seeds.
+
 ## Supported Claims
 
 The current evidence supports these claims:
@@ -336,7 +356,10 @@ The current evidence supports these claims:
 5. Across the five 100-order windows covering the full 500-order test split,
    the same shared-cache ranker-plus-audit protocol reaches identical final PF
    and coverage in every window with lower measured oracle and wall-clock cost.
-6. The cost reduction is substantial on test50/test100, modest on repaired
+6. On the first seed-specific initial-condition replicate, seed1:test[0,100),
+   ranker+audit reaches slightly better final PF with lower measured oracle and
+   wall-clock cost.
+7. The cost reduction is substantial on test50/test100, modest on repaired
    test250, and positive on every 100-order test window, so the current
    evidence supports a consistent efficiency advantage, not a uniform large
    speedup across all slices.
@@ -384,6 +407,9 @@ into a publishable result:
 - `BoxDesignSurrogateRL/scripts/summarize_ranker_window_results.py`
 - `BoxDesignSurrogateRL/docs/TEST500_WINDOW_RANKER_RESULT_MANIFEST_20260705.json`
 - `BoxDesignSurrogateRL/docs/TEST500_WINDOW_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET0_CONVERGENCE_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_PAPER_SUMMARY_20260704.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_HELDOUT_SUMMARY_20260703.md`
