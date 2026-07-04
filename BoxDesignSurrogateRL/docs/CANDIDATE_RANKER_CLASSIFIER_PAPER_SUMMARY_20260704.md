@@ -13,7 +13,8 @@ The claim supported by current evidence is:
 > A learned candidate ranker can guide exact-MILP local search to the same or
 > essentially the same local-search solution as exact staged greedy while
 > reducing measured exact-oracle work and wall-clock time on dev500 and three
-> held-out slice protocols.
+> prefix held-out slice protocols, plus one non-prefix independent held-out
+> window.
 
 This is a slice-level and seed-0 claim. It is not yet a full-OR2023 or
 multi-seed statistical claim.
@@ -31,6 +32,7 @@ exact staged-greedy audit when needed.
 | test50 | shared-cache convergence-path audit | 1.7182177961 | 1.7180912327 | 1.000 | 22080 | 16980 | 1892 | 1695 | 756.5954 | 675.3390 | 1166.3584 | 981.7580 |
 | test100 | shared-cache convergence-path audit | 1.8121077375 | 1.8121077375 | 1.000 | 31140 | 26190 | 2647 | 2374 | 1560.0587 | 1366.4305 | 2164.8369 | 1842.0075 |
 | test250 repaired | shared-cache repaired convergence-path audit | 2.1590677627 | 2.1590677627 | 1.000 | 24180 | 23630 | 2175 | 2140 | 2284.5554 | 2236.8717 | 2763.3551 | 2712.6450 |
+| test100 offset100 repaired | non-prefix shared-cache repaired convergence-path audit | 2.0757308361 | 2.0757308361 | 1.000 | 28980 | 26200 | 2521 | 2416 | 1469.8335 | 1419.6851 | 2047.5268 | 1944.8361 |
 
 Cost reductions relative to exact staged:
 
@@ -40,6 +42,7 @@ Cost reductions relative to exact staged:
 | test50 | -0.0001265634 | 23.1% | 10.4% | 10.7% | 15.8% |
 | test100 | 0.0000000000 | 15.9% | 10.3% | 12.4% | 14.9% |
 | test250 repaired | 0.0000000000 | 2.3% | 1.6% | 2.1% | 1.8% |
+| test100 offset100 repaired | 0.0000000000 | 9.6% | 4.2% | 3.4% | 5.0% |
 
 Interpretation:
 
@@ -47,6 +50,8 @@ Interpretation:
   essentially equal final PF.
 - repaired test250 also preserves final PF and coverage, but the cost reduction
   is small. It should be reported as positive but not as a large speedup.
+- test100 offset100 repaired is the cleanest non-prefix window check so far:
+  it preserves final PF and coverage with modest but positive cost reductions.
 - The strongest empirical pattern is consistent same-quality convergence with
   fewer exact oracle calls, not uniformly large acceleration.
 
@@ -73,8 +78,8 @@ Supported:
 1. Exact-verified learned ranking: the classifier only orders candidate
    evaluations; exact Java/Gurobi MILP decides accepted moves.
 2. Same or essentially same local-search quality with lower measured oracle
-   cost on dev500, test50, test100, and repaired test250 under the recorded
-   protocols.
+   cost on dev500, test50, test100, repaired test250, and the non-prefix
+   test100 offset100 repaired window under the recorded protocols.
 3. Better time-budgeted search quality on test50, test100, unrepaired test250
    when reported with coverage, and repaired test250.
 4. The benefit is strongest on test50/test100 and smaller on repaired test250.
@@ -93,7 +98,7 @@ Not supported yet:
 The next experiments that would most improve paper rigor are:
 
 1. Replicate the shared-cache convergence-path protocol across additional seeds
-   or independent splits.
+   and additional non-prefix held-out windows.
 2. Standardize coverage handling for any larger/full held-out comparison.
 3. If full OR2023 is attempted, treat it as a long systems experiment and
    report coverage, final PF, uncached boxes, subprocess time, and wall-clock
@@ -105,4 +110,5 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_CONVERGENCE_20260703.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET100_REPAIRED_CONVERGENCE_20260704.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_HELDOUT_SUMMARY_20260703.md`
