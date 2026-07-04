@@ -14,20 +14,18 @@ The claim supported by current evidence is:
 > essentially the same local-search solution as exact staged greedy while
 > reducing measured exact-oracle work and wall-clock time on dev500, three
 > prefix held-out slice protocols, and a complete 500-order test split evaluated
-> as five 100-order windows.
+> as five 100-order windows, with a second complete seed-1 five-window
+> initial-condition replicate showing the same pattern.
 
-This is a window-wise 500-order test-split and seed-0 claim. It is not yet a
-full-OR2023 or multi-seed statistical claim.
+This is a window-wise 500-order test-split claim across the seed-0 fixed
+checkpoint protocol and one full seed-1 initial-condition replicate. It is not
+yet a full-OR2023 or multi-seed statistical claim.
 
-Three seed-specific windows have also been run with seed-1 k-means initial
-boxes. On seed1:test[0,100), ranker+audit improves PF from `1.8908695471` to
-`1.8892309108`. On seed1:test[100,200), ranker+audit matches exact staged PF
-at `2.2084188336`. On seed1:test[200,300), ranker+audit matches exact staged
-PF at `2.0315201381`. Across these first three seed-1 windows, ranker+audit
-preserves or improves final PF and full coverage while reducing validations by
-14.1%, uncached boxes by 6.7%, subprocess time by 6.5%, and wall-clock time by
-7.4%. This is positive initial-condition evidence, but not yet a multi-seed
-statistical result.
+The complete seed-1 five-window initial-condition replicate also preserves or
+improves final PF and full coverage in every window. Across seed1:test[0,500),
+ranker+audit reduces validations by 14.3%, uncached boxes by 6.4%, subprocess
+time by 6.7%, and wall-clock time by 7.2%. This is positive
+initial-condition evidence, but not yet a multi-seed statistical result.
 
 ## Main Convergence And Audit Table
 
@@ -81,10 +79,10 @@ Interpretation:
   final PF and coverage in every window while reducing validations by 11.4%,
   uncached boxes by 7.6%, Java/Gurobi subprocess time by 8.8%, and wall-clock
   time by 9.5%.
-- Across the first three seed-1 windows, ranker+audit preserves or improves
-  final PF and full coverage while reducing validations by 14.1%, uncached
-  boxes by 6.7%, Java/Gurobi subprocess time by 6.5%, and wall-clock time by
-  7.4%.
+- Across the complete seed-1 five-window replicate, ranker+audit preserves or
+  improves final PF and full coverage while reducing validations by 14.3%,
+  uncached boxes by 6.4%, Java/Gurobi subprocess time by 6.7%, and wall-clock
+  time by 7.2%.
 - The strongest empirical pattern is consistent same-quality convergence with
   fewer exact oracle calls, not uniformly large acceleration.
 
@@ -113,9 +111,12 @@ Supported:
 2. Same or essentially same local-search quality with lower measured oracle
    cost on dev500, test50, test100, repaired test250, and the non-prefix
    five-window repaired test split under the recorded protocols.
-3. Better time-budgeted search quality on test50, test100, unrepaired test250
+3. The same seed-specific protocol on the complete seed1:test[0,500)
+   five-window replicate preserves or improves final PF and full coverage with
+   lower measured oracle and wall-clock cost.
+4. Better time-budgeted search quality on test50, test100, unrepaired test250
    when reported with coverage, and repaired test250.
-4. The benefit is strongest on test50/test100 and smaller on repaired test250.
+5. The benefit is strongest on test50/test100 and smaller on repaired test250.
 
 Not supported yet:
 
@@ -156,6 +157,16 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET200_CONVERGENCE_20260705.md`
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_200_RANKER_RESULT_MANIFEST_20260705.json`
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_200_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET300_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET300_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET300_CONVERGENCE_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_300_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_300_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET400_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET400_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET400_CONVERGENCE_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_400_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_400_RANKER_AUTO_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`

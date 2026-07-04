@@ -1,0 +1,7 @@
+[
+  {
+    "label": "seed1:test[400,500)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed1_offset400_20260705\\protocol_20260705_042122\\s1_o400\\e\\staged_greedy\\run_20260705_042124_108806\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed1_offset400_20260705\\protocol_20260705_042122\\s1_o400\\r\\frontier_20260705_043013\\frontier_summary.json"
+  }
+]
