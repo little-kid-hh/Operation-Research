@@ -351,6 +351,70 @@ class MilpOracleTest(unittest.TestCase):
             },
         )
 
+    def test_java_oracle_labeler_window_args_use_order_offset(self) -> None:
+        orders = [
+            summarize_items("toy.xml", "30", [(1.0, 1.0, 1.0)]),
+            summarize_items("toy.xml", "31", [(2.0, 1.0, 1.0)]),
+        ]
+        boxes = [
+            Box(0, 2.0, 2.0, 2.0),
+            Box(1, 3.0, 3.0, 3.0),
+            Box(2, 4.0, 4.0, 4.0),
+        ]
+
+        oracle = JavaMilpOracle(xml_path=Path("toy.xml"), java_classpath="unused", orders_offset=10)
+
+        # Java indexes order-box tasks after truncating packages, so an order
+        # offset of 10 with three boxes skips the first 30 tasks and evaluates
+        # exactly the two selected orders times three boxes.
+        self.assertEqual(oracle._labeler_window_args(orders, boxes), (12, 30, 6))
+
+    def test_java_oracle_rejects_negative_order_offset(self) -> None:
+        with self.assertRaisesRegex(ValueError, "orders_offset"):
+            JavaMilpOracle(xml_path=Path("toy.xml"), java_classpath="unused", orders_offset=-1)
+
+    def test_java_oracle_rejects_output_outside_selected_window(self) -> None:
+        orders = [summarize_items("toy.xml", "10", [(1.0, 1.0, 1.0)])]
+        boxes = [Box(0, 2.0, 2.0, 2.0)]
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_path = Path(tmp) / "labels.csv"
+            with output_path.open("w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(
+                    f,
+                    fieldnames=[
+                        "instance_name",
+                        "order_id",
+                        "package_id",
+                        "package_l",
+                        "package_w",
+                        "package_h",
+                        "label_2ori",
+                        "time_2ori_ms",
+                        "label_6ori",
+                        "time_6ori_ms",
+                    ],
+                )
+                writer.writeheader()
+                writer.writerow(
+                    {
+                        "instance_name": "toy.xml",
+                        "order_id": "0",
+                        "package_id": "0",
+                        "package_l": "2.0",
+                        "package_w": "2.0",
+                        "package_h": "2.0",
+                        "label_2ori": "1",
+                        "time_2ori_ms": "1",
+                        "label_6ori": "1",
+                        "time_6ori_ms": "1",
+                    }
+                )
+
+            oracle = JavaMilpOracle(xml_path=Path("toy.xml"), java_classpath="unused")
+            with self.assertRaisesRegex(ValueError, "outside the selected window"):
+                oracle._read_output_statuses(output_path, orders, boxes)
+
 
 if __name__ == "__main__":
     unittest.main()

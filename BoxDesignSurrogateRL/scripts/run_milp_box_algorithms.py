@@ -226,6 +226,7 @@ def make_oracle(args: argparse.Namespace) -> BoxSetOracle:
         time_limit_seconds=args.milp_time_limit_seconds,
         allow_bsp_derived_data=args.allow_bsp_derived_data,
         cache_dir=args.oracle_cache_dir,
+        orders_offset=args.orders_offset,
     )
 
 

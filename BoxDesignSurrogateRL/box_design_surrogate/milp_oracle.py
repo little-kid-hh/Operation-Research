@@ -157,9 +157,12 @@ class JavaMilpOracle:
         time_limit_seconds: float = 30.0,
         allow_bsp_derived_data: bool = True,
         cache_dir: Path | None = None,
+        orders_offset: int = 0,
     ) -> None:
         if orientation_label not in {"label_2ori", "label_6ori"}:
             raise ValueError(f"unknown orientation label: {orientation_label}")
+        if orders_offset < 0:
+            raise ValueError("orders_offset must be non-negative")
         self.xml_path = xml_path
         self.java_classpath = java_classpath
         self.labeler_class = labeler_class
@@ -167,6 +170,7 @@ class JavaMilpOracle:
         self.time_limit_seconds = float(time_limit_seconds)
         self.allow_bsp_derived_data = allow_bsp_derived_data
         self.cache_dir = cache_dir
+        self.orders_offset = int(orders_offset)
         self._feasibility_cache: dict[
             tuple[tuple[tuple[str, str], ...], tuple[float, float, float]],
             tuple[int, ...],
@@ -292,6 +296,15 @@ class JavaMilpOracle:
             "subprocess_seconds": self.subprocess_seconds,
         }
 
+    def _labeler_window_args(self, orders: list[OrderSummary], boxes: list[Box]) -> tuple[int, int, int]:
+        """Return Java labeler window arguments for the selected order slice."""
+
+        return (
+            self.orders_offset + len(orders),
+            self.orders_offset * len(boxes),
+            len(orders) * len(boxes),
+        )
+
     def _evaluate_uncached(self, orders: list[OrderSummary], boxes: list[Box]) -> np.ndarray:
         with tempfile.TemporaryDirectory(prefix="or2023_milp_oracle_") as tmp:
             tmp_dir = Path(tmp)
@@ -301,6 +314,7 @@ class JavaMilpOracle:
                 for box in boxes:
                     f.write(f"{box.box_id}\t{box.length:.6f}\t{box.width:.6f}\t{box.height:.6f}\n")
 
+            max_orders_per_xml, start_global_task, max_tasks = self._labeler_window_args(orders, boxes)
             cmd = [
                 "java",
                 f"-Dor2023.bpp.timeLimit2ori={self.time_limit_seconds}",
@@ -312,11 +326,11 @@ class JavaMilpOracle:
                 str(packages_path),
                 str(output_path),
                 "1",
-                str(len(orders)),
+                str(max_orders_per_xml),
                 str(len(boxes)),
                 f"^{self.xml_path.name}$",
-                "0",
-                "-1",
+                str(start_global_task),
+                str(max_tasks),
                 "true" if self.allow_bsp_derived_data else "false",
             ]
             subprocess_started = time.perf_counter()
@@ -427,10 +441,32 @@ class JavaMilpOracle:
         box_index = {box.box_id: idx for idx, box in enumerate(boxes)}
         order_index = {str(order.order_id): idx for idx, order in enumerate(orders)}
         statuses = np.zeros((len(orders), len(boxes)), dtype=np.int8)
+        seen = np.zeros((len(orders), len(boxes)), dtype=bool)
         with output_path.open(newline="", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                i = order_index[str(row["order_id"])]
-                j = box_index[int(row["package_id"])]
+                order_id = str(row["order_id"])
+                package_id = int(row["package_id"])
+                if order_id not in order_index:
+                    raise ValueError(
+                        "Java MILP oracle returned an order outside the selected window: "
+                        f"order_id={order_id}, selected_orders={list(order_index.keys())[:5]}"
+                    )
+                if package_id not in box_index:
+                    raise ValueError(
+                        "Java MILP oracle returned a package outside the requested boxes: "
+                        f"package_id={package_id}, requested_package_ids={list(box_index.keys())[:5]}"
+                    )
+                i = order_index[order_id]
+                j = box_index[package_id]
+                if seen[i, j]:
+                    raise ValueError(f"Java MILP oracle returned duplicate label for order={order_id}, package={package_id}")
                 statuses[i, j] = int(row[self.orientation_label])
+                seen[i, j] = True
+        if not np.all(seen):
+            missing = int((~seen).sum())
+            raise ValueError(
+                "Java MILP oracle returned an incomplete label matrix: "
+                f"missing_pairs={missing}, expected_pairs={len(orders) * len(boxes)}"
+            )
         return statuses

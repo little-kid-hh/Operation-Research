@@ -262,7 +262,10 @@ held-out windows from the same XML file. For example, `--orders-offset 100
 --orders-limit 100` evaluates orders with zero-based indices `[100, 200)`.
 The runner records `available_orders`, `orders_offset`, `orders_limit`,
 `selected_orders`, and `orders_end_exclusive` in `manifest.json` and
-`summary.json`.
+`summary.json`. With the online Java MILP oracle, the runner passes the same
+window to `GeneratePerminPackageLabels` by reading through the window end and
+skipping the order-box tasks before `orders_offset`; offset runs are therefore
+not treated as XML prefixes.
 
 ## Candidate Status Prefetching
 
