@@ -379,6 +379,9 @@ into a publishable result:
 
 ## Source Documents
 
+- `BoxDesignSurrogateRL/scripts/summarize_ranker_window_results.py`
+- `BoxDesignSurrogateRL/docs/TEST500_WINDOW_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/TEST500_WINDOW_RANKER_AUTO_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_PAPER_SUMMARY_20260704.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_HELDOUT_SUMMARY_20260703.md`

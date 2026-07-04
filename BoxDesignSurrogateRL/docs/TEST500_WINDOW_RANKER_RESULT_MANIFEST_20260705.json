@@ -1,0 +1,27 @@
+[
+  {
+    "label": "test[0,100)",
+    "exact_summary": "BoxDesignSurrogateRL/results/test100_exact_convergence_20260703/staged_greedy/run_20260703_165709_188504/summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL/results/test100_shared_cache_ranker_frontier_20260703/frontier_20260703_173350/frontier_summary.json"
+  },
+  {
+    "label": "test[100,200)",
+    "exact_summary": "BoxDesignSurrogateRL/results/test100_offset100_exact_repaired_convergence_20260704/staged_greedy/run_20260704_201108_079489/summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL/results/test100_offset100_repaired_shared_cache_ranker_frontier_20260704/frontier_20260704_204552/frontier_summary.json"
+  },
+  {
+    "label": "test[200,300)",
+    "exact_summary": "BoxDesignSurrogateRL/results/test100_offset200_exact_repaired_convergence_20260704/staged_greedy/run_20260704_212204_089123/summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL/results/test100_offset200_repaired_shared_cache_ranker_frontier_20260704/frontier_20260704_221144/frontier_summary.json"
+  },
+  {
+    "label": "test[300,400)",
+    "exact_summary": "BoxDesignSurrogateRL/results/test100_offset300_exact_repaired_convergence_20260704/staged_greedy/run_20260704_230057_695730/summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL/results/test100_offset300_repaired_shared_cache_ranker_frontier_20260704/frontier_20260704_233156/frontier_summary.json"
+  },
+  {
+    "label": "test[400,500)",
+    "exact_summary": "BoxDesignSurrogateRL/results/test100_offset400_exact_repaired_convergence_20260705/staged_greedy/run_20260705_000145_173451/summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL/results/test100_offset400_repaired_shared_cache_ranker_frontier_20260705/frontier_20260705_004335/frontier_summary.json"
+  }
+]
