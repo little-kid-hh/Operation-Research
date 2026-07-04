@@ -116,6 +116,15 @@ held-out slice sizes, test50 and test100, while still not proving full OR2023
 or multi-seed superiority. See
 `CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`.
 
+The coverage-controlled repaired test250 slice also reaches the same final PF
+under shared-cache ranker plus exact audit: exact repaired convergence reaches
+PF `2.1590677627` after 24180 validations and 2763.3551 elapsed seconds, while
+the ranker 180s path plus exact audit reaches the same PF with 23630
+validations and 2712.6450 elapsed seconds. The advantage is positive but much
+smaller than test50/test100, so it should be reported as diminishing returns
+on the larger repaired slice. See
+`CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_CONVERGENCE_20260703.md`.
+
 For a main paper table, report dev500 exact-audited results separately from
 held-out time-budget results. For larger held-out comparisons, use coverage
 repair or train an initial box set on the train split so PF is not dominated by

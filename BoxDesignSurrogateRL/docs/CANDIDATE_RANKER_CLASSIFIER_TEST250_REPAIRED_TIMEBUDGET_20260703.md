@@ -85,3 +85,24 @@ The magnitude of post-repair PF improvement is modest because coverage repair
 itself consumes most of the budget and leaves little time for fine-stage local
 search. Still, this is the cleanest held-out test250 comparison so far because
 coverage is equal and complete for both methods.
+
+## Follow-Up Exact Convergence Check
+
+The repaired exact staged convergence baseline and shared-cache ranker plus
+exact audit were later run for test250:
+
+```text
+Exact repaired convergence:
+BoxDesignSurrogateRL/results/test250_exact_repaired_convergence_20260703/staged_greedy/run_20260703_181235_291147
+
+Shared-cache ranker plus audit:
+BoxDesignSurrogateRL/results/test250_repaired_shared_cache_ranker_frontier_20260703/frontier_20260703_185904
+```
+
+Both reached PF `2.1590677627` with 100% coverage. The shared-cache ranker
+path used fewer validations (`23630` vs `24180`), fewer uncached boxes (`2140`
+vs `2175`), lower subprocess time (`2236.8717s` vs `2284.5554s`), and lower
+wall-clock time (`2712.6450s` vs `2763.3551s`). The savings are much smaller
+than on test50/test100, so this should be reported as a positive but modest
+larger-slice result. See
+`CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_CONVERGENCE_20260703.md`.

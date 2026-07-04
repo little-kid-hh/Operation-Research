@@ -239,6 +239,27 @@ wall-clock time.
 The PF improvement is modest after repair, but it is meaningful because
 coverage is equal and complete for both methods.
 
+The repaired test250 slice was then run through the same convergence-path
+protocol:
+
+```text
+Exact repaired convergence:
+BoxDesignSurrogateRL/results/test250_exact_repaired_convergence_20260703/staged_greedy/run_20260703_181235_291147
+
+Shared-cache ranker plus audit:
+BoxDesignSurrogateRL/results/test250_repaired_shared_cache_ranker_frontier_20260703/frontier_20260703_185904
+```
+
+Exact repaired staged convergence reached PF `2.1590677627` with 100% coverage
+after 24180 validations, 2175 uncached boxes, 2284.5554 Java/Gurobi subprocess
+seconds, and 2763.3551 elapsed seconds. The shared-cache ranker 180s run plus
+exact audit reached the same PF and coverage with 23630 validations, 2140
+uncached boxes, 2236.8717 subprocess seconds, and 2712.6450 elapsed seconds.
+This is a 2.3% validation reduction, 1.6% uncached-box reduction, 2.1%
+subprocess-time reduction, and 1.8% wall-clock reduction on repaired test250.
+The larger repaired slice therefore supports same-final-quality behavior, but
+with much smaller efficiency gains than test50/test100.
+
 ## Supported Claims
 
 The current evidence supports these claims:
@@ -252,12 +273,13 @@ The current evidence supports these claims:
 3. On held-out time-budget probes, the ranker transfers as a better anytime
    search policy: it spends the same budget on moves that reduce PF more
    quickly.
-4. On held-out test50 and test100, the shared-cache ranker 180s path plus exact
-   audit reaches the same or essentially the same converged quality as exact
-   staged from the same initial boxes, with lower measured oracle and
-   wall-clock cost.
-5. On repaired test250, where coverage is controlled at 100% for both methods,
-   the ranker improves PF and reduces uncached oracle cost.
+4. On held-out test50, test100, and repaired test250, the shared-cache ranker
+   180s path plus exact audit reaches the same or essentially the same
+   converged quality as exact staged from the same initial boxes, with lower
+   measured oracle and wall-clock cost.
+5. The cost reduction is substantial on test50/test100 but modest on repaired
+   test250, so the current evidence supports a consistent efficiency advantage,
+   not a uniform large speedup across all slices.
 
 ## Claims Not Yet Supported
 
@@ -267,8 +289,9 @@ The current evidence does not yet support these claims:
    MILP baseline.
 2. Multi-seed statistical significance.
 3. Universal reduction in uncached MILP labels on every held-out slice.
-4. Converged exact-equivalence across held-out test slices without running
-   shared-cache exact audits from the ranker final boxes.
+4. Converged exact-equivalence on the full held-out set, or on held-out slices
+   beyond test50, test100, and repaired test250, without running shared-cache
+   exact audits from the ranker final boxes.
 5. A claim that a feasibility predictor alone can solve the optimization
    problem.
 
@@ -282,10 +305,10 @@ into a publishable result:
 
 1. Replicate dev500 exact-audited runs across additional seeds or independent
    dev splits.
-2. Extend the shared-cache ranker plus exact-audit protocol to a
-   coverage-controlled larger slice, starting from repaired test250 or a
-   train-split initial box set, before claiming larger held-out generality.
-3. Standardize coverage handling before larger held-out comparisons: either
+2. Replicate the shared-cache convergence-path protocol across seeds or
+   independent splits to move from slice-level evidence to statistical
+   evidence.
+3. Standardize coverage handling before larger held-out/full comparisons: either
    train initial boxes on the corresponding train split or apply the same
    explicit repair step to both methods.
 4. Scale to a larger held-out slice or full OR2023 only after the above protocol
@@ -306,6 +329,7 @@ into a publishable result:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_TIMEBUDGET_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_TIMEBUDGET_20260703.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/MILP_BOX_ALGORITHMS.md`
 
 Repository evidence snapshot before this document: `ce6e309`.
