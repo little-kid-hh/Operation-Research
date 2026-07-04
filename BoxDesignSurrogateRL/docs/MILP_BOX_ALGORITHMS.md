@@ -226,6 +226,29 @@ The scientific comparison should emphasize `oracle_cache.uncached_boxes`,
 `milp_validated_candidates`, because the online Java MILP oracle caches
 order-box feasibility labels across candidate box sets.
 
+For multi-window or multi-seed runs, use:
+
+```text
+python3 BoxDesignSurrogateRL/scripts/run_ranker_window_protocol.py \
+  --xml-path BoxDesignSurrogateRL/results/splits_calibration/or2023_seed20260701_limit2500/or2023_bsp_unique_orders_test.xml \
+  --candidate-ranker-path BoxDesignSurrogateRL/results/candidate_predictors_dev300_repaired_20260702/candidate_ranker_20260702_230711/candidate_ranker.joblib \
+  --orders-offsets 0,100,200,300,400 \
+  --orders-limit 100 \
+  --seeds 1,2 \
+  --schedule 0.25:1000 \
+  --coverage-repair geometric_expand \
+  --ranker-max-elapsed-seconds 180
+```
+
+This wrapper first runs exact staged convergence, then runs ranker search and
+exact audit from the same initial boxes, and finally writes a manifest that
+`scripts/summarize_ranker_window_results.py` can turn into JSON/CSV/Markdown
+tables. To run a true seed replicate, omit `--initial-boxes-json`; the exact
+baseline will generate seed-specific k-means initial boxes and the ranker path
+will reuse the exact run's `initial_boxes.json`. Supplying
+`--initial-boxes-json` intentionally fixes the initial boxes and is therefore
+not a true initial-condition seed replicate.
+
 The candidate ranker can be trained with either pointwise regression targets
 or direct classifier targets. The classifier targets are:
 

@@ -117,6 +117,8 @@ Not supported yet:
 The next experiments that would most improve paper rigor are:
 
 1. Replicate the shared-cache convergence-path protocol across additional seeds.
+   Use `scripts/run_ranker_window_protocol.py` without `--initial-boxes-json`
+   for true seed-specific initial box sets.
 2. Standardize coverage handling for any larger/full held-out comparison.
 3. If full OR2023 is attempted, treat it as a long systems experiment and
    report coverage, final PF, uncached boxes, subprocess time, and wall-clock

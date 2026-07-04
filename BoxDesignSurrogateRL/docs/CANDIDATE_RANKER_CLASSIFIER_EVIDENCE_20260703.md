@@ -366,7 +366,9 @@ into a publishable result:
 1. Replicate dev500 exact-audited runs across additional seeds or independent
    dev splits.
 2. Replicate the shared-cache convergence-path protocol across seeds to move
-   from window-wise seed-0 evidence to statistical evidence.
+   from window-wise seed-0 evidence to statistical evidence. Use
+   `scripts/run_ranker_window_protocol.py` without `--initial-boxes-json` for
+   true seed-specific initial box sets.
 3. Standardize coverage handling before larger held-out/full comparisons: either
    train initial boxes on the corresponding train split or apply the same
    explicit repair step to both methods.
