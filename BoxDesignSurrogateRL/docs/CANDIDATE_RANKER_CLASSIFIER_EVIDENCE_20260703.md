@@ -318,23 +318,35 @@ coverage of the full 500-order test split.
 
 ## Seed-Specific Initial-Condition Replicate
 
-The first true seed-specific initial-condition replicate was run on
-test[0,100). This run omits `--initial-boxes-json`, so exact staged generates
-the initial K=10 box set by k-means with `--seed 1`; the ranker+audit path then
-reuses that exact run's `initial_boxes.json`.
+The first two true seed-specific initial-condition replicates were run on
+test[0,100) and test[100,200). These runs omit `--initial-boxes-json`, so exact
+staged generates the initial K=10 box set by k-means with `--seed 1`; the
+ranker+audit path then reuses each exact run's `initial_boxes.json`.
 
 | held-out window | method | final PF | coverage | uncovered | validations | uncached boxes | subprocess sec | elapsed sec |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
 | seed1:test[0,100) | exact staged | 1.8908695471 | 1.000 | 0 | 10620 | 976 | 511.3663 | 696.5627 |
 | seed1:test[0,100) | RF top50 180s + exact audit | 1.8892309108 | 1.000 | 0 | 8020 | 843 | 443.1656 | 601.0076 |
+| seed1:test[100,200) | exact staged | 2.2084188336 | 1.000 | 0 | 26280 | 2421 | 1307.7590 | 1814.9036 |
+| seed1:test[100,200) | RF top50 180s + exact audit | 2.2084188336 | 1.000 | 0 | 24180 | 2291 | 1242.7996 | 1718.0409 |
+| seed1:test[0,200) partial total | exact staged | window-wise | 1.000 | 0 | 36900 | 3397 | 1819.1253 | 2511.4663 |
+| seed1:test[0,200) partial total | RF top50 180s + exact audit | window-wise | 1.000 | 0 | 32200 | 3134 | 1685.9652 | 2319.0485 |
 
-The ranker path reaches slightly better final PF than exact staged from the
-same seed-1 initial boxes, with 24.5% fewer validations, 13.6% fewer uncached
-boxes, 13.3% lower subprocess time, and 13.7% lower wall-clock time.
+For seed1:test[0,100), the ranker path reaches slightly better final PF than
+exact staged from the same seed-1 initial boxes, with 24.5% fewer validations,
+13.6% fewer uncached boxes, 13.3% lower subprocess time, and 13.7% lower
+wall-clock time.
 
-This is positive initial-condition evidence, but it is only one additional
-seed-window replicate. It should not be described as statistical significance
-until the protocol is repeated across additional windows and seeds.
+For seed1:test[100,200), the ranker path reaches the same final PF and full
+coverage, with 8.0% fewer validations, 5.4% fewer uncached boxes, 5.0% lower
+subprocess time, and 5.3% lower wall-clock time.
+
+Across the first two seed-1 windows, ranker+audit preserves or improves final
+PF and full coverage, with aggregate reductions of 12.7% in validations, 7.7%
+in uncached boxes, 7.3% in Java/Gurobi subprocess time, and 7.7% in wall-clock
+time. This is positive initial-condition evidence, but it should not be
+described as statistical significance until the protocol is repeated across
+additional windows and seeds.
 
 ## Supported Claims
 
@@ -356,9 +368,9 @@ The current evidence supports these claims:
 5. Across the five 100-order windows covering the full 500-order test split,
    the same shared-cache ranker-plus-audit protocol reaches identical final PF
    and coverage in every window with lower measured oracle and wall-clock cost.
-6. On the first seed-specific initial-condition replicate, seed1:test[0,100),
-   ranker+audit reaches slightly better final PF with lower measured oracle and
-   wall-clock cost.
+6. On the first two seed-specific initial-condition windows, ranker+audit
+   preserves or improves final PF and full coverage with lower measured oracle
+   and wall-clock cost.
 7. The cost reduction is substantial on test50/test100, modest on repaired
    test250, and positive on every 100-order test window, so the current
    evidence supports a consistent efficiency advantage, not a uniform large
@@ -410,6 +422,11 @@ into a publishable result:
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_RANKER_RESULT_MANIFEST_20260705.json`
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_RANKER_AUTO_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET0_CONVERGENCE_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET100_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET100_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET100_CONVERGENCE_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_100_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_100_RANKER_AUTO_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_PAPER_SUMMARY_20260704.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_HELDOUT_SUMMARY_20260703.md`
@@ -427,5 +444,6 @@ into a publishable result:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET400_REPAIRED_CONVERGENCE_20260705.md`
 - `BoxDesignSurrogateRL/docs/MILP_BOX_ALGORITHMS.md`
 
-Current documented evidence covers results through the five-window test split
-run completed on 2026-07-05.
+Current documented evidence covers results through the five-window seed-0 test
+split and the first two seed-1 initial-condition windows completed on
+2026-07-05.

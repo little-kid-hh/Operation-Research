@@ -19,11 +19,14 @@ The claim supported by current evidence is:
 This is a window-wise 500-order test-split and seed-0 claim. It is not yet a
 full-OR2023 or multi-seed statistical claim.
 
-An initial seed-specific replicate has also been run on test[0,100) with
-seed-1 k-means initial boxes. Ranker+audit improves PF from `1.8908695471` to
-`1.8892309108` while reducing validations by 24.5%, uncached boxes by 13.6%,
-subprocess time by 13.3%, and wall-clock time by 13.7%. This is positive
-initial-condition evidence, but not yet a multi-seed statistical result.
+Two seed-specific windows have also been run with seed-1 k-means initial
+boxes. On seed1:test[0,100), ranker+audit improves PF from `1.8908695471` to
+`1.8892309108`. On seed1:test[100,200), ranker+audit matches exact staged PF
+at `2.2084188336`. Across these first two seed-1 windows, ranker+audit
+preserves or improves final PF and full coverage while reducing validations by
+12.7%, uncached boxes by 7.7%, subprocess time by 7.3%, and wall-clock time by
+7.7%. This is positive initial-condition evidence, but not yet a multi-seed
+statistical result.
 
 ## Main Convergence And Audit Table
 
@@ -77,6 +80,10 @@ Interpretation:
   final PF and coverage in every window while reducing validations by 11.4%,
   uncached boxes by 7.6%, Java/Gurobi subprocess time by 8.8%, and wall-clock
   time by 9.5%.
+- Across the first two seed-1 windows, ranker+audit preserves or improves
+  final PF and full coverage while reducing validations by 12.7%, uncached
+  boxes by 7.7%, Java/Gurobi subprocess time by 7.3%, and wall-clock time by
+  7.7%.
 - The strongest empirical pattern is consistent same-quality convergence with
   fewer exact oracle calls, not uniformly large acceleration.
 
@@ -138,6 +145,11 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_RANKER_RESULT_MANIFEST_20260705.json`
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_RANKER_AUTO_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET0_CONVERGENCE_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET100_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET100_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET100_CONVERGENCE_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_100_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_100_RANKER_AUTO_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`
