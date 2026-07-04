@@ -1,4 +1,4 @@
-# Candidate Classifier Ranker Evidence And Claim Boundary, 2026-07-03
+# Candidate Classifier Ranker Evidence And Claim Boundary, 2026-07-05
 
 ## Working Narrative Contract
 
@@ -260,22 +260,33 @@ subprocess-time reduction, and 1.8% wall-clock reduction on repaired test250.
 The larger repaired slice therefore supports same-final-quality behavior, but
 with much smaller efficiency gains than test50/test100.
 
-## Non-Prefix Held-Out Window Checks
+## Window-Wise Held-Out Test Split Checks
 
 After adding `--orders-offset` support to the Python runner and fixing the
 Java MILP oracle windowing, the shared-cache convergence-path protocol was
-replicated on three non-prefix held-out windows from the OR2023 test split.
-All runs use `geometric_expand` coverage repair for exact staged and
-ranker+audit.
+replicated across the full 500-order OR2023 test split as five 100-order
+windows. The first window had complete initial coverage and uses the original
+no-repair test100 protocol; the remaining repaired-window runs use
+`geometric_expand` coverage repair for exact staged and ranker+audit.
 
 | held-out window | method | final PF | coverage | uncovered | validations | uncached boxes | subprocess sec | elapsed sec |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| test[0,100) | exact staged | 1.8121077375 | 1.000 | 0 | 31140 | 2647 | 1560.0587 | 2164.8369 |
+| test[0,100) | RF top50 180s + exact audit | 1.8121077375 | 1.000 | 0 | 26190 | 2374 | 1366.4305 | 1842.0075 |
 | test[100,200) repaired | exact staged | 2.0757308361 | 1.000 | 0 | 28980 | 2521 | 1469.8335 | 2047.5268 |
 | test[100,200) repaired | RF top50 180s + exact audit | 2.0757308361 | 1.000 | 0 | 26200 | 2416 | 1419.6851 | 1944.8361 |
 | test[200,300) repaired | exact staged | 1.9098141289 | 1.000 | 0 | 43020 | 3714 | 2114.5624 | 2954.3013 |
 | test[200,300) repaired | RF top50 180s + exact audit | 1.9098141289 | 1.000 | 0 | 39220 | 3485 | 1955.3046 | 2729.9786 |
 | test[300,400) repaired | exact staged | 1.8590426956 | 1.000 | 0 | 28560 | 2478 | 1275.1553 | 1830.4731 |
 | test[300,400) repaired | RF top50 180s + exact audit | 1.8590426956 | 1.000 | 0 | 25460 | 2301 | 1143.9761 | 1596.6522 |
+| test[400,500) repaired | exact staged | 1.9889904647 | 1.000 | 0 | 36360 | 3173 | 1857.8720 | 2488.9937 |
+| test[400,500) repaired | RF top50 180s + exact audit | 1.9889904647 | 1.000 | 0 | 31860 | 2853 | 1660.0325 | 2277.6879 |
+| test[0,500) window total | exact staged | window-wise same | 1.000 | 0 | 168060 | 14533 | 8277.4819 | 11486.1318 |
+| test[0,500) window total | RF top50 180s + exact audit | window-wise same | 1.000 | 0 | 148930 | 13429 | 7545.4288 | 10391.1623 |
+
+For test[0,100), the ranker path reaches the exact same final PF and coverage
+with 15.9% fewer validations, 10.3% fewer uncached boxes, 12.4% lower
+Java/Gurobi subprocess time, and 14.9% lower wall-clock time.
 
 For test[100,200), the ranker path reaches the exact same final PF and
 coverage with 9.6% fewer validations, 4.2% fewer uncached boxes, 3.4% lower
@@ -291,9 +302,19 @@ For test[300,400), the ranker path also reaches the exact same final PF and
 coverage with 10.9% fewer validations, 7.1% fewer uncached boxes, 10.3% lower
 subprocess time, and 12.8% lower wall-clock time.
 
-These three non-prefix windows are stronger evidence than nested prefix slices
+For test[400,500), the ranker path reaches the exact same final PF and
+coverage with 12.4% fewer validations, 10.1% fewer uncached boxes, 10.6% lower
+subprocess time, and 8.5% lower wall-clock time.
+
+Across all five 100-order windows, ranker+audit preserves exact staged final
+PF and coverage in every window while reducing validations by 11.4%, uncached
+boxes by 7.6%, Java/Gurobi subprocess time by 8.8%, and wall-clock time by
+9.5%.
+
+The four non-prefix windows are stronger evidence than nested prefix slices
 because they do not repeatedly evaluate only the earliest orders in the XML
-ordering.
+ordering. Together with the prefix test[0,100) run, they provide window-wise
+coverage of the full 500-order test split.
 
 ## Supported Claims
 
@@ -312,14 +333,13 @@ The current evidence supports these claims:
    180s path plus exact audit reaches the same or essentially the same
    converged quality as exact staged from the same initial boxes, with lower
    measured oracle and wall-clock cost.
-5. On non-prefix held-out windows test[100,200), test[200,300), and
-   test[300,400), the same shared-cache ranker-plus-audit protocol reaches
-   identical final PF and coverage with lower measured oracle and wall-clock
-   cost.
+5. Across the five 100-order windows covering the full 500-order test split,
+   the same shared-cache ranker-plus-audit protocol reaches identical final PF
+   and coverage in every window with lower measured oracle and wall-clock cost.
 6. The cost reduction is substantial on test50/test100, modest on repaired
-   test250, and positive on both non-prefix windows, so the current evidence
-   supports a consistent efficiency advantage, not a uniform large speedup
-   across all slices.
+   test250, and positive on every 100-order test window, so the current
+   evidence supports a consistent efficiency advantage, not a uniform large
+   speedup across all slices.
 
 ## Claims Not Yet Supported
 
@@ -329,9 +349,9 @@ The current evidence does not yet support these claims:
    MILP baseline.
 2. Multi-seed statistical significance.
 3. Universal reduction in uncached MILP labels on every held-out slice.
-4. Converged exact-equivalence on the full held-out set, or statistical
-   significance across many held-out windows/seeds, without running
-   shared-cache exact audits from the ranker final boxes.
+4. A single monolithic full-held-out run, or statistical significance across
+   many seeds, without running shared-cache exact audits from the ranker final
+   boxes.
 5. A claim that a feasibility predictor alone can solve the optimization
    problem.
 
@@ -345,9 +365,8 @@ into a publishable result:
 
 1. Replicate dev500 exact-audited runs across additional seeds or independent
    dev splits.
-2. Replicate the shared-cache convergence-path protocol across seeds and more
-   non-prefix windows to move from slice-level evidence to statistical
-   evidence.
+2. Replicate the shared-cache convergence-path protocol across seeds to move
+   from window-wise seed-0 evidence to statistical evidence.
 3. Standardize coverage handling before larger held-out/full comparisons: either
    train initial boxes on the corresponding train split or apply the same
    explicit repair step to both methods.
@@ -371,6 +390,11 @@ into a publishable result:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_TIMEBUDGET_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_TIMEBUDGET_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_CONVERGENCE_20260703.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET100_REPAIRED_CONVERGENCE_20260704.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET200_REPAIRED_CONVERGENCE_20260704.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET300_REPAIRED_CONVERGENCE_20260704.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET400_REPAIRED_CONVERGENCE_20260705.md`
 - `BoxDesignSurrogateRL/docs/MILP_BOX_ALGORITHMS.md`
 
-Repository evidence snapshot before this document: `ce6e309`.
+Current documented evidence covers results through the five-window test split
+run completed on 2026-07-05.

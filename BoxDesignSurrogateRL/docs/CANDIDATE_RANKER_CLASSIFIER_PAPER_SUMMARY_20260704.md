@@ -1,4 +1,4 @@
-# Candidate Classifier Ranker Paper Summary, 2026-07-04
+# Candidate Classifier Ranker Paper Summary, 2026-07-05
 
 ## Paper-Facing Claim
 
@@ -12,12 +12,12 @@ The claim supported by current evidence is:
 
 > A learned candidate ranker can guide exact-MILP local search to the same or
 > essentially the same local-search solution as exact staged greedy while
-> reducing measured exact-oracle work and wall-clock time on dev500 and three
-> prefix held-out slice protocols, plus three non-prefix independent held-out
-> windows.
+> reducing measured exact-oracle work and wall-clock time on dev500, three
+> prefix held-out slice protocols, and a complete 500-order test split evaluated
+> as five 100-order windows.
 
-This is a slice-level and seed-0 claim. It is not yet a full-OR2023 or
-multi-seed statistical claim.
+This is a window-wise 500-order test-split and seed-0 claim. It is not yet a
+full-OR2023 or multi-seed statistical claim.
 
 ## Main Convergence And Audit Table
 
@@ -35,6 +35,8 @@ exact staged-greedy audit when needed.
 | test100 offset100 repaired | non-prefix shared-cache repaired convergence-path audit | 2.0757308361 | 2.0757308361 | 1.000 | 28980 | 26200 | 2521 | 2416 | 1469.8335 | 1419.6851 | 2047.5268 | 1944.8361 |
 | test100 offset200 repaired | non-prefix shared-cache repaired convergence-path audit | 1.9098141289 | 1.9098141289 | 1.000 | 43020 | 39220 | 3714 | 3485 | 2114.5624 | 1955.3046 | 2954.3013 | 2729.9786 |
 | test100 offset300 repaired | non-prefix shared-cache repaired convergence-path audit | 1.8590426956 | 1.8590426956 | 1.000 | 28560 | 25460 | 2478 | 2301 | 1275.1553 | 1143.9761 | 1830.4731 | 1596.6522 |
+| test100 offset400 repaired | non-prefix shared-cache repaired convergence-path audit | 1.9889904647 | 1.9889904647 | 1.000 | 36360 | 31860 | 3173 | 2853 | 1857.8720 | 1660.0325 | 2488.9937 | 2277.6879 |
+| test500 window total | five 100-order repaired convergence-path audits | window-wise same | window-wise same | 1.000 | 168060 | 148930 | 14533 | 13429 | 8277.4819 | 7545.4288 | 11486.1318 | 10391.1623 |
 
 Cost reductions relative to exact staged:
 
@@ -47,6 +49,8 @@ Cost reductions relative to exact staged:
 | test100 offset100 repaired | 0.0000000000 | 9.6% | 4.2% | 3.4% | 5.0% |
 | test100 offset200 repaired | 0.0000000000 | 8.8% | 6.2% | 7.5% | 7.6% |
 | test100 offset300 repaired | 0.0000000000 | 10.9% | 7.1% | 10.3% | 12.8% |
+| test100 offset400 repaired | 0.0000000000 | 12.4% | 10.1% | 10.6% | 8.5% |
+| test500 window total | 0.0000000000 window-wise | 11.4% | 7.6% | 8.8% | 9.5% |
 
 Interpretation:
 
@@ -61,6 +65,12 @@ Interpretation:
   metrics.
 - test100 offset300 repaired preserves final PF and coverage and has the
   largest non-prefix wall-clock reduction so far.
+- test100 offset400 repaired completes the five-window test split coverage and
+  again preserves final PF and coverage with lower cost.
+- Across the five 100-order test windows, ranker+audit preserves exact staged
+  final PF and coverage in every window while reducing validations by 11.4%,
+  uncached boxes by 7.6%, Java/Gurobi subprocess time by 8.8%, and wall-clock
+  time by 9.5%.
 - The strongest empirical pattern is consistent same-quality convergence with
   fewer exact oracle calls, not uniformly large acceleration.
 
@@ -88,8 +98,7 @@ Supported:
    evaluations; exact Java/Gurobi MILP decides accepted moves.
 2. Same or essentially same local-search quality with lower measured oracle
    cost on dev500, test50, test100, repaired test250, and the non-prefix
-   test100 offset100/offset200/offset300 repaired windows under the recorded
-   protocols.
+   five-window repaired test split under the recorded protocols.
 3. Better time-budgeted search quality on test50, test100, unrepaired test250
    when reported with coverage, and repaired test250.
 4. The benefit is strongest on test50/test100 and smaller on repaired test250.
@@ -107,8 +116,7 @@ Not supported yet:
 
 The next experiments that would most improve paper rigor are:
 
-1. Replicate the shared-cache convergence-path protocol across additional seeds
-   and additional non-prefix held-out windows.
+1. Replicate the shared-cache convergence-path protocol across additional seeds.
 2. Standardize coverage handling for any larger/full held-out comparison.
 3. If full OR2023 is attempted, treat it as a long systems experiment and
    report coverage, final PF, uncached boxes, subprocess time, and wall-clock
@@ -123,4 +131,5 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET100_REPAIRED_CONVERGENCE_20260704.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET200_REPAIRED_CONVERGENCE_20260704.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET300_REPAIRED_CONVERGENCE_20260704.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET400_REPAIRED_CONVERGENCE_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_HELDOUT_SUMMARY_20260703.md`
