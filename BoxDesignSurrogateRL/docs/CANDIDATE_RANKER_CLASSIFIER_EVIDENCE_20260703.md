@@ -260,6 +260,34 @@ subprocess-time reduction, and 1.8% wall-clock reduction on repaired test250.
 The larger repaired slice therefore supports same-final-quality behavior, but
 with much smaller efficiency gains than test50/test100.
 
+## Non-Prefix Held-Out Window Checks
+
+After adding `--orders-offset` support to the Python runner and fixing the
+Java MILP oracle windowing, the shared-cache convergence-path protocol was
+replicated on two non-prefix held-out windows from the OR2023 test split. Both
+runs use `geometric_expand` coverage repair for exact staged and ranker+audit.
+
+| held-out window | method | final PF | coverage | uncovered | validations | uncached boxes | subprocess sec | elapsed sec |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| test[100,200) repaired | exact staged | 2.0757308361 | 1.000 | 0 | 28980 | 2521 | 1469.8335 | 2047.5268 |
+| test[100,200) repaired | RF top50 180s + exact audit | 2.0757308361 | 1.000 | 0 | 26200 | 2416 | 1419.6851 | 1944.8361 |
+| test[200,300) repaired | exact staged | 1.9098141289 | 1.000 | 0 | 43020 | 3714 | 2114.5624 | 2954.3013 |
+| test[200,300) repaired | RF top50 180s + exact audit | 1.9098141289 | 1.000 | 0 | 39220 | 3485 | 1955.3046 | 2729.9786 |
+
+For test[100,200), the ranker path reaches the exact same final PF and
+coverage with 9.6% fewer validations, 4.2% fewer uncached boxes, 3.4% lower
+Java/Gurobi subprocess time, and 5.0% lower wall-clock time.
+
+For test[200,300), the ranker path again reaches the exact same final PF and
+coverage with 8.8% fewer validations, 6.2% fewer uncached boxes, 7.5% lower
+subprocess time, and 7.6% lower wall-clock time. This second window is harder
+than offset100: exact staged requires 43020 candidate validations and 2954.3
+wall-clock seconds.
+
+These two non-prefix windows are stronger evidence than nested prefix slices
+because they do not repeatedly evaluate only the earliest orders in the XML
+ordering.
+
 ## Supported Claims
 
 The current evidence supports these claims:
@@ -277,9 +305,13 @@ The current evidence supports these claims:
    180s path plus exact audit reaches the same or essentially the same
    converged quality as exact staged from the same initial boxes, with lower
    measured oracle and wall-clock cost.
-5. The cost reduction is substantial on test50/test100 but modest on repaired
-   test250, so the current evidence supports a consistent efficiency advantage,
-   not a uniform large speedup across all slices.
+5. On non-prefix held-out windows test[100,200) and test[200,300), the same
+   shared-cache ranker-plus-audit protocol reaches identical final PF and
+   coverage with lower measured oracle and wall-clock cost.
+6. The cost reduction is substantial on test50/test100, modest on repaired
+   test250, and positive on both non-prefix windows, so the current evidence
+   supports a consistent efficiency advantage, not a uniform large speedup
+   across all slices.
 
 ## Claims Not Yet Supported
 
@@ -289,9 +321,9 @@ The current evidence does not yet support these claims:
    MILP baseline.
 2. Multi-seed statistical significance.
 3. Universal reduction in uncached MILP labels on every held-out slice.
-4. Converged exact-equivalence on the full held-out set, or on held-out slices
-   beyond test50, test100, and repaired test250, without running shared-cache
-   exact audits from the ranker final boxes.
+4. Converged exact-equivalence on the full held-out set, or statistical
+   significance across many held-out windows/seeds, without running
+   shared-cache exact audits from the ranker final boxes.
 5. A claim that a feasibility predictor alone can solve the optimization
    problem.
 
@@ -305,8 +337,8 @@ into a publishable result:
 
 1. Replicate dev500 exact-audited runs across additional seeds or independent
    dev splits.
-2. Replicate the shared-cache convergence-path protocol across seeds or
-   independent splits to move from slice-level evidence to statistical
+2. Replicate the shared-cache convergence-path protocol across seeds and more
+   non-prefix windows to move from slice-level evidence to statistical
    evidence.
 3. Standardize coverage handling before larger held-out/full comparisons: either
    train initial boxes on the corresponding train split or apply the same

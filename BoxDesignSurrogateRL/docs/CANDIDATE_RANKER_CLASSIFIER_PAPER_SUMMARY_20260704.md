@@ -13,8 +13,8 @@ The claim supported by current evidence is:
 > A learned candidate ranker can guide exact-MILP local search to the same or
 > essentially the same local-search solution as exact staged greedy while
 > reducing measured exact-oracle work and wall-clock time on dev500 and three
-> prefix held-out slice protocols, plus one non-prefix independent held-out
-> window.
+> prefix held-out slice protocols, plus two non-prefix independent held-out
+> windows.
 
 This is a slice-level and seed-0 claim. It is not yet a full-OR2023 or
 multi-seed statistical claim.
@@ -33,6 +33,7 @@ exact staged-greedy audit when needed.
 | test100 | shared-cache convergence-path audit | 1.8121077375 | 1.8121077375 | 1.000 | 31140 | 26190 | 2647 | 2374 | 1560.0587 | 1366.4305 | 2164.8369 | 1842.0075 |
 | test250 repaired | shared-cache repaired convergence-path audit | 2.1590677627 | 2.1590677627 | 1.000 | 24180 | 23630 | 2175 | 2140 | 2284.5554 | 2236.8717 | 2763.3551 | 2712.6450 |
 | test100 offset100 repaired | non-prefix shared-cache repaired convergence-path audit | 2.0757308361 | 2.0757308361 | 1.000 | 28980 | 26200 | 2521 | 2416 | 1469.8335 | 1419.6851 | 2047.5268 | 1944.8361 |
+| test100 offset200 repaired | non-prefix shared-cache repaired convergence-path audit | 1.9098141289 | 1.9098141289 | 1.000 | 43020 | 39220 | 3714 | 3485 | 2114.5624 | 1955.3046 | 2954.3013 | 2729.9786 |
 
 Cost reductions relative to exact staged:
 
@@ -43,6 +44,7 @@ Cost reductions relative to exact staged:
 | test100 | 0.0000000000 | 15.9% | 10.3% | 12.4% | 14.9% |
 | test250 repaired | 0.0000000000 | 2.3% | 1.6% | 2.1% | 1.8% |
 | test100 offset100 repaired | 0.0000000000 | 9.6% | 4.2% | 3.4% | 5.0% |
+| test100 offset200 repaired | 0.0000000000 | 8.8% | 6.2% | 7.5% | 7.6% |
 
 Interpretation:
 
@@ -52,6 +54,9 @@ Interpretation:
   is small. It should be reported as positive but not as a large speedup.
 - test100 offset100 repaired is the cleanest non-prefix window check so far:
   it preserves final PF and coverage with modest but positive cost reductions.
+- test100 offset200 repaired is a harder non-prefix window and also preserves
+  final PF and coverage with positive reductions across all primary cost
+  metrics.
 - The strongest empirical pattern is consistent same-quality convergence with
   fewer exact oracle calls, not uniformly large acceleration.
 
@@ -79,7 +84,7 @@ Supported:
    evaluations; exact Java/Gurobi MILP decides accepted moves.
 2. Same or essentially same local-search quality with lower measured oracle
    cost on dev500, test50, test100, repaired test250, and the non-prefix
-   test100 offset100 repaired window under the recorded protocols.
+   test100 offset100/offset200 repaired windows under the recorded protocols.
 3. Better time-budgeted search quality on test50, test100, unrepaired test250
    when reported with coverage, and repaired test250.
 4. The benefit is strongest on test50/test100 and smaller on repaired test250.
@@ -111,4 +116,5 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET100_REPAIRED_CONVERGENCE_20260704.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_OFFSET200_REPAIRED_CONVERGENCE_20260704.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_HELDOUT_SUMMARY_20260703.md`
