@@ -364,8 +364,39 @@ Across the complete seed-1 five-window replicate, ranker+audit preserves or
 improves final PF and full coverage, with aggregate reductions of 14.3% in
 validations, 6.4% in uncached boxes, 6.7% in Java/Gurobi subprocess time, and
 7.2% in wall-clock time. This is positive initial-condition evidence, but it
-should not be described as statistical significance until the protocol is
-repeated across additional seeds.
+should not be described as statistical significance by itself.
+
+The full seed-2 initial-condition replicate was then run with the same
+protocol. Unlike seed1, seed2 is not a strict same-or-better result in every
+window, so it should be treated as aggregate efficiency evidence with one
+quality tradeoff.
+
+| held-out window | method | final PF | coverage | uncovered | validations | uncached boxes | subprocess sec | elapsed sec |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| seed2:test[0,100) | exact staged | 1.9380009674 | 1.000 | 0 | 9840 | 906 | 471.6141 | 641.3276 |
+| seed2:test[0,100) | RF top50 180s + exact audit | 1.9380009674 | 1.000 | 0 | 6980 | 750 | 390.3809 | 534.3316 |
+| seed2:test[100,200) | exact staged | 2.2095968714 | 1.000 | 0 | 16200 | 1579 | 853.3800 | 1155.2793 |
+| seed2:test[100,200) | RF top50 180s + exact audit | 2.2095968714 | 1.000 | 0 | 14830 | 1548 | 830.7895 | 1092.2495 |
+| seed2:test[200,300) | exact staged | 1.9186301368 | 1.000 | 0 | 9480 | 964 | 553.5630 | 728.1239 |
+| seed2:test[200,300) | RF top50 180s + exact audit | 1.9186301368 | 1.000 | 0 | 7110 | 882 | 495.5806 | 644.5394 |
+| seed2:test[300,400) | exact staged | 1.9960143397 | 1.000 | 0 | 7860 | 793 | 475.6722 | 620.7365 |
+| seed2:test[300,400) | RF top50 180s + exact audit | 1.9726992574 | 1.000 | 0 | 7370 | 794 | 471.3637 | 613.5968 |
+| seed2:test[400,500) | exact staged | 1.9929555750 | 1.000 | 0 | 23160 | 2063 | 1043.8999 | 1425.8324 |
+| seed2:test[400,500) | RF top50 180s + exact audit | 2.0025546412 | 1.000 | 0 | 21510 | 2016 | 1012.4072 | 1432.5585 |
+| seed2:test[0,500) window total | exact staged | window-wise | 1.000 | 0 | 66540 | 6305 | 3398.1293 | 4571.2997 |
+| seed2:test[0,500) window total | RF top50 180s + exact audit | window-wise | 1.000 | 0 | 57800 | 5990 | 3200.5220 | 4317.2759 |
+
+For seed2, ranker+audit matches exact staged PF in three windows, improves PF
+in seed2:test[300,400) by `0.0233150822`, and is worse in seed2:test[400,500)
+by `0.0095990662`. Coverage remains 100% in all windows. Across all five
+seed2 windows, ranker+audit reduces validations by 13.1%, uncached boxes by
+5.0%, Java/Gurobi subprocess time by 5.8%, and wall-clock time by 5.6%.
+
+Across the two complete seed-specific replicates, seed1 and seed2, the 10
+paired windows have 7 equal-PF outcomes, 2 ranker+audit improvements, and 1
+ranker+audit regression. Aggregated over those 10 windows, ranker+audit
+reduces validations by 13.7%, uncached boxes by 5.7%, Java/Gurobi subprocess
+time by 6.3%, and wall-clock time by 6.4%, with full coverage in every window.
 
 ## Supported Claims
 
@@ -390,10 +421,13 @@ The current evidence supports these claims:
 6. On the complete seed-1 five-window initial-condition replicate,
    ranker+audit preserves or improves final PF and full coverage with lower
    measured oracle and wall-clock cost.
-7. The cost reduction is substantial on test50/test100, modest on repaired
+7. On the complete seed-2 five-window initial-condition replicate,
+   ranker+audit preserves full coverage and lowers aggregate oracle and
+   wall-clock cost, but includes one small PF-regression window.
+8. The cost reduction is substantial on test50/test100, modest on repaired
    test250, and positive on every 100-order test window, so the current
-   evidence supports a consistent efficiency advantage, not a uniform large
-   speedup across all slices.
+   evidence supports a consistent efficiency advantage, not unconditional
+   quality dominance or a uniform large speedup across all slices.
 
 ## Claims Not Yet Supported
 
@@ -402,11 +436,13 @@ The current evidence does not yet support these claims:
 1. Full OR2023 superiority over the tuned baseline or over the exact staged
    MILP baseline.
 2. Multi-seed statistical significance.
-3. Universal reduction in uncached MILP labels on every held-out slice.
-4. A single monolithic full-held-out run, or statistical significance across
+3. Strict same-or-better final PF in every seed/window; seed2:test[400,500)
+   is a documented PF-regression case.
+4. Universal reduction in uncached MILP labels on every held-out slice.
+5. A single monolithic full-held-out run, or statistical significance across
    many seeds, without running shared-cache exact audits from the ranker final
    boxes.
-5. A claim that a feasibility predictor alone can solve the optimization
+6. A claim that a feasibility predictor alone can solve the optimization
    problem.
 
 These should remain non-claims in paper-facing prose until additional runs
@@ -417,19 +453,21 @@ exist.
 The next experiments should be selected to turn the strongest current evidence
 into a publishable result:
 
-1. Replicate dev500 exact-audited runs across additional seeds or independent
+1. Add more seed-specific five-window replicates, or compute a paired
+   window-level statistical summary over the existing seed1/seed2 replicates
+   plus any compatible seed0 protocol rows.
+2. Analyze the seed2:test[400,500) PF-regression case to identify whether it
+   is an acceptable small quality tradeoff, a ranker/audit search-path failure,
+   or a sign that the audit budget/schedule needs a robustness variant.
+3. Replicate dev500 exact-audited runs across additional seeds or independent
    dev splits.
-2. Replicate the shared-cache convergence-path protocol across seeds to move
-   from window-wise seed-0 evidence to statistical evidence. Use
-   `scripts/run_ranker_window_protocol.py` without `--initial-boxes-json` for
-   true seed-specific initial box sets.
-3. Standardize coverage handling before larger held-out/full comparisons: either
+4. Standardize coverage handling before larger held-out/full comparisons: either
    train initial boxes on the corresponding train split or apply the same
    explicit repair step to both methods.
-4. Scale to a larger held-out slice or full OR2023 only after the above protocol
+5. Scale to a larger held-out slice or full OR2023 only after the above protocol
    is fixed, because full runs are expensive and ambiguous coverage handling
    would weaken the claim.
-5. Report prefetch batching only as an implementation ablation: it helped a
+6. Report prefetch batching only as an implementation ablation: it helped a
    20-order smoke test but hurt dev500, so it should not be part of the main
    method claim.
 
@@ -461,6 +499,10 @@ into a publishable result:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET400_CONVERGENCE_20260705.md`
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_400_RANKER_RESULT_MANIFEST_20260705.json`
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_400_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED2_OFFSET0_400_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED2_OFFSET0_400_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED2_CONVERGENCE_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_SEED2_WINDOW_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_PAPER_SUMMARY_20260704.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_HELDOUT_SUMMARY_20260703.md`
@@ -479,5 +521,5 @@ into a publishable result:
 - `BoxDesignSurrogateRL/docs/MILP_BOX_ALGORITHMS.md`
 
 Current documented evidence covers results through the five-window seed-0 test
-split and the complete five-window seed-1 initial-condition replicate
-completed on 2026-07-05.
+split plus the complete five-window seed-1 and seed-2 initial-condition
+replicates completed on 2026-07-05.

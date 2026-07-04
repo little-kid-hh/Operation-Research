@@ -1,0 +1,27 @@
+[
+  {
+    "label": "seed2:test[0,100)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o0\\e\\staged_greedy\\run_20260705_044332_997247\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o0\\r\\frontier_20260705_045415\\frontier_summary.json"
+  },
+  {
+    "label": "seed2:test[100,200)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o100\\e\\staged_greedy\\run_20260705_050315_090641\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o100\\r\\frontier_20260705_052231\\frontier_summary.json"
+  },
+  {
+    "label": "seed2:test[200,300)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o200\\e\\staged_greedy\\run_20260705_054048_841547\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o200\\r\\frontier_20260705_055257\\frontier_summary.json"
+  },
+  {
+    "label": "seed2:test[300,400)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o300\\e\\staged_greedy\\run_20260705_060348_025500\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o300\\r\\frontier_20260705_061409\\frontier_summary.json"
+  },
+  {
+    "label": "seed2:test[400,500)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o400\\e\\staged_greedy\\run_20260705_062428_460628\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o400\\r\\frontier_20260705_064814\\frontier_summary.json"
+  }
+]

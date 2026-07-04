@@ -14,18 +14,34 @@ The claim supported by current evidence is:
 > essentially the same local-search solution as exact staged greedy while
 > reducing measured exact-oracle work and wall-clock time on dev500, three
 > prefix held-out slice protocols, and a complete 500-order test split evaluated
-> as five 100-order windows, with a second complete seed-1 five-window
-> initial-condition replicate showing the same pattern.
+> as five 100-order windows, with a complete seed-1 five-window
+> initial-condition replicate showing the same pattern. A seed-2
+> replicate preserves full coverage and reduces aggregate oracle effort, but
+> includes one window with a small PF regression.
 
 This is a window-wise 500-order test-split claim across the seed-0 fixed
-checkpoint protocol and one full seed-1 initial-condition replicate. It is not
-yet a full-OR2023 or multi-seed statistical claim.
+checkpoint protocol plus full seed-1 and seed-2 initial-condition replicates.
+It is not yet a full-OR2023 statistical claim.
 
 The complete seed-1 five-window initial-condition replicate also preserves or
 improves final PF and full coverage in every window. Across seed1:test[0,500),
 ranker+audit reduces validations by 14.3%, uncached boxes by 6.4%, subprocess
 time by 6.7%, and wall-clock time by 7.2%. This is positive
-initial-condition evidence, but not yet a multi-seed statistical result.
+initial-condition evidence, but it is not a statistical result by itself.
+
+The complete seed-2 five-window initial-condition replicate preserves full
+coverage in every window and reduces aggregate oracle effort, but it is not a
+strict dominance result: ranker+audit matches exact PF in three windows,
+improves one window by `0.0233150822`, and is worse in one window by
+`0.0095990662`. Across seed2:test[0,500), ranker+audit reduces validations by
+13.1%, uncached boxes by 5.0%, subprocess time by 5.8%, and wall-clock time by
+5.6%.
+
+Across the 10 seed-specific windows in seed1 and seed2, ranker+audit matches
+exact PF in 7 windows, improves PF in 2 windows, and is worse in 1 window,
+while preserving 100% coverage in all windows. Aggregated over those 10
+windows, it reduces validations by 13.7%, uncached boxes by 5.7%,
+Java/Gurobi subprocess time by 6.3%, and wall-clock time by 6.4%.
 
 ## Main Convergence And Audit Table
 
@@ -45,6 +61,8 @@ exact staged-greedy audit when needed.
 | test100 offset300 repaired | non-prefix shared-cache repaired convergence-path audit | 1.8590426956 | 1.8590426956 | 1.000 | 28560 | 25460 | 2478 | 2301 | 1275.1553 | 1143.9761 | 1830.4731 | 1596.6522 |
 | test100 offset400 repaired | non-prefix shared-cache repaired convergence-path audit | 1.9889904647 | 1.9889904647 | 1.000 | 36360 | 31860 | 3173 | 2853 | 1857.8720 | 1660.0325 | 2488.9937 | 2277.6879 |
 | test500 window total | five 100-order repaired convergence-path audits | window-wise same | window-wise same | 1.000 | 168060 | 148930 | 14533 | 13429 | 8277.4819 | 7545.4288 | 11486.1318 | 10391.1623 |
+| seed1:test[0,500) window total | five 100-order seed-specific audits | window-wise same/better | window-wise same/better | 1.000 | 69780 | 59780 | 6475 | 6060 | 3606.0264 | 3364.1635 | 4876.3645 | 4524.3405 |
+| seed2:test[0,500) window total | five 100-order seed-specific audits | mixed window-wise | mixed window-wise | 1.000 | 66540 | 57800 | 6305 | 5990 | 3398.1293 | 3200.5220 | 4571.2997 | 4317.2759 |
 
 Cost reductions relative to exact staged:
 
@@ -59,6 +77,8 @@ Cost reductions relative to exact staged:
 | test100 offset300 repaired | 0.0000000000 | 10.9% | 7.1% | 10.3% | 12.8% |
 | test100 offset400 repaired | 0.0000000000 | 12.4% | 10.1% | 10.6% | 8.5% |
 | test500 window total | 0.0000000000 window-wise | 11.4% | 7.6% | 8.8% | 9.5% |
+| seed1:test[0,500) window total | same/better window-wise | 14.3% | 6.4% | 6.7% | 7.2% |
+| seed2:test[0,500) window total | mixed; mean -0.0027432032 | 13.1% | 5.0% | 5.8% | 5.6% |
 
 Interpretation:
 
@@ -83,8 +103,14 @@ Interpretation:
   improves final PF and full coverage while reducing validations by 14.3%,
   uncached boxes by 6.4%, Java/Gurobi subprocess time by 6.7%, and wall-clock
   time by 7.2%.
+- Across the complete seed-2 five-window replicate, ranker+audit preserves
+  full coverage and reduces aggregate oracle effort, but the quality result is
+  mixed: three windows match exact PF, one improves PF, and one is worse by
+  `0.0095990662`.
 - The strongest empirical pattern is consistent same-quality convergence with
-  fewer exact oracle calls, not uniformly large acceleration.
+  fewer exact oracle calls on seed0/seed1 and aggregate oracle-effort reduction
+  with a small quality tradeoff on seed2, not uniformly large acceleration or
+  unconditional dominance.
 
 ## Anytime Results
 
@@ -114,28 +140,34 @@ Supported:
 3. The same seed-specific protocol on the complete seed1:test[0,500)
    five-window replicate preserves or improves final PF and full coverage with
    lower measured oracle and wall-clock cost.
-4. Better time-budgeted search quality on test50, test100, unrepaired test250
+4. The complete seed2:test[0,500) replicate preserves full coverage and lowers
+   aggregate validations, uncached boxes, subprocess time, and wall-clock time,
+   while exposing one small PF-regression window.
+5. Better time-budgeted search quality on test50, test100, unrepaired test250
    when reported with coverage, and repaired test250.
-5. The benefit is strongest on test50/test100 and smaller on repaired test250.
+6. The benefit is strongest on test50/test100 and smaller on repaired test250.
 
 Not supported yet:
 
 1. Full OR2023 superiority.
 2. Multi-seed statistical significance.
-3. A claim that ML replaces exact feasibility.
-4. A universal large speedup across all slice sizes and coverage conditions.
-5. Exact reproduction of the private-data SKU-to-box paper; this project uses
+3. A strict claim that ranker+audit matches or improves exact staged final PF
+   in every seed and every window.
+4. A claim that ML replaces exact feasibility.
+5. A universal large speedup across all slice sizes and coverage conditions.
+6. Exact reproduction of the private-data SKU-to-box paper; this project uses
    OR2023 order geometry and an exact MILP order-feasibility oracle.
 
 ## Next Experiments
 
 The next experiments that would most improve paper rigor are:
 
-1. Replicate the shared-cache convergence-path protocol across additional seeds.
-   Use `scripts/run_ranker_window_protocol.py` without `--initial-boxes-json`
-   for true seed-specific initial box sets.
-2. Standardize coverage handling for any larger/full held-out comparison.
-3. If full OR2023 is attempted, treat it as a long systems experiment and
+1. Build a paired window-level statistical summary over the seed-specific
+   replicates, and add more seeds if the confidence interval is still too wide.
+2. Diagnose seed2:test[400,500), where ranker+audit has a small PF regression
+   despite lower oracle work and full coverage.
+3. Standardize coverage handling for any larger/full held-out comparison.
+4. If full OR2023 is attempted, treat it as a long systems experiment and
    report coverage, final PF, uncached boxes, subprocess time, and wall-clock
    time together.
 
@@ -167,6 +199,10 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET400_CONVERGENCE_20260705.md`
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_400_RANKER_RESULT_MANIFEST_20260705.json`
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_400_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED2_OFFSET0_400_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED2_OFFSET0_400_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED2_CONVERGENCE_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_SEED2_WINDOW_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`
