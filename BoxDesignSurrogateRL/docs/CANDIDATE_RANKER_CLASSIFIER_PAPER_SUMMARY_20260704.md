@@ -19,13 +19,14 @@ The claim supported by current evidence is:
 This is a window-wise 500-order test-split and seed-0 claim. It is not yet a
 full-OR2023 or multi-seed statistical claim.
 
-Two seed-specific windows have also been run with seed-1 k-means initial
+Three seed-specific windows have also been run with seed-1 k-means initial
 boxes. On seed1:test[0,100), ranker+audit improves PF from `1.8908695471` to
 `1.8892309108`. On seed1:test[100,200), ranker+audit matches exact staged PF
-at `2.2084188336`. Across these first two seed-1 windows, ranker+audit
+at `2.2084188336`. On seed1:test[200,300), ranker+audit matches exact staged
+PF at `2.0315201381`. Across these first three seed-1 windows, ranker+audit
 preserves or improves final PF and full coverage while reducing validations by
-12.7%, uncached boxes by 7.7%, subprocess time by 7.3%, and wall-clock time by
-7.7%. This is positive initial-condition evidence, but not yet a multi-seed
+14.1%, uncached boxes by 6.7%, subprocess time by 6.5%, and wall-clock time by
+7.4%. This is positive initial-condition evidence, but not yet a multi-seed
 statistical result.
 
 ## Main Convergence And Audit Table
@@ -80,10 +81,10 @@ Interpretation:
   final PF and coverage in every window while reducing validations by 11.4%,
   uncached boxes by 7.6%, Java/Gurobi subprocess time by 8.8%, and wall-clock
   time by 9.5%.
-- Across the first two seed-1 windows, ranker+audit preserves or improves
-  final PF and full coverage while reducing validations by 12.7%, uncached
-  boxes by 7.7%, Java/Gurobi subprocess time by 7.3%, and wall-clock time by
-  7.7%.
+- Across the first three seed-1 windows, ranker+audit preserves or improves
+  final PF and full coverage while reducing validations by 14.1%, uncached
+  boxes by 6.7%, Java/Gurobi subprocess time by 6.5%, and wall-clock time by
+  7.4%.
 - The strongest empirical pattern is consistent same-quality convergence with
   fewer exact oracle calls, not uniformly large acceleration.
 
@@ -150,6 +151,11 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET100_CONVERGENCE_20260705.md`
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_100_RANKER_RESULT_MANIFEST_20260705.json`
 - `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_100_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET200_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET200_RANKER_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_OFFSET200_CONVERGENCE_20260705.md`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_200_RANKER_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/SEED1_OFFSET0_200_RANKER_AUTO_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`

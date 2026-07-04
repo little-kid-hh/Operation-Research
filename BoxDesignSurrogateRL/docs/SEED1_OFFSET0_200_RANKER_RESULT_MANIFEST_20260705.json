@@ -1,0 +1,17 @@
+[
+  {
+    "label": "seed1:test[0,100)",
+    "exact_summary": "BoxDesignSurrogateRL/results/ranker_window_protocol_seed1_offset0_20260705/protocol_20260705_013941/seed1_test0_100/exact/staged_greedy/run_20260705_013943_252662/summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL/results/rwp_s1o0_r_20260705/frontier_20260705_015322/frontier_summary.json"
+  },
+  {
+    "label": "seed1:test[100,200)",
+    "exact_summary": "BoxDesignSurrogateRL/results/ranker_window_protocol_seed1_offset100_20260705/protocol_20260705_020930/s1_o100/e/staged_greedy/run_20260705_020932_158758/summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL/results/ranker_window_protocol_seed1_offset100_20260705/protocol_20260705_020930/s1_o100/r/frontier_20260705_023947/frontier_summary.json"
+  },
+  {
+    "label": "seed1:test[200,300)",
+    "exact_summary": "BoxDesignSurrogateRL/results/ranker_window_protocol_seed1_offset200_20260705/protocol_20260705_031522/s1_o200/e/staged_greedy/run_20260705_031524_540993/summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL/results/ranker_window_protocol_seed1_offset200_20260705/protocol_20260705_031522/s1_o200/r/frontier_20260705_032657/frontier_summary.json"
+  }
+]
