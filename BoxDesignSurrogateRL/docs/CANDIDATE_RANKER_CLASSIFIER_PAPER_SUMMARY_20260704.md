@@ -1,0 +1,108 @@
+# Candidate Classifier Ranker Paper Summary, 2026-07-04
+
+## Paper-Facing Claim
+
+The current strongest contribution is query-efficient exact-MILP local search
+for fine-grained box design. A learned accepted-move classifier ranks local
+box-set candidates, but every accepted move is still verified by the exact
+Java/Gurobi MILP oracle. The method should not be described as replacing exact
+packing feasibility.
+
+The claim supported by current evidence is:
+
+> A learned candidate ranker can guide exact-MILP local search to the same or
+> essentially the same local-search solution as exact staged greedy while
+> reducing measured exact-oracle work and wall-clock time on dev500 and three
+> held-out slice protocols.
+
+This is a slice-level and seed-0 claim. It is not yet a full-OR2023 or
+multi-seed statistical claim.
+
+## Main Convergence And Audit Table
+
+All rows use K=10, the Java/Gurobi MILP oracle with `label_6ori`, and exact
+verification for every accepted move. The learned method is the RF
+accepted-move classifier with adaptive top-k `10,20,30,40,50`, followed by an
+exact staged-greedy audit when needed.
+
+| slice | protocol | exact PF | ranker+audit PF | coverage | exact validations | ranker+audit validations | exact uncached boxes | ranker+audit uncached boxes | exact subprocess sec | ranker+audit subprocess sec | exact elapsed sec | ranker+audit elapsed sec |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| dev500 | exact audit after top50 | 2.3062720835 | 2.3062720835 | 1.000 | 900 | 480 | 134 | 114 | 236.6537 | 196.5169 | 259.8127 | 210.7224 |
+| test50 | shared-cache convergence-path audit | 1.7182177961 | 1.7180912327 | 1.000 | 22080 | 16980 | 1892 | 1695 | 756.5954 | 675.3390 | 1166.3584 | 981.7580 |
+| test100 | shared-cache convergence-path audit | 1.8121077375 | 1.8121077375 | 1.000 | 31140 | 26190 | 2647 | 2374 | 1560.0587 | 1366.4305 | 2164.8369 | 1842.0075 |
+| test250 repaired | shared-cache repaired convergence-path audit | 2.1590677627 | 2.1590677627 | 1.000 | 24180 | 23630 | 2175 | 2140 | 2284.5554 | 2236.8717 | 2763.3551 | 2712.6450 |
+
+Cost reductions relative to exact staged:
+
+| slice | PF delta | validation reduction | uncached-box reduction | subprocess-time reduction | wall-clock reduction |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| dev500 | 0.0000000000 | 46.7% | 14.9% | 17.0% | 18.9% |
+| test50 | -0.0001265634 | 23.1% | 10.4% | 10.7% | 15.8% |
+| test100 | 0.0000000000 | 15.9% | 10.3% | 12.4% | 14.9% |
+| test250 repaired | 0.0000000000 | 2.3% | 1.6% | 2.1% | 1.8% |
+
+Interpretation:
+
+- dev500, test50, and test100 show clear oracle-efficiency gains at equal or
+  essentially equal final PF.
+- repaired test250 also preserves final PF and coverage, but the cost reduction
+  is small. It should be reported as positive but not as a large speedup.
+- The strongest empirical pattern is consistent same-quality convergence with
+  fewer exact oracle calls, not uniformly large acceleration.
+
+## Anytime Results
+
+The 180-second held-out probes test time-budgeted search quality before exact
+audit:
+
+| slice | exact PF at about 180s | ranker PF at about 180s | coverage | interpretation |
+| --- | ---: | ---: | ---: | --- |
+| test50 | 2.1931578038 | 2.0875865358 | 1.000 | ranker reaches better PF under the same time budget |
+| test100 | 2.2313691575 | 2.1038561898 | 1.000 | ranker reaches better PF under the same time budget |
+| test250 unrepaired | 11.9165101124 | 11.3901214442 | 0.992 | PF is dominated by two uncovered orders; report only with coverage |
+| test250 repaired | 2.4763186692 | 2.4559321217 | 1.000 | ranker reaches better repaired PF under the same time budget |
+
+These are anytime-search results, not convergence claims by themselves. The
+convergence-path audits above are required before claiming same-quality local
+convergence.
+
+## Claim Matrix
+
+Supported:
+
+1. Exact-verified learned ranking: the classifier only orders candidate
+   evaluations; exact Java/Gurobi MILP decides accepted moves.
+2. Same or essentially same local-search quality with lower measured oracle
+   cost on dev500, test50, test100, and repaired test250 under the recorded
+   protocols.
+3. Better time-budgeted search quality on test50, test100, unrepaired test250
+   when reported with coverage, and repaired test250.
+4. The benefit is strongest on test50/test100 and smaller on repaired test250.
+
+Not supported yet:
+
+1. Full OR2023 superiority.
+2. Multi-seed statistical significance.
+3. A claim that ML replaces exact feasibility.
+4. A universal large speedup across all slice sizes and coverage conditions.
+5. Exact reproduction of the private-data SKU-to-box paper; this project uses
+   OR2023 order geometry and an exact MILP order-feasibility oracle.
+
+## Next Experiments
+
+The next experiments that would most improve paper rigor are:
+
+1. Replicate the shared-cache convergence-path protocol across additional seeds
+   or independent splits.
+2. Standardize coverage handling for any larger/full held-out comparison.
+3. If full OR2023 is attempted, treat it as a long systems experiment and
+   report coverage, final PF, uncached boxes, subprocess time, and wall-clock
+   time together.
+
+## Source Result Records
+
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST250_REPAIRED_CONVERGENCE_20260703.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_HELDOUT_SUMMARY_20260703.md`
