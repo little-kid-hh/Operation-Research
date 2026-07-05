@@ -170,3 +170,11 @@ An initial experimental controller for this direction is now implemented and
 documented in `ADAPTIVE_RANKER_HANDOFF_CONTROLLER_20260705.md`. It uses recent
 PF improvement per MILP validation as a simple marginal-value signal, keeps the
 exact audit as the certification layer, and is disabled by default.
+
+The first correct test-split threshold ablation on the heavy
+`seed3:test[400,500)` window is encouraging but not yet a main result. Threshold
+`3e-6` preserves audited PF and coverage, ties uncached MILP box queries, and
+reduces subprocess and wall-clock time versus a paired current no-handoff
+control, but it increases validations slightly. This supports further
+multi-window testing of adaptive handoff, not replacing the current certified
+ranker-audit main policy yet.

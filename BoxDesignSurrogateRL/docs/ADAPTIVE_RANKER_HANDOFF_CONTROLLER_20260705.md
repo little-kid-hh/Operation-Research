@@ -157,59 +157,104 @@ main paired windows. If no threshold passes, the result is still useful: it
 shows that the current fixed ranker budget is already near the best safe
 handoff point under this simple marginal-value signal.
 
-## First Threshold Result
+## Invalid Full-XML Diagnostic
 
-The first formal threshold probe was run on `seed3:test[400,500)` with:
+An initial threshold probe was accidentally run against the full OR2023 unique
+orders XML instead of the held-out test-split XML used by the certified
+seed3:test[400,500) evidence. That run is not comparable to the paper-facing
+main result and must not be used as formal algorithm evidence.
 
-- threshold: `0.00001`;
-- min iterations: `20`;
-- window: `10`;
+The invalid run is still useful as a reproducibility warning:
+
+- wrong XML: `or2023_bsp_data/xml_unique/or2023_bsp_unique_orders.xml`;
+- correct XML:
+  `BoxDesignSurrogateRL/results/splits_calibration/or2023_seed20260701_limit2500/or2023_bsp_unique_orders_test.xml`;
+- invalid adaptive result dir:
+  `BoxDesignSurrogateRL/results/adaptive_handoff_threshold_1e5_s3_o400/manifest_frontier_20260705_184031`;
+- invalid no-handoff control dir:
+  `BoxDesignSurrogateRL/results/nohandoff_current_s3_o400_control/manifest_frontier_20260705_192854`.
+
+The invalid full-XML adaptive and no-handoff reruns both finished at audited PF
+`1.9221927464`, far from the certified test-split PF `1.8251207019`. This
+confirmed that the discrepancy came from the data window, not from the handoff
+controller itself.
+
+## Correct Test-Split Ablation
+
+The comparable ablation uses the same test-split XML, initial boxes, exact
+baseline summary, schedule, ranker artifact, ranker frontier, and exact audit
+as the certified main result.
+
+Configuration:
+
+- window: `seed3:test[400,500)`;
+- XML:
+  `BoxDesignSurrogateRL/results/splits_calibration/or2023_seed20260701_limit2500/or2023_bsp_unique_orders_test.xml`;
+- K: 10;
+- schedule: `0.25:1000`;
+- ranker budgets: `20,30,40,50`;
+- safety: `none`;
 - ranker max elapsed: `900`;
-- exact audit enabled.
+- exact audit enabled;
+- min iterations: `20`;
+- window: `10`.
 
 Result:
 
-| metric | exact staged | current main ranker+audit | adaptive threshold 1e-5 |
-| --- | ---: | ---: | ---: |
-| audited PF | 1.8313420040 | 1.8251207019 | 1.9221927464 |
-| PF delta vs exact | n/a | -0.0062213021 | +0.0908507424 |
-| coverage | 1.0000 | 1.0000 | 1.0000 |
-| validations | 20760 | 12660 | 24680 |
-| uncached MILP boxes | 1919 | 1626 | 2679 |
-| subprocess seconds | 1047.5676 | 848.1555 | 2190.4414 |
-| wall-clock seconds | 1409.2608 | 1131.4878 | 2670.3534 |
-| ranker stop reason | n/a | `time_limit` | `time_limit` |
-
-This is a negative result. The threshold did not trigger the adaptive handoff:
-the ranker still stopped by the 900-second time limit. The ranker reached only
-PF `2.2760985121`, leaving the exact audit with a much harder recovery problem.
-The audit did not recover the exact or current main ranker-audit PF and instead
-finished at PF `1.9221927464`.
-
-Trace diagnostic:
-
-- ranker iterations: `194`;
-- ranker improvements: `193`;
-- last improvement iteration: `193`;
-- tail-10 PF improvement: `0.0139445897`;
-- tail-10 validations: `180`;
-- tail PF improvement per validation: about `7.7e-5`, above the `1e-5`
-  threshold.
+| metric | exact staged | no-handoff control | threshold 1e-5 | threshold 5e-6 | threshold 3e-6 |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| audited PF | 1.8313420040 | 1.8251207019 | 1.8251207019 | 1.8251207019 | 1.8251207019 |
+| PF delta vs exact | n/a | -0.0062213021 | -0.0062213021 | -0.0062213021 | -0.0062213021 |
+| coverage | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
+| validations | 20760 | 12650 | 13090 | 12850 | 12800 |
+| uncached MILP boxes | 1919 | 1626 | 1626 | 1626 | 1626 |
+| subprocess seconds | 1047.5676 | 850.9569 | 842.7632 | 837.5591 | 839.2221 |
+| wall-clock seconds | 1409.2608 | 1115.0527 | 1119.9636 | 1115.1521 | 1100.4007 |
+| ranker stop reason | n/a | `time_limit` | `ranker_marginal_pf_handoff` | `ranker_marginal_pf_handoff` | `ranker_marginal_pf_handoff` |
 
 Interpretation:
 
-- `1e-5` is too low to trigger on this heavy window.
-- Recent PF-per-validation alone is not a reliable safety signal because it can
-  remain positive while the ranker is still far from a state that makes audit
-  cheap.
-- Because this run used a new cold cache/time-limited rerun, the wall-clock
-  comparison to the historical main run should be treated cautiously; the
-  quality regression and increased oracle work are still enough to reject this
-  threshold.
+- All tested thresholds preserve audited PF, 100% coverage, and zero uncovered
+  orders on this window.
+- All tested thresholds tie the no-handoff control on uncached MILP box
+  queries.
+- `1e-5` hands off too early: it saves ranker work but shifts too much work to
+  audit, increasing validations and slightly increasing wall-clock time versus
+  the paired no-handoff control.
+- `5e-6` is better but still not clean: same audited quality and uncached
+  queries, lower subprocess seconds, near-tied wall-clock time, but more
+  validations.
+- `3e-6` is the best tested threshold on this single window: same audited
+  quality, same uncached queries, lower subprocess time, and lower wall-clock
+  time versus the paired current no-handoff control, with a small validation
+  increase.
+
+Comparison of `3e-6` against paired no-handoff control:
+
+- PF delta: `0.0000000000`;
+- coverage delta: `0.0000`;
+- uncovered order delta: `0`;
+- validations: `+150`;
+- uncached MILP boxes: `0`;
+- subprocess seconds: `-11.7347`;
+- wall-clock seconds: `-14.6520`.
+
+This is a modest single-window runtime win, not yet a main-paper claim. The
+adaptive controller has not reduced uncached MILP query count on this window,
+and the validation increase means it should be treated as an ablation candidate
+rather than a replacement for the certified ranker-audit main method.
 
 Source records:
 
-- adaptive threshold run:
-  `BoxDesignSurrogateRL/results/adaptive_handoff_threshold_1e5_s3_o400/manifest_frontier_20260705_184031`
-- handoff trace analysis:
-  `BoxDesignSurrogateRL/results/adaptive_handoff_threshold_1e5_s3_o400/manifest_frontier_20260705_184031/handoff_trace.json`
+- no-handoff control:
+  `BoxDesignSurrogateRL/results/nohandoff_current_s3_o400_control_testsplit/manifest_frontier_20260705_201445`;
+- threshold `1e-5`:
+  `BoxDesignSurrogateRL/results/ah1e5_ts/manifest_frontier_20260705_203600`;
+- threshold `5e-6`:
+  `BoxDesignSurrogateRL/results/ah5e6_ts/manifest_frontier_20260705_205801`;
+- threshold `3e-6`:
+  `BoxDesignSurrogateRL/results/ah3e6_ts/manifest_frontier_20260705_211746`.
+
+On Windows, keep `--out-root` short for these runs. Long result roots can push
+per-box JSON cache files past path-length limits during MILP oracle cache
+writes.

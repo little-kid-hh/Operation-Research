@@ -229,6 +229,11 @@ is larger than its own expected oracle cost.
 The first implementation of that controller is documented in
 `ADAPTIVE_RANKER_HANDOFF_CONTROLLER_20260705.md`. It is experimental and
 disabled by default; any paper claim still requires paired exact-audit results.
+The current threshold evidence is single-window only: `3e-6` gives a modest
+subprocess/wall-clock improvement on `seed3:test[400,500)` while preserving
+audited quality, but it does not reduce uncached MILP queries and it increases
+validations. It should remain an ablation candidate until broader paired-window
+evidence exists.
 
 This next iteration would strengthen the paper because it directly targets the
 remaining cost after the current strongest method: exact audit is retained as
