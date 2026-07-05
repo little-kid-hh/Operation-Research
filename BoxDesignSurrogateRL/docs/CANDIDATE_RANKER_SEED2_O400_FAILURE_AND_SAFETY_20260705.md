@@ -67,6 +67,12 @@ ranker feature set: the current ranker features do not include enough
 information about current order-to-box assignments to detect expansions that
 move orders from larger boxes into smaller boxes.
 
+That next step has a first focused positive result in
+`CANDIDATE_RANKER_ASSIGNMENT_AWARE_SEED2_O400_20260705.md`: assignment-aware
+features improve the exact first expansion's predicted rank from 48/60 to
+14/60, and an HGBT accepted classifier with a `20,30,40,50` budget sequence
+recovers exact PF while reducing wall-clock time by 2.4% on this window.
+
 ## Source Records
 
 Remote result directories:

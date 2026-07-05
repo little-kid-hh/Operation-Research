@@ -15,8 +15,13 @@ from box_design_surrogate.candidate_ranker import (
     CANDIDATE_NUMERIC_FEATURES,
     CandidateRanker,
     FastCandidatePipeline,
+    candidate_feature_row,
     positive_class_probability,
 )
+from box_design_surrogate.evaluator import Box
+from box_design_surrogate.features import summarize_items
+from box_design_surrogate.milp_oracle import MilpBoxSetScore
+from box_design_surrogate.search import BoxMove, apply_move
 
 
 def make_one_hot_encoder() -> OneHotEncoder:
@@ -122,6 +127,62 @@ class CandidateRankerFastPathTest(unittest.TestCase):
         )
 
         np.testing.assert_allclose(ranker.predict_scores(rows), expected, rtol=0.0, atol=1e-12)
+
+    def test_candidate_features_include_assignment_opportunity_stats(self) -> None:
+        orders = [
+            summarize_items("toy.xml", "small", [(4.0, 1.0, 1.0)]),
+            summarize_items("toy.xml", "served", [(2.0, 1.0, 1.0)]),
+        ]
+        current = [Box(0, 3.0, 3.0, 3.0), Box(1, 5.0, 5.0, 5.0)]
+        current_score = MilpBoxSetScore(
+            packaging_factor=10.0,
+            mean_box_volume=10.0,
+            mean_order_volume=1.0,
+            coverage_rate=1.0,
+            uncovered_orders=0,
+            unknown_pairs=0,
+            orders_with_unknown=0,
+            assignments=(1, 0),
+        )
+
+        expansion = BoxMove(0, "length", 1.0)
+        expansion_row = candidate_feature_row(
+            current_boxes=current,
+            candidate_boxes=apply_move(current, expansion),
+            move=expansion,
+            current_score=current_score,
+            step=1.0,
+            stage=1,
+            iteration=1,
+            candidate_index=1,
+            generated_candidates=12,
+            orders=orders,
+        )
+
+        self.assertEqual(expansion_row["assignment_moved_box_order_count"], 1.0)
+        self.assertEqual(expansion_row["assignment_candidate_capture_count"], 1.0)
+        self.assertEqual(expansion_row["assignment_candidate_capture_volume"], orders[0].total_volume)
+        self.assertEqual(expansion_row["assignment_candidate_new_capture_count"], 1.0)
+        self.assertGreater(expansion_row["assignment_candidate_capture_assigned_box_volume_delta"], 0.0)
+        self.assertEqual(expansion_row["assignment_moved_box_at_risk_count"], 0.0)
+
+        shrink = BoxMove(0, "length", -2.0)
+        shrink_row = candidate_feature_row(
+            current_boxes=current,
+            candidate_boxes=apply_move(current, shrink),
+            move=shrink,
+            current_score=current_score,
+            step=2.0,
+            stage=1,
+            iteration=2,
+            candidate_index=0,
+            generated_candidates=12,
+            orders=orders,
+        )
+
+        self.assertEqual(shrink_row["assignment_candidate_capture_count"], 0.0)
+        self.assertEqual(shrink_row["assignment_moved_box_at_risk_count"], 1.0)
+        self.assertEqual(shrink_row["assignment_moved_box_at_risk_volume"], orders[1].total_volume)
 
 
 if __name__ == "__main__":

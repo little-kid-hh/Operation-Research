@@ -47,6 +47,16 @@ run matches PF and coverage while increasing wall-clock by 2.1%, and the
 assignment-aware ranker features next, not promoting expansion safety as the
 main method.
 
+The first assignment-aware ranker check is positive on that same failure
+window. New current-assignment features move the exact first expansion from
+predicted rank 48/60 to 14/60 under an HGBT accepted-move classifier. With a
+`20,30,40,50` ranker budget sequence and exact audit, the assignment-aware
+ranker recovers exact PF `1.9929555750` and 100% coverage on
+seed2:test[400,500), while reducing validations by 9.7%, uncached boxes by
+6.3%, subprocess time by 6.9%, and wall-clock time by 2.4% versus exact staged.
+This is a focused repair result, not yet a replacement for the full seed-level
+evidence above.
+
 Across the 10 seed-specific windows in seed1 and seed2, ranker+audit matches
 exact PF in 7 windows, improves PF in 2 windows, and is worse in 1 window,
 while preserving 100% coverage in all windows. Aggregated over those 10
@@ -122,6 +132,12 @@ Interpretation:
   48/60 and accepts smaller top10 improvements. The expansion-safety variant
   fixes PF on this window but does not improve wall-clock time, so it is a
   robustness check rather than the main acceleration claim.
+- Assignment-aware ranker features are a better focused repair: on
+  seed2:test[400,500), the HGBT accepted classifier with `20,30,40,50` budget
+  recovers exact PF and full coverage while reducing validations, uncached
+  boxes, subprocess time, and wall-clock time versus exact staged. This still
+  needs full seed1+seed2 paired-window validation before becoming the main
+  claim.
 - The strongest empirical pattern is consistent same-quality convergence with
   fewer exact oracle calls on seed0/seed1 and aggregate oracle-effort reduction
   with a small quality tradeoff on seed2, not uniformly large acceleration or
@@ -179,9 +195,10 @@ The next experiments that would most improve paper rigor are:
 
 1. Build a paired window-level statistical summary over the seed-specific
    replicates, and add more seeds if the confidence interval is still too wide.
-2. Turn the seed2:test[400,500) diagnosis into an assignment-aware ranker
-   feature set, because the current feature set under-ranks expansions that
-   improve order-to-box assignment.
+2. Run the assignment-aware HGBT ranker on the full seed1+seed2 paired-window
+   protocol to check whether the focused seed2:test[400,500) repair generalizes
+   without damaging the windows where the original ranker already matched or
+   improved exact PF.
 3. Standardize coverage handling for any larger/full held-out comparison.
 4. If full OR2023 is attempted, treat it as a long systems experiment and
    report coverage, final PF, uncached boxes, subprocess time, and wall-clock
@@ -220,6 +237,7 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED2_CONVERGENCE_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_SEED2_WINDOW_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_SEED2_O400_FAILURE_AND_SAFETY_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_ASSIGNMENT_AWARE_SEED2_O400_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`

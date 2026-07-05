@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from .evaluator import Box
+from .kandula_repro import order_requirement
 from .milp_oracle import MilpBoxSetScore
 from .search import BoxMove
 
@@ -58,6 +59,18 @@ CANDIDATE_NUMERIC_FEATURES = [
     "candidate_set_max_volume",
     "candidate_set_std_volume",
     "candidate_set_total_volume",
+    "assignment_moved_box_order_count",
+    "assignment_moved_box_order_volume",
+    "assignment_moved_box_mean_order_volume",
+    "assignment_moved_box_order_share",
+    "assignment_moved_box_volume_share",
+    "assignment_candidate_capture_count",
+    "assignment_candidate_capture_volume",
+    "assignment_candidate_capture_assigned_box_volume_delta",
+    "assignment_candidate_new_capture_count",
+    "assignment_candidate_new_capture_volume",
+    "assignment_moved_box_at_risk_count",
+    "assignment_moved_box_at_risk_volume",
 ]
 
 CANDIDATE_CATEGORICAL_FEATURES = [
@@ -155,6 +168,105 @@ def _set_volume_stats(boxes: list[Box], prefix: str) -> dict[str, float]:
     }
 
 
+def _aggregate_feasible(order: Any, box: Box, eps: float = 1e-9) -> bool:
+    req_l, req_m, req_s, total_volume = order_requirement(order)
+    return (
+        req_l <= box.length + eps
+        and req_m <= box.width + eps
+        and req_s <= box.height + eps
+        and total_volume <= box.volume + eps
+    )
+
+
+def _assignment_feature_stats(
+    *,
+    orders: list[Any] | None,
+    current_boxes: list[Box],
+    current_box: Box,
+    candidate_box: Box,
+    current_score: MilpBoxSetScore,
+) -> dict[str, float]:
+    zero = {
+        "assignment_moved_box_order_count": 0.0,
+        "assignment_moved_box_order_volume": 0.0,
+        "assignment_moved_box_mean_order_volume": 0.0,
+        "assignment_moved_box_order_share": 0.0,
+        "assignment_moved_box_volume_share": 0.0,
+        "assignment_candidate_capture_count": 0.0,
+        "assignment_candidate_capture_volume": 0.0,
+        "assignment_candidate_capture_assigned_box_volume_delta": 0.0,
+        "assignment_candidate_new_capture_count": 0.0,
+        "assignment_candidate_new_capture_volume": 0.0,
+        "assignment_moved_box_at_risk_count": 0.0,
+        "assignment_moved_box_at_risk_volume": 0.0,
+    }
+    assignments = tuple(current_score.assignments or ())
+    if not orders or not assignments:
+        return zero
+
+    current_volume_by_id = {int(box.box_id): float(box.volume) for box in current_boxes}
+    total_order_volume = float(sum(float(getattr(order, "total_volume", 0.0)) for order in orders))
+
+    moved_count = 0
+    moved_volume = 0.0
+    capture_count = 0
+    capture_volume = 0.0
+    capture_assigned_box_volume_delta = 0.0
+    new_capture_count = 0
+    new_capture_volume = 0.0
+    at_risk_count = 0
+    at_risk_volume = 0.0
+
+    for order_idx, order in enumerate(orders):
+        if order_idx >= len(assignments):
+            break
+        order_volume = float(getattr(order, "total_volume", 0.0))
+        assigned_box_id = assignments[order_idx]
+        if assigned_box_id is None:
+            continue
+        assigned_box_id = int(assigned_box_id)
+        if assigned_box_id == int(current_box.box_id):
+            moved_count += 1
+            moved_volume += order_volume
+            if _aggregate_feasible(order, current_box) and not _aggregate_feasible(order, candidate_box):
+                at_risk_count += 1
+                at_risk_volume += order_volume
+            continue
+
+        assigned_volume = current_volume_by_id.get(assigned_box_id)
+        if assigned_volume is None or assigned_volume <= candidate_box.volume + 1e-9:
+            continue
+        if not _aggregate_feasible(order, candidate_box):
+            continue
+        capture_count += 1
+        capture_volume += order_volume
+        capture_assigned_box_volume_delta += assigned_volume - candidate_box.volume
+        if not _aggregate_feasible(order, current_box):
+            new_capture_count += 1
+            new_capture_volume += order_volume
+
+    out = dict(zero)
+    out.update(
+        {
+            "assignment_moved_box_order_count": float(moved_count),
+            "assignment_moved_box_order_volume": float(moved_volume),
+            "assignment_moved_box_mean_order_volume": float(moved_volume / moved_count) if moved_count else 0.0,
+            "assignment_moved_box_order_share": float(moved_count / len(orders)) if orders else 0.0,
+            "assignment_moved_box_volume_share": (
+                float(moved_volume / total_order_volume) if total_order_volume > 0.0 else 0.0
+            ),
+            "assignment_candidate_capture_count": float(capture_count),
+            "assignment_candidate_capture_volume": float(capture_volume),
+            "assignment_candidate_capture_assigned_box_volume_delta": float(capture_assigned_box_volume_delta),
+            "assignment_candidate_new_capture_count": float(new_capture_count),
+            "assignment_candidate_new_capture_volume": float(new_capture_volume),
+            "assignment_moved_box_at_risk_count": float(at_risk_count),
+            "assignment_moved_box_at_risk_volume": float(at_risk_volume),
+        }
+    )
+    return out
+
+
 def candidate_feature_row(
     *,
     current_boxes: list[Box],
@@ -166,6 +278,7 @@ def candidate_feature_row(
     iteration: int,
     candidate_index: int,
     generated_candidates: int,
+    orders: list[Any] | None = None,
 ) -> dict[str, Any]:
     current_by_id = _box_by_id(current_boxes)
     candidate_by_id = _box_by_id(candidate_boxes)
@@ -219,6 +332,15 @@ def candidate_feature_row(
     }
     row.update(_set_volume_stats(current_boxes, "current"))
     row.update(_set_volume_stats(candidate_boxes, "candidate"))
+    row.update(
+        _assignment_feature_stats(
+            orders=orders,
+            current_boxes=current_boxes,
+            current_box=current_box,
+            candidate_box=candidate_box,
+            current_score=current_score,
+        )
+    )
     return row
 
 
@@ -235,6 +357,7 @@ def candidate_trace_rows(
     moves: list[BoxMove],
     candidates: list[list[Box]],
     candidate_scores: list[MilpBoxSetScore],
+    orders: list[Any] | None = None,
 ) -> list[dict[str, Any]]:
     if not (len(moves) == len(candidates) == len(candidate_scores)):
         raise ValueError("moves, candidates, and candidate_scores must have equal length")
@@ -258,6 +381,7 @@ def candidate_trace_rows(
             iteration=iteration,
             candidate_index=idx,
             generated_candidates=len(candidates),
+            orders=orders,
         )
         row.update(
             {

@@ -87,3 +87,7 @@ version is that exact staged first takes an expansion move that the ranker
 places at predicted rank 48/60. An all-expansions safety variant recovers exact
 PF on this window, but wall-clock time increases, so the result is best treated
 as a robustness check and motivation for assignment-aware ranker features.
+The first assignment-aware HGBT focused repair is recorded in
+`CANDIDATE_RANKER_ASSIGNMENT_AWARE_SEED2_O400_20260705.md`; it recovers exact
+PF on this window with lower wall-clock than exact staged, but still requires
+full seed2 and cross-seed validation.

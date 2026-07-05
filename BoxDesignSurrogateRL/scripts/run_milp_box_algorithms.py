@@ -456,6 +456,7 @@ def best_single_action(
                 moves=moves,
                 candidates=candidates,
                 candidate_scores=candidate_scores,
+                orders=orders,
             )
         )
     metrics = {
@@ -654,6 +655,7 @@ def best_single_action_ranker_filtered(
             iteration=iteration,
             candidate_index=idx,
             generated_candidates=generated_candidates,
+            orders=orders,
         )
         for idx, (move, candidate) in enumerate(zip(moves, candidates))
     ]
