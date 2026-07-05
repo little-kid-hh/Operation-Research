@@ -218,6 +218,9 @@ def make_row(
             ranker_elapsed + audit_elapsed if ranker_elapsed is not None and audit_elapsed is not None else ranker_elapsed
         ),
         "baseline_pf": baseline_pf,
+        "baseline_milp_validated_candidates": baseline_summary.get("milp_validated_candidates")
+        if baseline_summary
+        else None,
         "baseline_prefetch_candidate_statuses": baseline_summary.get("prefetch_candidate_statuses")
         if baseline_summary
         else None,

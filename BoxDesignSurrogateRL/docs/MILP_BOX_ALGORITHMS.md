@@ -295,6 +295,24 @@ The budget is therefore not a hard interrupt inside a Java/Gurobi candidate
 batch; elapsed time can exceed the requested value by the duration of the
 current iteration.
 
+To analyze a ranker/audit handoff after running one or more frontier summaries,
+use:
+
+```text
+python3 BoxDesignSurrogateRL/scripts/analyze_ranker_handoff_traces.py \
+  --frontier-summary cap300=BoxDesignSurrogateRL/results/<cap300>/frontier_summary.json \
+  --frontier-summary cap600=BoxDesignSurrogateRL/results/<cap600>/frontier_summary.json \
+  --frontier-summary cap900=BoxDesignSurrogateRL/results/<cap900>/frontier_summary.json \
+  --tail-iterations 10 \
+  --out-json BoxDesignSurrogateRL/results/<analysis>/handoff_trace_analysis.json \
+  --out-md BoxDesignSurrogateRL/results/<analysis>/handoff_trace_analysis.md
+```
+
+The handoff analyzer reads each frontier row's ranker `trace.csv` and reports
+ranker-only PF, exact-audited PF, combined oracle work, last improving
+iteration, and recent tail progress. Use this for diagnosing adaptive
+ranker-audit controllers; it is not a substitute for exact audit.
+
 ## Order Windows
 
 Use `--orders-offset` together with `--orders-limit` to run non-overlapping

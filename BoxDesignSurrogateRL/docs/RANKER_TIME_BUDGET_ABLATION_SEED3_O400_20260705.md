@@ -59,6 +59,25 @@ changes:
 - +99.3108 Java/Gurobi subprocess seconds.
 - +179.8231 wall-clock seconds.
 
+## Trace Handoff Diagnostics
+
+The ranker trace shows why a fixed shorter cap is not sufficient. All three
+ranker runs stop by time limit while still finding improving moves near the
+end. The final 10 ranker iterations have diminishing PF improvement, but
+stopping too early leaves a much larger exact audit.
+
+| label | ranker cap | ranker PF | audit PF | PF delta | validations | uncached | subprocess s | elapsed s | ranker iters | last improvement | tail PF improvement | tail validations |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| cap300 | 300.0000 | 1.9814697311 | 1.8251207019 | -0.0062213021 | 18400 | 1807 | 947.4663 | 1311.3109 | 105 | 104 | 0.0078103814 | 180 |
+| cap600 | 600.0000 | 1.9071373816 | 1.8251207019 | -0.0062213021 | 13980 | 1639 | 849.1336 | 1119.0861 | 227 | 226 | 0.0030637625 | 270 |
+| cap900 | 900.0000 | 1.8342269911 | 1.8251207019 | -0.0062213021 | 12660 | 1626 | 848.1555 | 1131.4878 | 314 | 313 | 0.0010658413 | 450 |
+
+The last-improvement column means the final improving move occurred one
+iteration before the time-limit row for each cap. A simple patience rule based
+on "no recent improvements" would therefore not stop these runs earlier.
+Instead, the useful signal is the tradeoff between recent ranker progress and
+the predicted exact-audit burden.
+
 ## Interpretation
 
 This ablation does not justify replacing the 900-second cap as the main policy
@@ -89,8 +108,9 @@ Remote result roots:
   `BoxDesignSurrogateRL/results/aa_s3_o400_ranker_budget600/manifest_frontier_20260705_172212`
 - cap=900 main:
   `BoxDesignSurrogateRL/results/aa_s3_ranker900_o200_o400/protocol_20260705_132216`
+- handoff trace analysis:
+  `BoxDesignSurrogateRL/results/aa_s3_o400_handoff_trace_analysis/handoff_trace_analysis.json`
 
 Main comparison source:
 
 - `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED3_CERTIFIED_SUMMARY_20260705.json`
-
