@@ -1,0 +1,27 @@
+[
+  {
+    "label": "seed4:test[0,100)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o0\\e\\staged_greedy\\run_20260706_015057_265081\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o0\\r\\frontier_20260706_020022\\frontier_summary.json"
+  },
+  {
+    "label": "seed4:test[100,200)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o100\\e\\staged_greedy\\run_20260706_020806_287462\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o100\\r\\frontier_20260706_022731\\frontier_summary.json"
+  },
+  {
+    "label": "seed4:test[200,300)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o200\\e\\staged_greedy\\run_20260706_024657_152105\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o200\\r\\frontier_20260706_025932\\frontier_summary.json"
+  },
+  {
+    "label": "seed4:test[300,400)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o300\\e\\staged_greedy\\run_20260706_031118_939097\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o300\\r\\frontier_20260706_033154\\frontier_summary.json"
+  },
+  {
+    "label": "seed4:test[400,500)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o400\\e\\staged_greedy\\run_20260706_035220_301727\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o400\\r\\frontier_20260706_040813\\frontier_summary.json"
+  }
+]

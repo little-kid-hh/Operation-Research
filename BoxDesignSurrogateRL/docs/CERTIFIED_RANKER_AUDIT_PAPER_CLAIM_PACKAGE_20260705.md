@@ -1,5 +1,7 @@
 # Certified Ranker-Audit Paper Claim Package, 2026-07-05
 
+Updated with seed4 extension evidence on 2026-07-06.
+
 This document fixes the current paper-facing story for the OR2023
 MILP-backed box design experiments. It is a claim and evidence package, not a
 final paper section.
@@ -56,6 +58,12 @@ The current main ranker policy is:
 This makes the central contribution a learned ordering policy with exact
 certification, not a standalone feasibility predictor.
 
+The current combined evidence records the ranker wall-clock cap as a protocol
+parameter rather than treating it as already finalized: seed1, seed2, and seed4
+use a 180-second ranker cap, while seed3 uses a 900-second cap. A final
+paper-facing main table should either stratify by cap or rerun a cap-unified
+protocol.
+
 ## Baseline Contract
 
 The main paired baseline for the current evidence is exact staged greedy under
@@ -87,8 +95,8 @@ current oracle implementation.
 
 ## Main Evidence
 
-Current paired evidence covers fifteen 100-order OR2023 test windows across
-seed1, seed2, and seed3 initial conditions.
+The primary strict paired evidence covers fifteen 100-order OR2023 test windows
+across seed1, seed2, and seed3 initial conditions.
 
 Configuration:
 
@@ -97,6 +105,8 @@ Configuration:
 - seeds: 1, 2, 3 initial conditions;
 - schedule: `0.25:1000`;
 - K: 10;
+- ranker cap: seed1 and seed2 use earlier 180-second assignment-aware runs;
+  seed3 uses the certified 900-second protocol;
 - final quality: exact staged-greedy audit from the ranker result.
 
 Main result:
@@ -129,6 +139,43 @@ regression, exact and ranker-audit feasibility, positive aggregate reductions
 for all four cost metrics, no per-window cost increases, positive descriptive
 bootstrap lower bounds, and sign-test p-values below 0.05 for the four cost
 metrics.
+
+Expanded evidence now covers twenty 100-order OR2023 test windows after adding
+seed4 with the same `K=10`, `0.25:1000` exact staged baseline, frontier
+budgets, safety policy, and exact-audit requirement. Seed4 uses the 180-second
+ranker cap. This extension is important because it preserves the quality
+conclusion but rejects an overly strong runtime claim.
+
+Expanded 20-window result:
+
+- PF matched/improved/regressed: 19/1/0.
+- Mean PF delta: `-0.0003110651`.
+- Max PF regression: `0.0000000000`.
+- Max PF improvement: `-0.0062213021`.
+- Minimum exact coverage: `1.0000`.
+- Minimum ranker-audit coverage: `1.0000`.
+- Total exact uncovered orders: `0`.
+- Total ranker-audit uncovered orders: `0`.
+
+Expanded aggregate cost reductions:
+
+| metric | aggregate reduction | descriptive bootstrap 95% CI | windows reduced/tied/increased | sign-test p |
+| --- | ---: | ---: | ---: | ---: |
+| validations | 22.49% | [14.52%, 31.62%] | 20/0/0 | 0.0000 |
+| uncached boxes | 9.89% | [6.14%, 14.09%] | 19/1/0 | 0.0000 |
+| subprocess seconds | 10.56% | [6.63%, 14.99%] | 19/0/1 | 0.0000 |
+| elapsed seconds | 11.87% | [7.58%, 16.69%] | 20/0/0 | 0.0000 |
+
+The expanded strict audit in
+`ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_STRICT_CLAIM_AUDIT_20260706.md`
+fails only because it requires zero per-window increases for every cost metric:
+seed4:test[100,200) has a `0.5%` subprocess-time increase and an uncached-box
+tie while still matching PF and keeping full coverage. The aggregate claim audit
+in
+`ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_AGGREGATE_CLAIM_AUDIT_20260706.md`
+passes when the paper claim is stated as no certified PF regression, complete
+coverage, and positive aggregate cost reductions with at most one per-metric
+window increase.
 
 The anytime trace replay in
 `RANKER_AUDIT_ANYTIME_BUDGET_ANALYSIS_20260705.md` gives the mechanism-level
@@ -179,12 +226,18 @@ The current evidence supports the following conservative claims:
    preserves or improves exact staged final PF after exact audit.
 2. In the same paired windows, coverage remains complete and uncovered orders
    remain zero.
-3. In all evaluated windows, the certified ranker-audit path reduces
-   validations, uncached MILP box queries, Java/Gurobi subprocess time, and
-   wall-clock time relative to exact staged search.
-4. Exact audit is essential: the paper should not claim that the learned ranker
+3. In the primary 15-window strict audit, the certified ranker-audit path
+   reduces validations, uncached MILP box queries, Java/Gurobi subprocess time,
+   and wall-clock time in every window relative to exact staged search.
+4. In the expanded 20-window evidence, the certified ranker-audit path has no
+   PF regression and reduces aggregate oracle cost: `22.49%` fewer validations,
+   `9.89%` fewer uncached MILP box queries, `10.56%` less subprocess time, and
+   `11.87%` lower wall-clock time. The expanded evidence should not be worded
+   as "every cost metric decreases in every window" because one subprocess-time
+   window increases slightly.
+5. Exact audit is essential: the paper should not claim that the learned ranker
    alone is a reliable replacement for exact optimization.
-5. More exact validation is not automatically better: both wider frontier and
+6. More exact validation is not automatically better: both wider frontier and
    broad safety-set ablations spend more oracle budget without improving the
    certified final solution on the tested heavy window.
 
@@ -217,7 +270,7 @@ Candidate signals for audit control:
 - number of candidates that the ranker rejected before the accepted move;
 - cache-hit and uncached-query profile in the current window.
 
-Trace-calibrated audit control should be tested against four controls:
+Trace-calibrated audit control should be tested against five controls:
 
 1. Main certified ranker-audit: `20,30,40,50`, safety `none`.
 2. Wide frontier: `20,50,100,200`.
@@ -269,6 +322,18 @@ candidates during the ranker stage.
   `BoxDesignSurrogateRL/docs/CERTIFIED_RANKER_AUDIT_CLAIM_AUDIT_20260705.md`
 - Main 15-window anytime budget analysis:
   `BoxDesignSurrogateRL/docs/RANKER_AUDIT_ANYTIME_BUDGET_ANALYSIS_20260705.md`
+- Seed4 extension summary:
+  `BoxDesignSurrogateRL/docs/SEED4_RANKER180_EXTENSION_SUMMARY_20260706.md`
+- Seed4 extension statistical summary:
+  `BoxDesignSurrogateRL/docs/SEED4_RANKER180_EXTENSION_STATS_20260706.md`
+- Combined 20-window summary:
+  `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_COMBINED_SUMMARY_20260706.md`
+- Combined 20-window statistical summary:
+  `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_COMBINED_STATS_20260706.md`
+- Combined 20-window strict claim audit:
+  `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_STRICT_CLAIM_AUDIT_20260706.md`
+- Combined 20-window aggregate claim audit:
+  `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_AGGREGATE_CLAIM_AUDIT_20260706.md`
 - Seed3 certified summary:
   `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED3_CERTIFIED_SUMMARY_20260705.md`
 - Certified method direction:
@@ -289,9 +354,11 @@ candidates during the ranker stage.
 
 | Claim | Evidence | Status | Caveat |
 | --- | --- | --- | --- |
-| Ranker-audit has no certified PF regression on current paired windows. | 15-window claim audit, summary, and stats. | Supported for current windows. | Not yet full OR2023. |
-| Ranker-audit reduces uncached MILP box queries. | 15-window claim audit, summary, and stats. | Supported for current windows. | Uses current cache and subprocess implementation. |
-| Ranker-audit reduces wall-clock time. | 15-window claim audit, summary, and stats. | Supported for current windows. | Hardware and process-launch overhead should be reported in appendix. |
+| Ranker-audit has no certified PF regression on current paired windows. | 20-window combined aggregate audit, summary, and stats. | Supported for current windows. | Not yet full OR2023. |
+| Ranker-audit reduces aggregate uncached MILP box queries. | 20-window combined aggregate audit, summary, and stats. | Supported for current windows. | One expanded window ties on uncached boxes; uses current cache and subprocess implementation. |
+| Ranker-audit reduces aggregate wall-clock time. | 20-window combined aggregate audit, summary, and stats. | Supported for current windows. | Hardware and process-launch overhead should be reported in appendix. |
+| Ranker-audit reduces every cost metric in every evaluated window. | 20-window strict audit. | Unsupported as a general claim. | Fails because one seed4 window has a slight subprocess-time increase. |
+| Ranker-audit reduces every cost metric in every primary 15-window strict-audit window. | 15-window claim audit, summary, and stats. | Supported for the primary strict audit only. | Do not generalize this wording to the 20-window extension. |
 | Ranker-audit reaches better anytime PF under partial exact-validation budgets. | 15-window anytime budget analysis. | Supported for current windows. | Trace replay uses completed-run logs, not interrupted live runs. |
 | Exact audit is required. | Ranker-only diagnostics and certified direction doc. | Supported as method rationale. | Need concise main-text wording. |
 | Wide frontier is not a better default. | Seed3 heavy-window frontier ablation. | Supported as focused ablation. | Single heavy window, not broad proof. |
@@ -309,10 +376,13 @@ memo.
 
 Major risks:
 
-- The main empirical evidence currently covers 15 paired 100-order windows, not
-  the full OR2023 dataset.
+- The expanded empirical evidence currently covers 20 paired 100-order windows,
+  not the full OR2023 dataset.
 - The method claim must stay centered on certified candidate ordering. A claim
   that ML replaces MILP would be misleading.
+- The expanded evidence does not support saying every cost metric decreases in
+  every window; that stronger wording is only valid for the 15-window strict
+  audit.
 - Runtime reductions are partly implementation-dependent because the current
   oracle uses Java/Gurobi subprocess calls.
 - Literature claims about the original baseline and prior box-sizing work still
