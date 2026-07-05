@@ -285,6 +285,29 @@ class MilpOracleTest(unittest.TestCase):
             },
         )
 
+    def test_java_oracle_recreates_disk_cache_dir_before_write(self) -> None:
+        class FakeJavaOracle(JavaMilpOracle):
+            def __init__(self, cache_dir: Path) -> None:
+                super().__init__(xml_path=Path("toy.xml"), java_classpath="unused", cache_dir=cache_dir)
+
+            def _validate_environment(self) -> None:
+                return None
+
+            def _evaluate_uncached(self, orders, boxes):
+                return np.ones((len(orders), len(boxes)), dtype=bool)
+
+        orders = [summarize_items("toy.xml", "10", [(1.0, 1.0, 1.0)])]
+        boxes = [Box(0, 2.0, 2.0, 2.0)]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            cache_dir = Path(tmpdir) / "nested" / "cache"
+            oracle = FakeJavaOracle(cache_dir)
+            cache_dir.rmdir()
+
+            oracle.evaluate(orders, boxes)
+
+            self.assertTrue(cache_dir.exists())
+            self.assertEqual(len(list(cache_dir.glob("*.json"))), 1)
+
     def test_java_oracle_prefetches_unique_box_dimensions(self) -> None:
         class FakeJavaOracle(JavaMilpOracle):
             def __init__(self) -> None:

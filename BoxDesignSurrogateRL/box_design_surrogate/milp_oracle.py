@@ -432,6 +432,7 @@ class JavaMilpOracle:
             return
         payload = self._cache_payload(signature, dims_key)
         payload["statuses"] = list(statuses)
+        path.parent.mkdir(parents=True, exist_ok=True)
         tmp_path = path.with_suffix(".tmp")
         with tmp_path.open("w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False)
