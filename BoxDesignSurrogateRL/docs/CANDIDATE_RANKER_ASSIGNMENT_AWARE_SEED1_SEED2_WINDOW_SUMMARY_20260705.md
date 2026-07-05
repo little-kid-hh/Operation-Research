@@ -32,6 +32,20 @@ same seed-specific initial condition as its exact baseline.
 | Java/Gurobi subprocess seconds | 7004.1556 | 6523.2825 | 6.9% |
 | wall-clock seconds | 9447.6642 | 8715.1345 | 7.8% |
 
+Descriptive paired-window uncertainty estimates are in
+`ASSIGNMENT_AWARE_SEED1_SEED2_STATS_20260705.md`. With 10,000 window-bootstrap
+resamples, the 95% descriptive CIs for aggregate reduction are:
+
+| metric | aggregate reduction | bootstrap 95% CI | windows reduced/tied/increased |
+| --- | ---: | ---: | ---: |
+| validations | 13.50% | [8.93%, 20.94%] | 10/0/0 |
+| uncached boxes | 6.71% | [4.12%, 11.40%] | 10/0/0 |
+| Java/Gurobi subprocess seconds | 6.87% | [4.05%, 11.64%] | 10/0/0 |
+| wall-clock seconds | 7.75% | [4.99%, 12.64%] | 10/0/0 |
+
+These intervals are descriptive window-bootstrap intervals, not formal iid
+statistical guarantees.
+
 ## Quality And Coverage
 
 Across all 10 seed-specific windows:
@@ -128,4 +142,13 @@ Code support:
 
 - `BoxDesignSurrogateRL/scripts/run_ranker_frontier_from_exact_manifest.py`
 - `BoxDesignSurrogateRL/scripts/summarize_ranker_window_results.py`
+- `BoxDesignSurrogateRL/scripts/analyze_ranker_window_statistics.py`
 - `BoxDesignSurrogateRL/box_design_surrogate/candidate_ranker.py`
+
+Committed generated records:
+
+- `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_RESULT_MANIFEST_20260705.json`
+- `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_AUTO_SUMMARY_20260705.json`
+- `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_AUTO_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_STATS_20260705.json`
+- `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_STATS_20260705.md`

@@ -64,6 +64,13 @@ supersedes the previous RF seed-level result as the cleaner main method
 because it removes the only PF-regression window, although it also loses the
 two opportunistic PF improvements that the previous RF run found.
 
+As a descriptive paired-window uncertainty check, 10,000 window-bootstrap
+resamples give 95% CIs of [8.93%, 20.94%] for validation reduction, [4.12%,
+11.40%] for uncached-box reduction, [4.05%, 11.64%] for Java/Gurobi subprocess
+time reduction, and [4.99%, 12.64%] for wall-clock reduction. All 10 windows
+reduce each of the four cost metrics. These are descriptive intervals over the
+observed windows, not formal iid statistical guarantees.
+
 For comparison, the previous RF ranker across the same 10 seed-specific
 windows matches exact PF in 7 windows, improves PF in 2 windows, and is worse
 in 1 window, while preserving 100% coverage in all windows. Aggregated over
@@ -244,6 +251,8 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_SEED2_O400_FAILURE_AND_SAFETY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_ASSIGNMENT_AWARE_SEED2_O400_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_ASSIGNMENT_AWARE_SEED1_SEED2_WINDOW_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_AUTO_SUMMARY_20260705.json`
+- `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_STATS_20260705.json`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`
