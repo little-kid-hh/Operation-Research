@@ -31,6 +31,18 @@ PF because it may stop after validating a limited ranked frontier. Therefore,
 ranker-only numbers should be reported as diagnostic or ablation results, not
 as the main algorithm.
 
+After completing seed3, the broader paired-window result is stronger:
+
+- 15/15 windows have no certified quality regression after exact audit.
+- 14/15 windows match exact staged PF at reported precision.
+- 1/15 windows improves on the original exact staged run after ranker+audit.
+- Exact and ranker+audit both have 100% coverage in every window.
+- Aggregate reductions over the 15 windows:
+  - validations: 26.0%
+  - uncached MILP box queries: 11.7%
+  - Java/Gurobi subprocess seconds: 12.4%
+  - wall-clock seconds: 13.9%
+
 ## Seed3 Diagnostic
 
 To test robustness beyond seed1/seed2, seed3 was probed on OR2023 test windows
@@ -89,7 +101,28 @@ a cost advantage:
 | uncached boxes | 1894 | 1335 | 107 | 1442 | 23.9% |
 | Java/Gurobi subprocess seconds | 1019.8061 | 745.0229 | 48.8933 | 793.9161 | 22.2% |
 | wall-clock seconds | 1374.9555 | 900.2675 | 134.9794 | 1035.2469 | 24.7% |
-| validations | 20210 | 5830 | 4860 | 10690 | 47.1% |
+| validations | 19980 | 5600 | 4860 | 10460 | 47.6% |
+
+### seed3 full-window result
+
+All five seed3 windows are now complete under the certified ranker+audit
+protocol:
+
+- 4 windows match exact staged PF.
+- 1 window improves over exact staged PF: seed3:test[400,500), by
+  `-0.0062213021` PF.
+- 0 windows regress after exact audit.
+- Exact and ranker+audit both have 100% coverage in all five windows.
+- Aggregate seed3 reductions:
+  - validations: 49.0%
+  - uncached MILP box queries: 20.8%
+  - Java/Gurobi subprocess seconds: 22.1%
+  - wall-clock seconds: 25.0%
+
+Full seed3 tables are in
+`ASSIGNMENT_AWARE_SEED3_CERTIFIED_SUMMARY_20260705.md`, and the combined
+seed1/seed2/seed3 summary is in
+`ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_CERTIFIED_SUMMARY_20260705.md`.
 
 ## Interpretation
 
@@ -107,12 +140,9 @@ directly replaces the MILP feasibility oracle.
 
 ## Next Experiments
 
-1. Finish seed3 windows under the certified ranker+audit protocol, but do not
-   stop after ranker-only summaries.
-2. Add a frontier ablation with larger adaptive budget sequences, for example
+1. Add a frontier ablation with larger adaptive budget sequences, for example
    `20,50,100,200`, to test whether audit work can be reduced further.
-3. Test `ranker-safety-policy=all_expansions` as a robustness variant.
-4. Report ranker-only as an ablation, not the main method.
-5. If seed3 remains quality-preserving after audit, update the aggregate
-   seed1/seed2/seed3 descriptive statistics.
-
+2. Test `ranker-safety-policy=all_expansions` as a robustness variant.
+3. Report ranker-only as an ablation, not the main method.
+4. Decide whether to run a larger OR2023 sample after choosing the best
+   certified frontier policy.
