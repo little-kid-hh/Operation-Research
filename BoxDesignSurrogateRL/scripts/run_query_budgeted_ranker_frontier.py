@@ -161,6 +161,12 @@ def make_row(
         "ranker_safety_policy": ranker_summary.get("ranker_safety_policy"),
         "ranker_safety_max_candidates": ranker_summary.get("ranker_safety_max_candidates"),
         "ranker_safety_candidates": ranker_summary.get("ranker_safety_candidates"),
+        "ranker_handoff_policy": ranker_summary.get("ranker_handoff_policy"),
+        "ranker_handoff_min_iterations": ranker_summary.get("ranker_handoff_min_iterations"),
+        "ranker_handoff_window": ranker_summary.get("ranker_handoff_window"),
+        "ranker_handoff_min_pf_improvement_per_validation": ranker_summary.get(
+            "ranker_handoff_min_pf_improvement_per_validation"
+        ),
         "ranker_eval_seconds": ranker_summary.get("ranker_eval_seconds"),
         "ranker_prefetch_eval_seconds": ranker_prefetch_elapsed,
         "ranker_oracle_uncached_boxes": ranker_uncached,
@@ -268,6 +274,15 @@ def main() -> None:
         default=None,
         help="Optional maximum safety candidates per iteration for targeted ranker safety policies.",
     )
+    parser.add_argument(
+        "--ranker-handoff-policy",
+        choices=["none", "marginal_pf_per_validation"],
+        default="none",
+        help="Experimental adaptive handoff policy passed to ranker_filtered_greedy.",
+    )
+    parser.add_argument("--ranker-handoff-min-iterations", type=int, default=20)
+    parser.add_argument("--ranker-handoff-window", type=int, default=10)
+    parser.add_argument("--ranker-handoff-min-pf-improvement-per-validation", type=float, default=0.0)
     parser.add_argument("--run-audit", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument(
         "--ranker-max-elapsed-seconds",
@@ -307,6 +322,18 @@ def main() -> None:
         raise ValueError("--audit-max-elapsed-seconds must be positive when supplied")
     if args.ranker_safety_max_candidates is not None and args.ranker_safety_max_candidates <= 0:
         raise ValueError("--ranker-safety-max-candidates must be positive when supplied")
+    if args.ranker_handoff_min_iterations < 0:
+        raise ValueError("--ranker-handoff-min-iterations must be non-negative")
+    if args.ranker_handoff_window <= 0:
+        raise ValueError("--ranker-handoff-window must be positive")
+    if (
+        args.ranker_handoff_policy == "marginal_pf_per_validation"
+        and args.ranker_handoff_min_pf_improvement_per_validation <= 0.0
+    ):
+        raise ValueError(
+            "--ranker-handoff-min-pf-improvement-per-validation must be positive "
+            "when marginal_pf_per_validation handoff is enabled"
+        )
     if args.orders_offset < 0:
         raise ValueError("--orders-offset must be non-negative")
 
@@ -341,6 +368,14 @@ def main() -> None:
                 sequence,
                 "--ranker-safety-policy",
                 args.ranker_safety_policy,
+                "--ranker-handoff-policy",
+                args.ranker_handoff_policy,
+                "--ranker-handoff-min-iterations",
+                str(args.ranker_handoff_min_iterations),
+                "--ranker-handoff-window",
+                str(args.ranker_handoff_window),
+                "--ranker-handoff-min-pf-improvement-per-validation",
+                str(args.ranker_handoff_min_pf_improvement_per_validation),
                 "--no-ranker-noop-fallback",
                 "--config-label",
                 ranker_label,

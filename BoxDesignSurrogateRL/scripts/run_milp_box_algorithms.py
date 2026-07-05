@@ -36,6 +36,7 @@ from box_design_surrogate.search import apply_move, coordinate_moves
 
 
 RANKER_SAFETY_POLICIES = ("none", "all_expansions", "targeted_expansion_capture")
+RANKER_HANDOFF_POLICIES = ("none", "marginal_pf_per_validation")
 DEFAULT_TARGETED_SAFETY_MAX_CANDIDATES = 5
 
 
@@ -345,6 +346,54 @@ def ranker_safety_indices(
         scored_indices.sort(key=lambda item: (-item[0], -item[1], item[2], item[3]))
         return [idx for *_rest, idx in scored_indices[:limit]]
     raise ValueError(f"unknown ranker safety policy: {safety_policy}")
+
+
+def ranker_marginal_handoff_metrics(
+    trace: list[dict[str, Any]],
+    *,
+    min_iterations: int,
+    window: int,
+    min_pf_improvement_per_validation: float,
+) -> dict[str, Any] | None:
+    ranker_rows = [
+        row
+        for row in trace
+        if row.get("phase") == "ranker_filtered_greedy"
+        and row.get("stop_reason") in {None, ""}
+        and row.get("action") not in {"init", "time_limit", "adaptive_handoff"}
+    ]
+    if len(ranker_rows) < min_iterations or len(ranker_rows) < window:
+        return None
+
+    end_row = ranker_rows[-1]
+    if int(end_row.get("uncovered_orders", 0)) > 0 or int(end_row.get("unknown_pairs", 0)) > 0:
+        return None
+
+    window_start = len(ranker_rows) - window
+    recent_rows = ranker_rows[window_start:]
+    if window_start == 0:
+        start_pf = float(trace[0]["packaging_factor"])
+    else:
+        start_pf = float(ranker_rows[window_start - 1]["packaging_factor"])
+    end_pf = float(end_row["packaging_factor"])
+    recent_validations = int(sum(int(row.get("milp_validated_candidates", 0)) for row in recent_rows))
+    if recent_validations <= 0:
+        return None
+
+    pf_improvement = max(0.0, start_pf - end_pf)
+    pf_per_validation = pf_improvement / float(recent_validations)
+    if pf_per_validation >= min_pf_improvement_per_validation:
+        return None
+
+    return {
+        "ranker_handoff_policy": "marginal_pf_per_validation",
+        "ranker_handoff_min_iterations": min_iterations,
+        "ranker_handoff_window": window,
+        "ranker_handoff_recent_pf_improvement": pf_improvement,
+        "ranker_handoff_recent_validations": recent_validations,
+        "ranker_handoff_pf_per_validation": pf_per_validation,
+        "ranker_handoff_threshold": min_pf_improvement_per_validation,
+    }
 
 
 def expand_box_for_order(box: Box, order, margin: float) -> Box:
@@ -1027,6 +1076,10 @@ def run_ranker_filtered_greedy(
     noop_fallback: bool,
     safety_policy: str = "none",
     safety_max_candidates: int | None = None,
+    handoff_policy: str = "none",
+    handoff_min_iterations: int = 0,
+    handoff_window: int = 10,
+    handoff_min_pf_improvement_per_validation: float = 0.0,
     initial_score: MilpBoxSetScore | None = None,
     initial_phase: str = "initial",
     deadline: float | None = None,
@@ -1055,6 +1108,7 @@ def run_ranker_filtered_greedy(
             "ranker_safety_candidates": 0,
             "ranker_tiers_evaluated": 0,
             "ranker_noop_fallback_used": False,
+            "ranker_handoff_policy": handoff_policy,
             **score_to_dict(current_score),
         }
     ]
@@ -1106,6 +1160,43 @@ def run_ranker_filtered_greedy(
                 break
             current = best_boxes
             current_score = best_score
+            if handoff_policy == "marginal_pf_per_validation":
+                handoff_metrics = ranker_marginal_handoff_metrics(
+                    trace,
+                    min_iterations=handoff_min_iterations,
+                    window=handoff_window,
+                    min_pf_improvement_per_validation=handoff_min_pf_improvement_per_validation,
+                )
+                if handoff_metrics is not None:
+                    trace.append(
+                        {
+                            "phase": "ranker_filtered_greedy",
+                            "iteration": global_iteration + 1,
+                            "stage": stage_idx,
+                            "step": step,
+                            "action": "adaptive_handoff",
+                            "improved": False,
+                            "stop_reason": "ranker_marginal_pf_handoff",
+                            "candidate_evaluations": 0,
+                            "generated_candidates": 0,
+                            "ranker_scored_candidates": 0,
+                            "milp_validated_candidates": 0,
+                            "milp_candidate_evaluations_avoided": 0,
+                            "milp_avoidance_rate": 0.0,
+                            "ranker_eval_seconds": 0.0,
+                            "prefetch_eval_seconds": 0.0,
+                            "milp_eval_seconds": 0.0,
+                            "ranker_top_k_sequence": "",
+                            "ranker_safety_policy": safety_policy,
+                            "ranker_safety_max_candidates": safety_max_candidates,
+                            "ranker_safety_candidates": 0,
+                            "ranker_tiers_evaluated": 0,
+                            "ranker_noop_fallback_used": False,
+                            **handoff_metrics,
+                            **score_to_dict(current_score),
+                        }
+                    )
+                    return sorted(current, key=lambda b: b.volume), current_score, trace
     return sorted(current, key=lambda b: b.volume), current_score, trace
 
 
@@ -1147,6 +1238,13 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "ranker_safety_candidates",
         "ranker_tiers_evaluated",
         "ranker_noop_fallback_used",
+        "ranker_handoff_policy",
+        "ranker_handoff_min_iterations",
+        "ranker_handoff_window",
+        "ranker_handoff_recent_pf_improvement",
+        "ranker_handoff_recent_validations",
+        "ranker_handoff_pf_per_validation",
+        "ranker_handoff_threshold",
     ]
     with path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
@@ -1294,6 +1392,36 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--ranker-handoff-policy",
+        choices=RANKER_HANDOFF_POLICIES,
+        default="none",
+        help=(
+            "Experimental adaptive handoff policy for ranker_filtered_greedy. "
+            "The exact audit remains responsible for final quality certification."
+        ),
+    )
+    parser.add_argument(
+        "--ranker-handoff-min-iterations",
+        type=int,
+        default=20,
+        help="Minimum ranker iterations before an adaptive handoff rule may stop the ranker phase.",
+    )
+    parser.add_argument(
+        "--ranker-handoff-window",
+        type=int,
+        default=10,
+        help="Recent ranker iterations used to estimate marginal PF improvement per validation.",
+    )
+    parser.add_argument(
+        "--ranker-handoff-min-pf-improvement-per-validation",
+        type=float,
+        default=0.0,
+        help=(
+            "For marginal_pf_per_validation handoff, stop when recent PF improvement "
+            "per MILP validation falls below this threshold."
+        ),
+    )
+    parser.add_argument(
         "--prefetch-candidate-statuses",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -1372,6 +1500,18 @@ def main() -> None:
         raise ValueError("--ranker-adaptive-top-k values must be positive")
     if args.ranker_safety_max_candidates is not None and args.ranker_safety_max_candidates <= 0:
         raise ValueError("--ranker-safety-max-candidates must be positive when supplied")
+    if args.ranker_handoff_min_iterations < 0:
+        raise ValueError("--ranker-handoff-min-iterations must be non-negative")
+    if args.ranker_handoff_window <= 0:
+        raise ValueError("--ranker-handoff-window must be positive")
+    if (
+        args.ranker_handoff_policy == "marginal_pf_per_validation"
+        and args.ranker_handoff_min_pf_improvement_per_validation <= 0.0
+    ):
+        raise ValueError(
+            "--ranker-handoff-min-pf-improvement-per-validation must be positive "
+            "when marginal_pf_per_validation handoff is enabled"
+        )
     if args.candidate_trace_csv is not None and args.algorithm not in {"paper_fixed_step", "staged_greedy"}:
         raise ValueError("--candidate-trace-csv is currently supported only for exact algorithms")
 
@@ -1441,6 +1581,16 @@ def main() -> None:
         "ranker_safety_policy": args.ranker_safety_policy if args.algorithm == "ranker_filtered_greedy" else None,
         "ranker_safety_max_candidates": (
             args.ranker_safety_max_candidates if args.algorithm == "ranker_filtered_greedy" else None
+        ),
+        "ranker_handoff_policy": args.ranker_handoff_policy if args.algorithm == "ranker_filtered_greedy" else None,
+        "ranker_handoff_min_iterations": (
+            args.ranker_handoff_min_iterations if args.algorithm == "ranker_filtered_greedy" else None
+        ),
+        "ranker_handoff_window": args.ranker_handoff_window if args.algorithm == "ranker_filtered_greedy" else None,
+        "ranker_handoff_min_pf_improvement_per_validation": (
+            args.ranker_handoff_min_pf_improvement_per_validation
+            if args.algorithm == "ranker_filtered_greedy"
+            else None
         ),
         "prefetch_candidate_statuses": args.prefetch_candidate_statuses,
         "candidate_trace_csv": str(args.candidate_trace_csv) if args.candidate_trace_csv is not None else None,
@@ -1544,6 +1694,10 @@ def main() -> None:
             noop_fallback=args.ranker_noop_fallback,
             safety_policy=args.ranker_safety_policy,
             safety_max_candidates=args.ranker_safety_max_candidates,
+            handoff_policy=args.ranker_handoff_policy,
+            handoff_min_iterations=args.ranker_handoff_min_iterations,
+            handoff_window=args.ranker_handoff_window,
+            handoff_min_pf_improvement_per_validation=args.ranker_handoff_min_pf_improvement_per_validation,
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
             deadline=deadline,

@@ -226,6 +226,10 @@ main adaptive mechanism and points to a marginal-value controller: keep running
 the ranker only while its expected reduction in subsequent exact-audit burden
 is larger than its own expected oracle cost.
 
+The first implementation of that controller is documented in
+`ADAPTIVE_RANKER_HANDOFF_CONTROLLER_20260705.md`. It is experimental and
+disabled by default; any paper claim still requires paired exact-audit results.
+
 This next iteration would strengthen the paper because it directly targets the
 remaining cost after the current strongest method: exact audit is retained as
 the certification mechanism, but the ranker/audit handoff is chosen by expected

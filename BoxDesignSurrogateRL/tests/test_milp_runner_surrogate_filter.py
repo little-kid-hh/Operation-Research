@@ -351,6 +351,84 @@ class SurrogateFilterTest(unittest.TestCase):
         self.assertEqual(metrics["ranker_safety_max_candidates"], 1)
         self.assertEqual(metrics["ranker_safety_candidates"], 1)
 
+    def test_ranker_marginal_handoff_triggers_below_threshold(self) -> None:
+        runner = _load_runner_module()
+        trace = [
+            {
+                "phase": "initial",
+                "action": "init",
+                "packaging_factor": 10.0,
+                "uncovered_orders": 0,
+                "unknown_pairs": 0,
+            },
+            {
+                "phase": "ranker_filtered_greedy",
+                "action": "0:width:-1.000000",
+                "packaging_factor": 9.99,
+                "uncovered_orders": 0,
+                "unknown_pairs": 0,
+                "milp_validated_candidates": 100,
+            },
+            {
+                "phase": "ranker_filtered_greedy",
+                "action": "0:height:-1.000000",
+                "packaging_factor": 9.98,
+                "uncovered_orders": 0,
+                "unknown_pairs": 0,
+                "milp_validated_candidates": 100,
+            },
+        ]
+
+        metrics = runner.ranker_marginal_handoff_metrics(
+            trace,
+            min_iterations=2,
+            window=2,
+            min_pf_improvement_per_validation=0.0002,
+        )
+
+        self.assertIsNotNone(metrics)
+        assert metrics is not None
+        self.assertAlmostEqual(metrics["ranker_handoff_recent_pf_improvement"], 0.02)
+        self.assertEqual(metrics["ranker_handoff_recent_validations"], 200)
+        self.assertAlmostEqual(metrics["ranker_handoff_pf_per_validation"], 0.0001)
+
+    def test_ranker_marginal_handoff_keeps_running_above_threshold(self) -> None:
+        runner = _load_runner_module()
+        trace = [
+            {
+                "phase": "initial",
+                "action": "init",
+                "packaging_factor": 10.0,
+                "uncovered_orders": 0,
+                "unknown_pairs": 0,
+            },
+            {
+                "phase": "ranker_filtered_greedy",
+                "action": "0:width:-1.000000",
+                "packaging_factor": 9.80,
+                "uncovered_orders": 0,
+                "unknown_pairs": 0,
+                "milp_validated_candidates": 100,
+            },
+            {
+                "phase": "ranker_filtered_greedy",
+                "action": "0:height:-1.000000",
+                "packaging_factor": 9.60,
+                "uncovered_orders": 0,
+                "unknown_pairs": 0,
+                "milp_validated_candidates": 100,
+            },
+        ]
+
+        metrics = runner.ranker_marginal_handoff_metrics(
+            trace,
+            min_iterations=2,
+            window=2,
+            min_pf_improvement_per_validation=0.0002,
+        )
+
+        self.assertIsNone(metrics)
+
 
 if __name__ == "__main__":
     unittest.main()

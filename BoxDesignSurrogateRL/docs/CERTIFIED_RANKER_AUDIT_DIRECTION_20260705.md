@@ -165,3 +165,8 @@ The manifest-level handoff trace analysis in
 before the stopping row, so a naive no-improvement patience rule would not
 solve the handoff problem. The next controller should estimate marginal ranker
 value versus predicted exact-audit burden.
+
+An initial experimental controller for this direction is now implemented and
+documented in `ADAPTIVE_RANKER_HANDOFF_CONTROLLER_20260705.md`. It uses recent
+PF improvement per MILP validation as a simple marginal-value signal, keeps the
+exact audit as the certification layer, and is disabled by default.
