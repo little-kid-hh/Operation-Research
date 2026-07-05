@@ -140,9 +140,21 @@ directly replaces the MILP feasibility oracle.
 
 ## Next Experiments
 
-1. Add a frontier ablation with larger adaptive budget sequences, for example
-   `20,50,100,200`, to test whether audit work can be reduced further.
-2. Test `ranker-safety-policy=all_expansions` as a robustness variant.
-3. Report ranker-only as an ablation, not the main method.
-4. Decide whether to run a larger OR2023 sample after choosing the best
-   certified frontier policy.
+The immediate frontier, safety, targeted-safety, and fixed time-budget
+ablations have now been run on the heaviest seed3 window. None replaces the
+current main policy of `20,30,40,50`, safety `none`, and exact audit:
+
+- `20,50,100,200` reaches the same certified PF but costs more.
+- `all_expansions` reaches the same certified PF but is substantially more
+  expensive.
+- `targeted_expansion_capture` reaches the same certified PF but is not a clean
+  oracle-work improvement.
+- fixed 300/600 second ranker caps reach the same certified PF, but shorter
+  ranker phases shift too much work into exact audit; the 600-second cap is only
+  a small wall-clock tradeoff, not a clean subprocess or uncached-query win.
+
+The next useful experiment is therefore not another fixed frontier or fixed
+time cap. It is an adaptive ranker-audit controller that estimates whether
+another ranker iteration is likely to reduce subsequent exact-audit cost enough
+to justify its own oracle work. Ranker-only should remain an ablation, and
+final PF/coverage should still be claimed only after exact audit.

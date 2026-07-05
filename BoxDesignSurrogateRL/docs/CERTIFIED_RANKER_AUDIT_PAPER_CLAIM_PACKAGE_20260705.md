@@ -145,9 +145,16 @@ same certified final PF and is time-comparable, but it uses one additional
 uncached MILP box query and 94 additional validations. With cap=3 it is worse
 than safety `none` on all main cost metrics.
 
-These ablations support keeping safety `none` as the current main policy.
-Simply adding protected candidates, even targeted ones, is not the strongest
-next direction.
+Fixed shorter ranker time budgets are also not a clean replacement for the
+current 900-second cap on this heavy window. A 600-second cap reaches the same
+certified final PF and is 12.4017 seconds faster wall-clock, but uses 13 more
+uncached box queries, 1320 more validations, and 0.9781 more subprocess
+seconds. A 300-second cap is worse than the 900-second cap on every main cost
+metric.
+
+These ablations support keeping safety `none` and the current 900-second heavy
+window cap as the main policy. Simply adding protected candidates or using a
+fixed shorter ranker cap is not the strongest next direction.
 
 ## Defensible Claims
 
@@ -180,10 +187,10 @@ Do not claim the following from current evidence:
 
 ## Next Method Iteration
 
-The next scientifically useful method direction is trace-calibrated audit
-control. The principle is to keep exact certification, but reduce wasted exact
-work after the ranker phase by predicting when audit is likely to be cheap,
-expensive, or unnecessary under a bounded acceptance rule.
+The next scientifically useful method direction is an adaptive ranker-audit
+controller. The principle is to keep exact certification, but use trace signals
+to decide whether another ranker iteration is likely to reduce later exact
+audit cost enough to justify its own oracle work.
 
 Candidate signals for audit control:
 
@@ -201,6 +208,7 @@ Trace-calibrated audit control should be tested against four controls:
 2. Wide frontier: `20,50,100,200`.
 3. Broad safety: `all_expansions`.
 4. Targeted safety: `targeted_expansion_capture`.
+5. Fixed shorter ranker caps: `300` and `600` seconds.
 
 Acceptance rule:
 
@@ -212,9 +220,9 @@ Acceptance rule:
 
 This next iteration would strengthen the paper because it directly targets the
 remaining cost after the current strongest method: exact audit is retained as
-the certification mechanism, but its expected incremental cost is modeled and
-reported rather than blindly reduced by validating more candidates during the
-ranker stage.
+the certification mechanism, but the ranker/audit handoff is chosen by expected
+incremental oracle cost rather than by a fixed time cap or by validating more
+candidates during the ranker stage.
 
 ## Evidence Map
 
@@ -232,6 +240,8 @@ ranker stage.
   `BoxDesignSurrogateRL/docs/RANKER_SAFETY_POLICY_ABLATION_SEED3_O400_20260705.md`
 - Targeted capture safety ablation:
   `BoxDesignSurrogateRL/docs/RANKER_TARGETED_CAPTURE_SAFETY_ABLATION_SEED3_O400_20260705.md`
+- Ranker time-budget ablation:
+  `BoxDesignSurrogateRL/docs/RANKER_TIME_BUDGET_ABLATION_SEED3_O400_20260705.md`
 - Algorithm/protocol documentation:
   `BoxDesignSurrogateRL/docs/MILP_BOX_ALGORITHMS.md`
   `BoxDesignSurrogateRL/docs/EXPERIMENT_PROTOCOL.md`
@@ -247,6 +257,7 @@ ranker stage.
 | Wide frontier is not a better default. | Seed3 heavy-window frontier ablation. | Supported as focused ablation. | Single heavy window, not broad proof. |
 | Broad expansion safety is not a better default. | Seed3 heavy-window safety ablation. | Supported as focused ablation. | Single heavy window, not broad proof. |
 | Targeted capture safety is not a better default. | Seed3 heavy-window targeted capture ablation. | Supported as focused ablation. | Single heavy window; does not rule out audit-control variants. |
+| Fixed shorter ranker caps are not a better default. | Seed3 heavy-window time-budget ablation. | Supported as focused ablation. | Single heavy window; adaptive handoff remains open. |
 | Original paper uses an identical baseline. | Not established in current evidence. | Unsupported. | Requires paper/data/protocol verification. |
 
 ## Same-Agent AC-Style Review
