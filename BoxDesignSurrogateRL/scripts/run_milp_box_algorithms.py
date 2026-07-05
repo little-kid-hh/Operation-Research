@@ -308,6 +308,18 @@ def prefetch_candidate_statuses(
     return time.perf_counter() - started
 
 
+def ranker_safety_indices(
+    *,
+    safety_policy: str,
+    moves: list,
+) -> list[int]:
+    if safety_policy == "none":
+        return []
+    if safety_policy == "all_expansions":
+        return [idx for idx, move in enumerate(moves) if float(move.delta) > 0.0]
+    raise ValueError(f"unknown ranker safety policy: {safety_policy}")
+
+
 def expand_box_for_order(box: Box, order, margin: float) -> Box:
     req_l, req_m, req_s, total_volume = order_requirement(order)
     length = max(box.length, req_l * margin)
@@ -607,6 +619,7 @@ def best_single_action_ranker_filtered(
     top_k: int,
     adaptive_top_k: list[int] | None,
     noop_fallback: bool,
+    safety_policy: str = "none",
     prefetch_candidate_statuses_enabled: bool = False,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
     moves = list(coordinate_moves(current, step))
@@ -624,6 +637,8 @@ def best_single_action_ranker_filtered(
             "prefetch_eval_seconds": 0.0,
             "milp_eval_seconds": 0.0,
             "ranker_top_k_sequence": "",
+            "ranker_safety_policy": safety_policy,
+            "ranker_safety_candidates": 0,
             "ranker_tiers_evaluated": 0,
             "ranker_noop_fallback_used": False,
         }
@@ -661,6 +676,10 @@ def best_single_action_ranker_filtered(
         top_k_sequence.append(generated_candidates)
 
     ranked_indices = sorted(range(generated_candidates), key=lambda idx: (float(predicted_scores[idx]), idx))
+    safety_indices = ranker_safety_indices(
+        safety_policy=safety_policy,
+        moves=moves,
+    )
 
     best_boxes = current
     best_score = current_score
@@ -671,7 +690,10 @@ def best_single_action_ranker_filtered(
     tiers_evaluated = 0
     noop_fallback_used = False
     for tier_keep in top_k_sequence:
-        tier_indices = ranked_indices[:tier_keep]
+        tier_indices = list(ranked_indices[:tier_keep])
+        if safety_indices:
+            seen = set(tier_indices)
+            tier_indices.extend(idx for idx in safety_indices if idx not in seen)
         new_indices = [idx for idx in tier_indices if idx not in validated_indices]
         if not new_indices:
             continue
@@ -711,6 +733,8 @@ def best_single_action_ranker_filtered(
         "prefetch_eval_seconds": prefetch_eval_seconds,
         "milp_eval_seconds": milp_eval_seconds,
         "ranker_top_k_sequence": ",".join(str(value) for value in top_k_sequence),
+        "ranker_safety_policy": safety_policy,
+        "ranker_safety_candidates": len(safety_indices),
         "ranker_tiers_evaluated": tiers_evaluated,
         "ranker_noop_fallback_used": noop_fallback_used,
     }
@@ -966,6 +990,7 @@ def run_ranker_filtered_greedy(
     top_k: int,
     adaptive_top_k: list[int] | None,
     noop_fallback: bool,
+    safety_policy: str = "none",
     initial_score: MilpBoxSetScore | None = None,
     initial_phase: str = "initial",
     deadline: float | None = None,
@@ -989,6 +1014,8 @@ def run_ranker_filtered_greedy(
             "ranker_eval_seconds": 0.0,
             "milp_eval_seconds": 0.0,
             "ranker_top_k_sequence": "",
+            "ranker_safety_policy": safety_policy,
+            "ranker_safety_candidates": 0,
             "ranker_tiers_evaluated": 0,
             "ranker_noop_fallback_used": False,
             **score_to_dict(current_score),
@@ -1021,6 +1048,7 @@ def run_ranker_filtered_greedy(
                 top_k=top_k,
                 adaptive_top_k=adaptive_top_k,
                 noop_fallback=noop_fallback,
+                safety_policy=safety_policy,
                 prefetch_candidate_statuses_enabled=prefetch_candidate_statuses_enabled,
             )
             improved = score_rank(best_score) < score_rank(current_score)
@@ -1076,6 +1104,8 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "surrogate_tiers_evaluated",
         "surrogate_noop_fallback_used",
         "ranker_top_k_sequence",
+        "ranker_safety_policy",
+        "ranker_safety_candidates",
         "ranker_tiers_evaluated",
         "ranker_noop_fallback_used",
     ]
@@ -1200,6 +1230,16 @@ def main() -> None:
         action=argparse.BooleanOptionalAction,
         default=False,
         help="When all ranker tiers have no MILP improvement, validate remaining candidates before noop.",
+    )
+    parser.add_argument(
+        "--ranker-safety-policy",
+        choices=["none", "all_expansions"],
+        default="none",
+        help=(
+            "Optional exact-audit safety set added to every ranker tier. "
+            "all_expansions always validates expansion moves because they can "
+            "lower PF by enabling assignments to smaller boxes."
+        ),
     )
     parser.add_argument(
         "--prefetch-candidate-statuses",
@@ -1344,6 +1384,7 @@ def main() -> None:
             args.ranker_adaptive_top_k if args.algorithm == "ranker_filtered_greedy" else None
         ),
         "ranker_noop_fallback": args.ranker_noop_fallback if args.algorithm == "ranker_filtered_greedy" else None,
+        "ranker_safety_policy": args.ranker_safety_policy if args.algorithm == "ranker_filtered_greedy" else None,
         "prefetch_candidate_statuses": args.prefetch_candidate_statuses,
         "candidate_trace_csv": str(args.candidate_trace_csv) if args.candidate_trace_csv is not None else None,
         "coverage_repair": args.coverage_repair,
@@ -1444,6 +1485,7 @@ def main() -> None:
             top_k=args.ranker_top_k,
             adaptive_top_k=args.ranker_adaptive_top_k,
             noop_fallback=args.ranker_noop_fallback,
+            safety_policy=args.ranker_safety_policy,
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
             deadline=deadline,
@@ -1485,6 +1527,7 @@ def main() -> None:
             sum(1 for row in trace if str(row.get("surrogate_noop_fallback_used", "")).lower() == "true")
         ),
         "ranker_tiers_evaluated": int(sum(row.get("ranker_tiers_evaluated", 0) for row in trace)),
+        "ranker_safety_candidates": int(sum(row.get("ranker_safety_candidates", 0) for row in trace)),
         "ranker_noop_fallback_uses": int(
             sum(1 for row in trace if str(row.get("ranker_noop_fallback_used", "")).lower() == "true")
         ),

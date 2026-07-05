@@ -149,6 +149,8 @@ def frontier_command(
         args.coverage_repair,
         "--ranker-max-elapsed-seconds",
         str(args.ranker_max_elapsed_seconds),
+        "--ranker-safety-policy",
+        args.ranker_safety_policy,
         "--out-root",
         str(frontier_out_root),
         "--oracle-cache-dir",
@@ -216,6 +218,12 @@ def main() -> None:
     parser.add_argument("--milp-time-limit-seconds", type=float, default=30.0)
     parser.add_argument("--coverage-repair", choices=["none", "geometric_expand"], default="geometric_expand")
     parser.add_argument("--ranker-budget-sequence", action="append", default=None)
+    parser.add_argument(
+        "--ranker-safety-policy",
+        choices=["none", "all_expansions"],
+        default="none",
+        help="Optional ranker safety set passed to the query-budgeted frontier runner.",
+    )
     parser.add_argument("--ranker-max-elapsed-seconds", type=float, default=180.0)
     parser.add_argument("--out-root", type=Path, default=ROOT / "results/ranker_window_protocol")
     parser.add_argument("--code-version", default="")

@@ -158,6 +158,8 @@ def make_row(
         "ranker_generated_candidates": ranker_generated,
         "ranker_milp_validated_candidates": ranker_validated,
         "ranker_candidate_avoidance_rate": ranker_summary.get("milp_avoidance_rate"),
+        "ranker_safety_policy": ranker_summary.get("ranker_safety_policy"),
+        "ranker_safety_candidates": ranker_summary.get("ranker_safety_candidates"),
         "ranker_eval_seconds": ranker_summary.get("ranker_eval_seconds"),
         "ranker_prefetch_eval_seconds": ranker_prefetch_elapsed,
         "ranker_oracle_uncached_boxes": ranker_uncached,
@@ -250,6 +252,12 @@ def main() -> None:
     parser.add_argument("--candidate-ranker-path", type=Path, required=True)
     parser.add_argument("--exact-baseline-summary", type=Path, default=None)
     parser.add_argument("--ranker-budget-sequence", action="append", type=parse_budget_sequence, default=None)
+    parser.add_argument(
+        "--ranker-safety-policy",
+        choices=["none", "all_expansions"],
+        default="none",
+        help="Optional ranker safety set passed to ranker_filtered_greedy.",
+    )
     parser.add_argument("--run-audit", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument(
         "--ranker-max-elapsed-seconds",
@@ -319,6 +327,8 @@ def main() -> None:
                 str(args.candidate_ranker_path),
                 "--ranker-adaptive-top-k",
                 sequence,
+                "--ranker-safety-policy",
+                args.ranker_safety_policy,
                 "--no-ranker-noop-fallback",
                 "--config-label",
                 ranker_label,

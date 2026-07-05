@@ -32,6 +32,10 @@ def _surrogate_eval(cost: float) -> BoxSetEvaluation:
 
 
 def _milp_score(pf: float) -> MilpBoxSetScore:
+    return _milp_score_with_assignments(pf, (0,))
+
+
+def _milp_score_with_assignments(pf: float, assignments: tuple[int | None, ...]) -> MilpBoxSetScore:
     return MilpBoxSetScore(
         packaging_factor=pf,
         mean_box_volume=pf,
@@ -40,7 +44,7 @@ def _milp_score(pf: float) -> MilpBoxSetScore:
         uncovered_orders=0,
         unknown_pairs=0,
         orders_with_unknown=0,
-        assignments=(0,),
+        assignments=assignments,
     )
 
 
@@ -79,6 +83,20 @@ class WidthShrinkRanker:
             0.0 if row["move_dimension"] == "width" and row["move_direction"] == "shrink" else 100.0
             for row in rows
         ]
+
+
+class HeightExpansionBestOracle:
+    def __init__(self) -> None:
+        self.evaluated_boxes: list[Box] = []
+
+    def evaluate(self, orders, boxes):
+        box = boxes[0]
+        self.evaluated_boxes.append(box)
+        if box.height > 3.0:
+            return _milp_score(4.0)
+        if box.width < 3.0:
+            return _milp_score(5.0)
+        return _milp_score(11.0)
 
 
 class SurrogateFilterTest(unittest.TestCase):
@@ -259,6 +277,36 @@ class SurrogateFilterTest(unittest.TestCase):
         self.assertEqual(metrics["ranker_scored_candidates"], 6)
         self.assertEqual(metrics["milp_validated_candidates"], 1)
         self.assertEqual(metrics["milp_candidate_evaluations_avoided"], 5)
+
+    def test_ranker_expansion_safety_recovers_low_ranked_expansion(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+        current = [Box(0, 3.0, 3.0, 3.0)]
+        oracle = HeightExpansionBestOracle()
+
+        best_boxes, best_score, action, metrics = runner.best_single_action_ranker_filtered(
+            oracle=oracle,
+            ranker=WidthShrinkRanker(),
+            orders=orders,
+            current=current,
+            current_score=_milp_score(10.0),
+            step=1.0,
+            stage=1,
+            iteration=1,
+            top_k=1,
+            adaptive_top_k=None,
+            noop_fallback=False,
+            safety_policy="all_expansions",
+        )
+
+        self.assertEqual(len(oracle.evaluated_boxes), 4)
+        self.assertEqual(action, "0:height:+1.000000")
+        self.assertEqual(best_score.packaging_factor, 4.0)
+        self.assertEqual(best_boxes[0].height, 4.0)
+        self.assertEqual(metrics["milp_validated_candidates"], 4)
+        self.assertEqual(metrics["milp_candidate_evaluations_avoided"], 2)
+        self.assertEqual(metrics["ranker_safety_policy"], "all_expansions")
+        self.assertEqual(metrics["ranker_safety_candidates"], 3)
 
 
 if __name__ == "__main__":

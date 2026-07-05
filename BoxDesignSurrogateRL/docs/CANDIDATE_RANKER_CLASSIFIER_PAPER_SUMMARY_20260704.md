@@ -37,6 +37,16 @@ improves one window by `0.0233150822`, and is worse in one window by
 13.1%, uncached boxes by 5.0%, subprocess time by 5.8%, and wall-clock time by
 5.6%.
 
+The seed2:test[400,500) regression has now been diagnosed. The exact first
+move is an expansion, `5:height:+0.250000`, but the ranker predicted it at rank
+48/60 and stopped after top10 because smaller verified improvements already
+existed. An `all_expansions` safety variant recovers exact PF on this window,
+but it is a robustness tradeoff rather than a speedup: the 180-second safety
+run matches PF and coverage while increasing wall-clock by 2.1%, and the
+60-second safety run increases wall-clock by 5.3%. This supports adding
+assignment-aware ranker features next, not promoting expansion safety as the
+main method.
+
 Across the 10 seed-specific windows in seed1 and seed2, ranker+audit matches
 exact PF in 7 windows, improves PF in 2 windows, and is worse in 1 window,
 while preserving 100% coverage in all windows. Aggregated over those 10
@@ -107,6 +117,11 @@ Interpretation:
   full coverage and reduces aggregate oracle effort, but the quality result is
   mixed: three windows match exact PF, one improves PF, and one is worse by
   `0.0095990662`.
+- The seed2:test[400,500) regression is caused by a low-ranked expansion move:
+  exact chooses `5:height:+0.250000` first, but the ranker places it at rank
+  48/60 and accepts smaller top10 improvements. The expansion-safety variant
+  fixes PF on this window but does not improve wall-clock time, so it is a
+  robustness check rather than the main acceleration claim.
 - The strongest empirical pattern is consistent same-quality convergence with
   fewer exact oracle calls on seed0/seed1 and aggregate oracle-effort reduction
   with a small quality tradeoff on seed2, not uniformly large acceleration or
@@ -164,8 +179,9 @@ The next experiments that would most improve paper rigor are:
 
 1. Build a paired window-level statistical summary over the seed-specific
    replicates, and add more seeds if the confidence interval is still too wide.
-2. Diagnose seed2:test[400,500), where ranker+audit has a small PF regression
-   despite lower oracle work and full coverage.
+2. Turn the seed2:test[400,500) diagnosis into an assignment-aware ranker
+   feature set, because the current feature set under-ranks expansions that
+   improve order-to-box assignment.
 3. Standardize coverage handling for any larger/full held-out comparison.
 4. If full OR2023 is attempted, treat it as a long systems experiment and
    report coverage, final PF, uncached boxes, subprocess time, and wall-clock
@@ -203,6 +219,7 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/docs/SEED2_OFFSET0_400_RANKER_AUTO_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED2_CONVERGENCE_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_SEED2_WINDOW_SUMMARY_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_SEED2_O400_FAILURE_AND_SAFETY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`

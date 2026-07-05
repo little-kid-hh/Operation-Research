@@ -80,3 +80,10 @@ overstrong claim that ranker+audit always matches or improves exact staged
 final PF window-by-window. A rigorous paper-facing statement should describe
 seed2 as a small quality tradeoff in one window with aggregate oracle-effort
 reduction and full coverage, not as an unconditional dominance result.
+
+Follow-up diagnosis of the single regression window is recorded in
+`CANDIDATE_RANKER_SEED2_O400_FAILURE_AND_SAFETY_20260705.md`. The short
+version is that exact staged first takes an expansion move that the ranker
+places at predicted rank 48/60. An all-expansions safety variant recovers exact
+PF on this window, but wall-clock time increases, so the result is best treated
+as a robustness check and motivation for assignment-aware ranker features.

@@ -21,6 +21,7 @@ class RunRankerWindowProtocolTest(unittest.TestCase):
             milp_time_limit_seconds=30.0,
             coverage_repair="geometric_expand",
             ranker_budget_sequence=["10,20,30,40,50"],
+            ranker_safety_policy="all_expansions",
             ranker_max_elapsed_seconds=180.0,
             code_version="test-version",
             config_prefix="protocol",
@@ -69,6 +70,7 @@ class RunRankerWindowProtocolTest(unittest.TestCase):
         self.assertEqual(Path(cmd[cmd.index("--initial-boxes-json") + 1]), Path("exact/run/initial_boxes.json"))
         self.assertEqual(Path(cmd[cmd.index("--exact-baseline-summary") + 1]), Path("exact/run/summary.json"))
         self.assertEqual(cmd[cmd.index("--ranker-budget-sequence") + 1], "10,20,30,40,50")
+        self.assertEqual(cmd[cmd.index("--ranker-safety-policy") + 1], "all_expansions")
         self.assertEqual(cmd[cmd.index("--orders-offset") + 1], "300")
 
 
