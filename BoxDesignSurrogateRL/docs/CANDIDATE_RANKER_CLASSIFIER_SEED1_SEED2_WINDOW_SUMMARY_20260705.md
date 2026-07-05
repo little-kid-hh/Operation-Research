@@ -8,6 +8,10 @@ seed-specific initial-condition replicates:
 - seed1:test[0,500), evaluated as five 100-order windows.
 - seed2:test[0,500), evaluated as five 100-order windows.
 
+This document records the previous RF accepted-move ranker. The later
+assignment-aware HGBT result is in
+`CANDIDATE_RANKER_ASSIGNMENT_AWARE_SEED1_SEED2_WINDOW_SUMMARY_20260705.md`.
+
 All rows use K=10, `0.25:1000`, the Java/Gurobi MILP oracle with `label_6ori`,
 `geometric_expand` coverage repair, and ranker budget sequence
 `10,20,30,40,50` followed by exact staged audit.

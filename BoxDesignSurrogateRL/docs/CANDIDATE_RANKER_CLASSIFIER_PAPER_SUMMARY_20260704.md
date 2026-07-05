@@ -8,16 +8,16 @@ box-set candidates, but every accepted move is still verified by the exact
 Java/Gurobi MILP oracle. The method should not be described as replacing exact
 packing feasibility.
 
-The claim supported by current evidence is:
+The latest assignment-aware HGBT ranker result supports the cleaner main
+claim:
 
 > A learned candidate ranker can guide exact-MILP local search to the same or
 > essentially the same local-search solution as exact staged greedy while
-> reducing measured exact-oracle work and wall-clock time on dev500, three
-> prefix held-out slice protocols, and a complete 500-order test split evaluated
-> as five 100-order windows, with a complete seed-1 five-window
-> initial-condition replicate showing the same pattern. A seed-2
-> replicate preserves full coverage and reduces aggregate oracle effort, but
-> includes one window with a small PF regression.
+> reducing measured exact-oracle work and wall-clock time. On the paired
+> seed1/seed2 10-window protocol, the assignment-aware HGBT ranker plus exact
+> audit matches exact staged PF and full coverage in every window while
+> reducing validations by 13.5%, uncached boxes by 6.7%, Java/Gurobi subprocess
+> time by 6.9%, and wall-clock time by 7.8%.
 
 This is a window-wise 500-order test-split claim across the seed-0 fixed
 checkpoint protocol plus full seed-1 and seed-2 initial-condition replicates.
@@ -47,20 +47,27 @@ run matches PF and coverage while increasing wall-clock by 2.1%, and the
 assignment-aware ranker features next, not promoting expansion safety as the
 main method.
 
-The first assignment-aware ranker check is positive on that same failure
-window. New current-assignment features move the exact first expansion from
-predicted rank 48/60 to 14/60 under an HGBT accepted-move classifier. With a
-`20,30,40,50` ranker budget sequence and exact audit, the assignment-aware
-ranker recovers exact PF `1.9929555750` and 100% coverage on
-seed2:test[400,500), while reducing validations by 9.7%, uncached boxes by
-6.3%, subprocess time by 6.9%, and wall-clock time by 2.4% versus exact staged.
-This is a focused repair result, not yet a replacement for the full seed-level
-evidence above.
+The assignment-aware ranker check is now complete on the full seed1+seed2
+paired-window protocol. New current-assignment features move the
+seed2:test[400,500) exact first expansion from predicted rank 48/60 to 14/60
+under an HGBT accepted-move classifier. With a `20,30,40,50` ranker budget
+sequence and exact audit, the assignment-aware ranker recovers exact PF
+`1.9929555750` and 100% coverage on seed2:test[400,500), while reducing
+validations by 9.2%, uncached boxes by 5.8%, subprocess time by 6.4%, and
+wall-clock time by 4.1% versus exact staged in the final paired run.
 
-Across the 10 seed-specific windows in seed1 and seed2, ranker+audit matches
-exact PF in 7 windows, improves PF in 2 windows, and is worse in 1 window,
-while preserving 100% coverage in all windows. Aggregated over those 10
-windows, it reduces validations by 13.7%, uncached boxes by 5.7%,
+Across the 10 seed-specific windows in seed1 and seed2, assignment-aware
+HGBT+audit matches exact PF in all 10 windows, preserves 100% coverage in all
+10 windows, and reduces validations by 13.5%, uncached boxes by 6.7%,
+Java/Gurobi subprocess time by 6.9%, and wall-clock time by 7.8%. This
+supersedes the previous RF seed-level result as the cleaner main method
+because it removes the only PF-regression window, although it also loses the
+two opportunistic PF improvements that the previous RF run found.
+
+For comparison, the previous RF ranker across the same 10 seed-specific
+windows matches exact PF in 7 windows, improves PF in 2 windows, and is worse
+in 1 window, while preserving 100% coverage in all windows. Aggregated over
+those 10 windows, it reduces validations by 13.7%, uncached boxes by 5.7%,
 Java/Gurobi subprocess time by 6.3%, and wall-clock time by 6.4%.
 
 ## Main Convergence And Audit Table
@@ -195,10 +202,8 @@ The next experiments that would most improve paper rigor are:
 
 1. Build a paired window-level statistical summary over the seed-specific
    replicates, and add more seeds if the confidence interval is still too wide.
-2. Run the assignment-aware HGBT ranker on the full seed1+seed2 paired-window
-   protocol to check whether the focused seed2:test[400,500) repair generalizes
-   without damaging the windows where the original ranker already matched or
-   improved exact PF.
+2. Add one or more additional seed-specific paired-window replicates if a
+   statistical interval, rather than a descriptive 10-window result, is needed.
 3. Standardize coverage handling for any larger/full held-out comparison.
 4. If full OR2023 is attempted, treat it as a long systems experiment and
    report coverage, final PF, uncached boxes, subprocess time, and wall-clock
@@ -238,6 +243,7 @@ The next experiments that would most improve paper rigor are:
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_SEED1_SEED2_WINDOW_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_SEED2_O400_FAILURE_AND_SAFETY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_ASSIGNMENT_AWARE_SEED2_O400_20260705.md`
+- `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_ASSIGNMENT_AWARE_SEED1_SEED2_WINDOW_SUMMARY_20260705.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_DEV500_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST50_CONVERGENCE_20260703.md`
 - `BoxDesignSurrogateRL/docs/CANDIDATE_RANKER_CLASSIFIER_TEST100_CONVERGENCE_20260703.md`
