@@ -156,3 +156,60 @@ If a threshold passes on `seed3:test[400,500)`, evaluate it on the remaining
 main paired windows. If no threshold passes, the result is still useful: it
 shows that the current fixed ranker budget is already near the best safe
 handoff point under this simple marginal-value signal.
+
+## First Threshold Result
+
+The first formal threshold probe was run on `seed3:test[400,500)` with:
+
+- threshold: `0.00001`;
+- min iterations: `20`;
+- window: `10`;
+- ranker max elapsed: `900`;
+- exact audit enabled.
+
+Result:
+
+| metric | exact staged | current main ranker+audit | adaptive threshold 1e-5 |
+| --- | ---: | ---: | ---: |
+| audited PF | 1.8313420040 | 1.8251207019 | 1.9221927464 |
+| PF delta vs exact | n/a | -0.0062213021 | +0.0908507424 |
+| coverage | 1.0000 | 1.0000 | 1.0000 |
+| validations | 20760 | 12660 | 24680 |
+| uncached MILP boxes | 1919 | 1626 | 2679 |
+| subprocess seconds | 1047.5676 | 848.1555 | 2190.4414 |
+| wall-clock seconds | 1409.2608 | 1131.4878 | 2670.3534 |
+| ranker stop reason | n/a | `time_limit` | `time_limit` |
+
+This is a negative result. The threshold did not trigger the adaptive handoff:
+the ranker still stopped by the 900-second time limit. The ranker reached only
+PF `2.2760985121`, leaving the exact audit with a much harder recovery problem.
+The audit did not recover the exact or current main ranker-audit PF and instead
+finished at PF `1.9221927464`.
+
+Trace diagnostic:
+
+- ranker iterations: `194`;
+- ranker improvements: `193`;
+- last improvement iteration: `193`;
+- tail-10 PF improvement: `0.0139445897`;
+- tail-10 validations: `180`;
+- tail PF improvement per validation: about `7.7e-5`, above the `1e-5`
+  threshold.
+
+Interpretation:
+
+- `1e-5` is too low to trigger on this heavy window.
+- Recent PF-per-validation alone is not a reliable safety signal because it can
+  remain positive while the ranker is still far from a state that makes audit
+  cheap.
+- Because this run used a new cold cache/time-limited rerun, the wall-clock
+  comparison to the historical main run should be treated cautiously; the
+  quality regression and increased oracle work are still enough to reject this
+  threshold.
+
+Source records:
+
+- adaptive threshold run:
+  `BoxDesignSurrogateRL/results/adaptive_handoff_threshold_1e5_s3_o400/manifest_frontier_20260705_184031`
+- handoff trace analysis:
+  `BoxDesignSurrogateRL/results/adaptive_handoff_threshold_1e5_s3_o400/manifest_frontier_20260705_184031/handoff_trace.json`
