@@ -151,6 +151,14 @@ def frontier_command(
         str(args.ranker_max_elapsed_seconds),
         "--ranker-safety-policy",
         args.ranker_safety_policy,
+        "--ranker-handoff-policy",
+        args.ranker_handoff_policy,
+        "--ranker-handoff-min-iterations",
+        str(args.ranker_handoff_min_iterations),
+        "--ranker-handoff-window",
+        str(args.ranker_handoff_window),
+        "--ranker-handoff-min-pf-improvement-per-validation",
+        str(args.ranker_handoff_min_pf_improvement_per_validation),
         "--out-root",
         str(frontier_out_root),
         "--oracle-cache-dir",
@@ -233,6 +241,14 @@ def main() -> None:
         help="Optional maximum safety candidates per iteration for targeted ranker safety policies.",
     )
     parser.add_argument("--ranker-max-elapsed-seconds", type=float, default=180.0)
+    parser.add_argument(
+        "--ranker-handoff-policy",
+        choices=["none", "marginal_pf_per_validation"],
+        default="none",
+    )
+    parser.add_argument("--ranker-handoff-min-iterations", type=int, default=20)
+    parser.add_argument("--ranker-handoff-window", type=int, default=10)
+    parser.add_argument("--ranker-handoff-min-pf-improvement-per-validation", type=float, default=0.0)
     parser.add_argument("--out-root", type=Path, default=ROOT / "results/ranker_window_protocol")
     parser.add_argument("--code-version", default="")
     parser.add_argument("--config-prefix", default="window_protocol")
@@ -249,6 +265,18 @@ def main() -> None:
         raise ValueError("--ranker-max-elapsed-seconds must be positive")
     if args.ranker_safety_max_candidates is not None and args.ranker_safety_max_candidates <= 0:
         raise ValueError("--ranker-safety-max-candidates must be positive when supplied")
+    if args.ranker_handoff_min_iterations < 0:
+        raise ValueError("--ranker-handoff-min-iterations must be non-negative")
+    if args.ranker_handoff_window <= 0:
+        raise ValueError("--ranker-handoff-window must be positive")
+    if (
+        args.ranker_handoff_policy == "marginal_pf_per_validation"
+        and args.ranker_handoff_min_pf_improvement_per_validation <= 0.0
+    ):
+        raise ValueError(
+            "--ranker-handoff-min-pf-improvement-per-validation must be positive "
+            "when marginal_pf_per_validation handoff is enabled"
+        )
     args.ranker_budget_sequence = args.ranker_budget_sequence or ["10,20,30,40,50"]
 
     protocol_id = datetime.now().strftime("protocol_%Y%m%d_%H%M%S")

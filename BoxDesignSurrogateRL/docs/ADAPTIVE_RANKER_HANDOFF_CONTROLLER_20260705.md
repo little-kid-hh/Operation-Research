@@ -63,6 +63,12 @@ python BoxDesignSurrogateRL/scripts/run_query_budgeted_ranker_frontier.py \
   --ranker-handoff-min-pf-improvement-per-validation 0.00001
 ```
 
+The same handoff arguments are also exposed through the paired-window protocol
+entrypoints:
+
+- `BoxDesignSurrogateRL/scripts/run_ranker_window_protocol.py`
+- `BoxDesignSurrogateRL/scripts/run_ranker_frontier_from_exact_manifest.py`
+
 The default remains:
 
 ```text

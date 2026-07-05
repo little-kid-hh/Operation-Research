@@ -24,6 +24,10 @@ class RunRankerWindowProtocolTest(unittest.TestCase):
             ranker_safety_policy="all_expansions",
             ranker_safety_max_candidates=None,
             ranker_max_elapsed_seconds=180.0,
+            ranker_handoff_policy="none",
+            ranker_handoff_min_iterations=20,
+            ranker_handoff_window=10,
+            ranker_handoff_min_pf_improvement_per_validation=0.0,
             code_version="test-version",
             config_prefix="protocol",
         )
@@ -72,6 +76,7 @@ class RunRankerWindowProtocolTest(unittest.TestCase):
         self.assertEqual(Path(cmd[cmd.index("--exact-baseline-summary") + 1]), Path("exact/run/summary.json"))
         self.assertEqual(cmd[cmd.index("--ranker-budget-sequence") + 1], "10,20,30,40,50")
         self.assertEqual(cmd[cmd.index("--ranker-safety-policy") + 1], "all_expansions")
+        self.assertEqual(cmd[cmd.index("--ranker-handoff-policy") + 1], "none")
         self.assertEqual(cmd[cmd.index("--orders-offset") + 1], "300")
 
     def test_frontier_command_passes_targeted_safety_limit(self) -> None:
@@ -91,6 +96,28 @@ class RunRankerWindowProtocolTest(unittest.TestCase):
 
         self.assertEqual(cmd[cmd.index("--ranker-safety-policy") + 1], "targeted_expansion_capture")
         self.assertEqual(cmd[cmd.index("--ranker-safety-max-candidates") + 1], "3")
+
+    def test_frontier_command_passes_adaptive_handoff_policy(self) -> None:
+        args = self._args(initial_boxes_json=None)
+        args.ranker_handoff_policy = "marginal_pf_per_validation"
+        args.ranker_handoff_min_iterations = 30
+        args.ranker_handoff_window = 12
+        args.ranker_handoff_min_pf_improvement_per_validation = 0.00001
+
+        cmd = frontier_command(
+            args=args,
+            seed=1,
+            offset=300,
+            initial_boxes_json=Path("exact/run/initial_boxes.json"),
+            exact_summary=Path("exact/run/summary.json"),
+            frontier_out_root=Path("out/frontier"),
+            frontier_cache_dir=Path("cache/frontier"),
+        )
+
+        self.assertEqual(cmd[cmd.index("--ranker-handoff-policy") + 1], "marginal_pf_per_validation")
+        self.assertEqual(cmd[cmd.index("--ranker-handoff-min-iterations") + 1], "30")
+        self.assertEqual(cmd[cmd.index("--ranker-handoff-window") + 1], "12")
+        self.assertEqual(cmd[cmd.index("--ranker-handoff-min-pf-improvement-per-validation") + 1], "1e-05")
 
 
 if __name__ == "__main__":
