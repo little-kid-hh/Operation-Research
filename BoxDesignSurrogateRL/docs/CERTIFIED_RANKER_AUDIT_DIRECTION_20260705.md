@@ -158,3 +158,10 @@ time cap. It is an adaptive ranker-audit controller that estimates whether
 another ranker iteration is likely to reduce subsequent exact-audit cost enough
 to justify its own oracle work. Ranker-only should remain an ablation, and
 final PF/coverage should still be claimed only after exact audit.
+
+The manifest-level handoff trace analysis in
+`RANKER_HANDOFF_TRACE_ANALYSIS_20260705.md` strengthens this conclusion. Across
+14 analyzed main windows, the last ranker improvement occurs one iteration
+before the stopping row, so a naive no-improvement patience rule would not
+solve the handoff problem. The next controller should estimate marginal ranker
+value versus predicted exact-audit burden.

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from scripts.analyze_ranker_handoff_traces import analyze
+from scripts.analyze_ranker_handoff_traces import analyze, load_manifest_frontiers
 
 
 class AnalyzeRankerHandoffTracesTest(unittest.TestCase):
@@ -96,7 +96,28 @@ class AnalyzeRankerHandoffTracesTest(unittest.TestCase):
         self.assertAlmostEqual(row["subprocess_reduction_pct"], 20.0)
         self.assertAlmostEqual(row["elapsed_reduction_pct"], 10.0)
 
+    def test_load_manifest_frontiers_resolves_relative_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            frontier_path = tmp_path / "frontier_summary.json"
+            frontier_path.write_text("[]", encoding="utf-8")
+            manifest_path = tmp_path / "manifest.json"
+            manifest_path.write_text(
+                json.dumps(
+                    [
+                        {
+                            "label": "seed1:test[0,100)",
+                            "frontier_summary": "frontier_summary.json",
+                        }
+                    ]
+                ),
+                encoding="utf-8",
+            )
+
+            frontiers = load_manifest_frontiers(manifest_path)
+
+        self.assertEqual(frontiers, [("seed1:test[0,100)", frontier_path)])
+
 
 if __name__ == "__main__":
     unittest.main()
-

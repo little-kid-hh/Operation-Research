@@ -218,6 +218,14 @@ Acceptance rule:
 - lower uncached boxes and lower subprocess seconds than the main ranker-audit
   policy on paired windows, or a clear quality improvement at comparable cost.
 
+The handoff trace evidence in
+`RANKER_HANDOFF_TRACE_ANALYSIS_20260705.md` should guide this controller. In
+the 14-window trace table, every analyzed run has its last ranker improvement
+one iteration before the stopping row. This rules out simple patience as the
+main adaptive mechanism and points to a marginal-value controller: keep running
+the ranker only while its expected reduction in subsequent exact-audit burden
+is larger than its own expected oracle cost.
+
 This next iteration would strengthen the paper because it directly targets the
 remaining cost after the current strongest method: exact audit is retained as
 the certification mechanism, but the ranker/audit handoff is chosen by expected

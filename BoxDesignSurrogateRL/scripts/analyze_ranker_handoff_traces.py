@@ -128,6 +128,35 @@ def labeled_path(value: str) -> tuple[str, Path]:
     return label, Path(path_s)
 
 
+def resolve_path(base_dir: Path, value: str | Path) -> Path:
+    path = Path(value)
+    if path.is_absolute():
+        return path
+    candidate = base_dir / path
+    if candidate.exists():
+        return candidate
+    if path.exists():
+        return path
+    return path
+
+
+def load_manifest_frontiers(path: Path) -> list[tuple[str, Path]]:
+    payload = load_json(path)
+    if not isinstance(payload, list):
+        raise ValueError(f"manifest must be a JSON list: {path}")
+    base_dir = path.parent
+    frontiers: list[tuple[str, Path]] = []
+    for idx, record in enumerate(payload):
+        if not isinstance(record, dict):
+            raise ValueError(f"manifest entry {idx} must be an object: {path}")
+        if "label" not in record or "frontier_summary" not in record:
+            raise ValueError(f"manifest entry {idx} needs label and frontier_summary: {path}")
+        label = str(record["label"])
+        frontier_path = resolve_path(base_dir, str(record["frontier_summary"]))
+        frontiers.append((label, frontier_path))
+    return frontiers
+
+
 def analyze_frontier(label: str, path: Path, *, tail_iterations: int) -> dict[str, Any]:
     row = read_frontier_row(path)
     ranker_run_dir = Path(str(row["ranker_run_dir"]))
@@ -229,7 +258,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Analyze ranker/audit handoff traces from query-budgeted frontier summaries."
     )
-    parser.add_argument("--frontier-summary", action="append", type=labeled_path, required=True)
+    parser.add_argument("--frontier-summary", action="append", type=labeled_path, default=None)
+    parser.add_argument(
+        "--manifest",
+        action="append",
+        type=Path,
+        default=None,
+        help="Ranker window manifest containing label/frontier_summary records.",
+    )
     parser.add_argument("--tail-iterations", type=int, default=10)
     parser.add_argument("--out-json", type=Path, default=None)
     parser.add_argument("--out-md", type=Path, default=None)
@@ -237,7 +273,12 @@ def main() -> None:
 
     if args.tail_iterations < 0:
         raise ValueError("--tail-iterations must be non-negative")
-    analysis = analyze(args.frontier_summary, tail_iterations=args.tail_iterations)
+    frontier_summaries = list(args.frontier_summary or [])
+    for manifest_path in args.manifest or []:
+        frontier_summaries.extend(load_manifest_frontiers(manifest_path))
+    if not frontier_summaries:
+        raise ValueError("at least one --frontier-summary or --manifest is required")
+    analysis = analyze(frontier_summaries, tail_iterations=args.tail_iterations)
     if args.out_json is not None:
         write_json(args.out_json, analysis)
     if args.out_md is not None:
@@ -247,4 +288,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
