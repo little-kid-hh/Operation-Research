@@ -178,6 +178,8 @@ def frontier_command(
         cmd.extend(["--ranker-max-elapsed-seconds", str(args.ranker_max_elapsed_seconds)])
     if args.audit_max_elapsed_seconds is not None:
         cmd.extend(["--audit-max-elapsed-seconds", str(args.audit_max_elapsed_seconds)])
+    if args.ranker_safety_max_candidates is not None:
+        cmd.extend(["--ranker-safety-max-candidates", str(args.ranker_safety_max_candidates)])
     if args.prefetch_candidate_statuses:
         cmd.append("--prefetch-candidate-statuses")
     for sequence in args.ranker_budget_sequence:
@@ -223,8 +225,14 @@ def main() -> None:
     parser.add_argument("--ranker-budget-sequence", action="append", type=parse_budget_sequence, default=None)
     parser.add_argument(
         "--ranker-safety-policy",
-        choices=["none", "all_expansions"],
+        choices=["none", "all_expansions", "targeted_expansion_capture"],
         default="none",
+    )
+    parser.add_argument(
+        "--ranker-safety-max-candidates",
+        type=int,
+        default=None,
+        help="Optional maximum safety candidates per iteration for targeted ranker safety policies.",
     )
     parser.add_argument("--ranker-max-elapsed-seconds", type=float, default=None)
     parser.add_argument("--audit-max-elapsed-seconds", type=float, default=None)
@@ -248,6 +256,8 @@ def main() -> None:
         raise ValueError("--ranker-max-elapsed-seconds must be positive")
     if args.audit_max_elapsed_seconds is not None and args.audit_max_elapsed_seconds <= 0.0:
         raise ValueError("--audit-max-elapsed-seconds must be positive")
+    if args.ranker_safety_max_candidates is not None and args.ranker_safety_max_candidates <= 0:
+        raise ValueError("--ranker-safety-max-candidates must be positive when supplied")
     args.ranker_budget_sequence = args.ranker_budget_sequence or ["10,20,30,40,50"]
 
     input_manifest = load_manifest(args.manifest)

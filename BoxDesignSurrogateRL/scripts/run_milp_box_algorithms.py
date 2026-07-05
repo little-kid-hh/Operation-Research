@@ -35,6 +35,10 @@ from box_design_surrogate.milp_oracle import (
 from box_design_surrogate.search import apply_move, coordinate_moves
 
 
+RANKER_SAFETY_POLICIES = ("none", "all_expansions", "targeted_expansion_capture")
+DEFAULT_TARGETED_SAFETY_MAX_CANDIDATES = 5
+
+
 class BoxSetOracle(Protocol):
     def evaluate(self, orders: list, boxes: list[Box]) -> MilpBoxSetScore:
         ...
@@ -312,11 +316,34 @@ def ranker_safety_indices(
     *,
     safety_policy: str,
     moves: list,
+    feature_rows: list[dict[str, Any]] | None = None,
+    predicted_scores: list[float] | None = None,
+    max_candidates: int | None = None,
 ) -> list[int]:
     if safety_policy == "none":
         return []
     if safety_policy == "all_expansions":
         return [idx for idx, move in enumerate(moves) if float(move.delta) > 0.0]
+    if safety_policy == "targeted_expansion_capture":
+        if feature_rows is None:
+            raise ValueError("targeted_expansion_capture requires candidate feature rows")
+        limit = max_candidates or DEFAULT_TARGETED_SAFETY_MAX_CANDIDATES
+        scored_indices: list[tuple[float, float, float, int]] = []
+        for idx, move in enumerate(moves):
+            if float(move.delta) <= 0.0:
+                continue
+            row = feature_rows[idx]
+            capture_savings = float(row.get("assignment_candidate_capture_assigned_box_volume_delta", 0.0))
+            new_capture_volume = float(row.get("assignment_candidate_new_capture_volume", 0.0))
+            capture_count = float(row.get("assignment_candidate_capture_count", 0.0))
+            at_risk_volume = float(row.get("assignment_moved_box_at_risk_volume", 0.0))
+            safety_value = capture_savings + new_capture_volume - at_risk_volume
+            if safety_value <= 0.0 and capture_count <= 0.0:
+                continue
+            ranker_score = float(predicted_scores[idx]) if predicted_scores is not None else 0.0
+            scored_indices.append((safety_value, capture_savings, -ranker_score, idx))
+        scored_indices.sort(key=lambda item: (-item[0], -item[1], item[2], item[3]))
+        return [idx for *_rest, idx in scored_indices[:limit]]
     raise ValueError(f"unknown ranker safety policy: {safety_policy}")
 
 
@@ -621,6 +648,7 @@ def best_single_action_ranker_filtered(
     adaptive_top_k: list[int] | None,
     noop_fallback: bool,
     safety_policy: str = "none",
+    safety_max_candidates: int | None = None,
     prefetch_candidate_statuses_enabled: bool = False,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
     moves = list(coordinate_moves(current, step))
@@ -639,6 +667,7 @@ def best_single_action_ranker_filtered(
             "milp_eval_seconds": 0.0,
             "ranker_top_k_sequence": "",
             "ranker_safety_policy": safety_policy,
+            "ranker_safety_max_candidates": safety_max_candidates,
             "ranker_safety_candidates": 0,
             "ranker_tiers_evaluated": 0,
             "ranker_noop_fallback_used": False,
@@ -681,6 +710,9 @@ def best_single_action_ranker_filtered(
     safety_indices = ranker_safety_indices(
         safety_policy=safety_policy,
         moves=moves,
+        feature_rows=feature_rows,
+        predicted_scores=[float(value) for value in predicted_scores],
+        max_candidates=safety_max_candidates,
     )
 
     best_boxes = current
@@ -736,6 +768,7 @@ def best_single_action_ranker_filtered(
         "milp_eval_seconds": milp_eval_seconds,
         "ranker_top_k_sequence": ",".join(str(value) for value in top_k_sequence),
         "ranker_safety_policy": safety_policy,
+        "ranker_safety_max_candidates": safety_max_candidates,
         "ranker_safety_candidates": len(safety_indices),
         "ranker_tiers_evaluated": tiers_evaluated,
         "ranker_noop_fallback_used": noop_fallback_used,
@@ -993,6 +1026,7 @@ def run_ranker_filtered_greedy(
     adaptive_top_k: list[int] | None,
     noop_fallback: bool,
     safety_policy: str = "none",
+    safety_max_candidates: int | None = None,
     initial_score: MilpBoxSetScore | None = None,
     initial_phase: str = "initial",
     deadline: float | None = None,
@@ -1017,6 +1051,7 @@ def run_ranker_filtered_greedy(
             "milp_eval_seconds": 0.0,
             "ranker_top_k_sequence": "",
             "ranker_safety_policy": safety_policy,
+            "ranker_safety_max_candidates": safety_max_candidates,
             "ranker_safety_candidates": 0,
             "ranker_tiers_evaluated": 0,
             "ranker_noop_fallback_used": False,
@@ -1051,6 +1086,7 @@ def run_ranker_filtered_greedy(
                 adaptive_top_k=adaptive_top_k,
                 noop_fallback=noop_fallback,
                 safety_policy=safety_policy,
+                safety_max_candidates=safety_max_candidates,
                 prefetch_candidate_statuses_enabled=prefetch_candidate_statuses_enabled,
             )
             improved = score_rank(best_score) < score_rank(current_score)
@@ -1107,6 +1143,7 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "surrogate_noop_fallback_used",
         "ranker_top_k_sequence",
         "ranker_safety_policy",
+        "ranker_safety_max_candidates",
         "ranker_safety_candidates",
         "ranker_tiers_evaluated",
         "ranker_noop_fallback_used",
@@ -1235,12 +1272,25 @@ def main() -> None:
     )
     parser.add_argument(
         "--ranker-safety-policy",
-        choices=["none", "all_expansions"],
+        choices=RANKER_SAFETY_POLICIES,
         default="none",
         help=(
             "Optional exact-audit safety set added to every ranker tier. "
             "all_expansions always validates expansion moves because they can "
-            "lower PF by enabling assignments to smaller boxes."
+            "lower PF by enabling assignments to smaller boxes; "
+            "targeted_expansion_capture validates only high capture-value "
+            "expansion moves from assignment-aware candidate features."
+        ),
+    )
+    parser.add_argument(
+        "--ranker-safety-max-candidates",
+        type=int,
+        default=None,
+        help=(
+            "Maximum safety candidates per iteration for targeted ranker safety "
+            "policies. If omitted, targeted_expansion_capture uses a conservative "
+            f"default of {DEFAULT_TARGETED_SAFETY_MAX_CANDIDATES}; all_expansions "
+            "is uncapped unless this value is supplied in a future policy."
         ),
     )
     parser.add_argument(
@@ -1320,6 +1370,8 @@ def main() -> None:
         raise ValueError("--ranker-top-k must be positive")
     if args.ranker_adaptive_top_k is not None and any(value <= 0 for value in args.ranker_adaptive_top_k):
         raise ValueError("--ranker-adaptive-top-k values must be positive")
+    if args.ranker_safety_max_candidates is not None and args.ranker_safety_max_candidates <= 0:
+        raise ValueError("--ranker-safety-max-candidates must be positive when supplied")
     if args.candidate_trace_csv is not None and args.algorithm not in {"paper_fixed_step", "staged_greedy"}:
         raise ValueError("--candidate-trace-csv is currently supported only for exact algorithms")
 
@@ -1387,6 +1439,9 @@ def main() -> None:
         ),
         "ranker_noop_fallback": args.ranker_noop_fallback if args.algorithm == "ranker_filtered_greedy" else None,
         "ranker_safety_policy": args.ranker_safety_policy if args.algorithm == "ranker_filtered_greedy" else None,
+        "ranker_safety_max_candidates": (
+            args.ranker_safety_max_candidates if args.algorithm == "ranker_filtered_greedy" else None
+        ),
         "prefetch_candidate_statuses": args.prefetch_candidate_statuses,
         "candidate_trace_csv": str(args.candidate_trace_csv) if args.candidate_trace_csv is not None else None,
         "coverage_repair": args.coverage_repair,
@@ -1488,6 +1543,7 @@ def main() -> None:
             adaptive_top_k=args.ranker_adaptive_top_k,
             noop_fallback=args.ranker_noop_fallback,
             safety_policy=args.ranker_safety_policy,
+            safety_max_candidates=args.ranker_safety_max_candidates,
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
             deadline=deadline,

@@ -262,6 +262,23 @@ accepted exact-improving candidate. At runtime the ranker orders candidates by
 negative positive-class probability, then the runner still validates candidates
 with the exact MILP oracle before accepting any move.
 
+Ranker safety policies are controlled by:
+
+```text
+--ranker-safety-policy none
+--ranker-safety-policy all_expansions
+--ranker-safety-policy targeted_expansion_capture
+--ranker-safety-max-candidates <n>
+```
+
+`none` is the current main policy. `all_expansions` validates every expansion
+move in each ranker tier and is intentionally broad. `targeted_expansion_capture`
+uses assignment-aware candidate features to validate only high capture-value
+expansion moves, capped by `--ranker-safety-max-candidates`; when the cap is
+omitted, the runner uses a conservative default of five targeted safety
+candidates per iteration. These safety policies affect only the ranker stage.
+Final PF and coverage must still be reported after exact staged-greedy audit.
+
 ## Time-Budgeted Runs
 
 Long held-out or full-data exact runs can take much longer than the dev fine

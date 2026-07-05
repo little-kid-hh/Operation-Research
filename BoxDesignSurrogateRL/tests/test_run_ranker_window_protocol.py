@@ -22,6 +22,7 @@ class RunRankerWindowProtocolTest(unittest.TestCase):
             coverage_repair="geometric_expand",
             ranker_budget_sequence=["10,20,30,40,50"],
             ranker_safety_policy="all_expansions",
+            ranker_safety_max_candidates=None,
             ranker_max_elapsed_seconds=180.0,
             code_version="test-version",
             config_prefix="protocol",
@@ -72,6 +73,24 @@ class RunRankerWindowProtocolTest(unittest.TestCase):
         self.assertEqual(cmd[cmd.index("--ranker-budget-sequence") + 1], "10,20,30,40,50")
         self.assertEqual(cmd[cmd.index("--ranker-safety-policy") + 1], "all_expansions")
         self.assertEqual(cmd[cmd.index("--orders-offset") + 1], "300")
+
+    def test_frontier_command_passes_targeted_safety_limit(self) -> None:
+        args = self._args(initial_boxes_json=None)
+        args.ranker_safety_policy = "targeted_expansion_capture"
+        args.ranker_safety_max_candidates = 3
+
+        cmd = frontier_command(
+            args=args,
+            seed=1,
+            offset=300,
+            initial_boxes_json=Path("exact/run/initial_boxes.json"),
+            exact_summary=Path("exact/run/summary.json"),
+            frontier_out_root=Path("out/frontier"),
+            frontier_cache_dir=Path("cache/frontier"),
+        )
+
+        self.assertEqual(cmd[cmd.index("--ranker-safety-policy") + 1], "targeted_expansion_capture")
+        self.assertEqual(cmd[cmd.index("--ranker-safety-max-candidates") + 1], "3")
 
 
 if __name__ == "__main__":

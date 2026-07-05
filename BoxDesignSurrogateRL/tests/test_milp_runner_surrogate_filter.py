@@ -99,6 +99,18 @@ class HeightExpansionBestOracle:
         return _milp_score(11.0)
 
 
+class TargetedCaptureOracle:
+    def __init__(self) -> None:
+        self.evaluated_boxes: list[list[Box]] = []
+
+    def evaluate(self, orders, boxes):
+        self.evaluated_boxes.append(boxes)
+        box0 = boxes[0]
+        if box0.width > 2.0:
+            return _milp_score_with_assignments(4.0, (0,))
+        return _milp_score_with_assignments(11.0, (1,))
+
+
 class SurrogateFilterTest(unittest.TestCase):
     def test_filter_only_sends_top_k_candidates_to_milp(self) -> None:
         runner = _load_runner_module()
@@ -307,6 +319,37 @@ class SurrogateFilterTest(unittest.TestCase):
         self.assertEqual(metrics["milp_candidate_evaluations_avoided"], 2)
         self.assertEqual(metrics["ranker_safety_policy"], "all_expansions")
         self.assertEqual(metrics["ranker_safety_candidates"], 3)
+
+    def test_ranker_targeted_expansion_capture_recovers_low_ranked_capture(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(3.0, 2.4, 2.0)])]
+        current = [Box(0, 3.0, 2.0, 2.0), Box(1, 5.0, 5.0, 5.0)]
+        oracle = TargetedCaptureOracle()
+
+        best_boxes, best_score, action, metrics = runner.best_single_action_ranker_filtered(
+            oracle=oracle,
+            ranker=WidthShrinkRanker(),
+            orders=orders,
+            current=current,
+            current_score=_milp_score_with_assignments(10.0, (1,)),
+            step=1.0,
+            stage=1,
+            iteration=1,
+            top_k=1,
+            adaptive_top_k=None,
+            noop_fallback=False,
+            safety_policy="targeted_expansion_capture",
+            safety_max_candidates=1,
+        )
+
+        self.assertEqual(len(oracle.evaluated_boxes), 2)
+        self.assertEqual(action, "0:width:+1.000000")
+        self.assertEqual(best_score.packaging_factor, 4.0)
+        self.assertEqual(best_boxes[0].width, 3.0)
+        self.assertEqual(metrics["milp_validated_candidates"], 2)
+        self.assertEqual(metrics["ranker_safety_policy"], "targeted_expansion_capture")
+        self.assertEqual(metrics["ranker_safety_max_candidates"], 1)
+        self.assertEqual(metrics["ranker_safety_candidates"], 1)
 
 
 if __name__ == "__main__":

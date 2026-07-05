@@ -139,8 +139,15 @@ adds 7181 validations, 361 uncached box queries, 209.8493 subprocess seconds,
 and 338.1259 wall-clock seconds. It is also slower than exact staged on the
 main runtime metrics for that window.
 
-These ablations support the next method direction: protect fewer, better chosen
-candidates rather than spending more MILP budget indiscriminately.
+The narrower `targeted_expansion_capture` safety policy is also not a clear
+replacement for safety `none` on the same window. With cap=1 it reaches the
+same certified final PF and is time-comparable, but it uses one additional
+uncached MILP box query and 94 additional validations. With cap=3 it is worse
+than safety `none` on all main cost metrics.
+
+These ablations support keeping safety `none` as the current main policy.
+Simply adding protected candidates, even targeted ones, is not the strongest
+next direction.
 
 ## Defensible Claims
 
@@ -173,12 +180,12 @@ Do not claim the following from current evidence:
 
 ## Next Method Iteration
 
-The next scientifically useful method is targeted certification. The principle
-is to keep the final exact audit, but reduce wasted exact validation during the
-ranker phase by protecting only a small subset of moves whose omission is likely
-to make the audit expensive.
+The next scientifically useful method direction is trace-calibrated audit
+control. The principle is to keep exact certification, but reduce wasted exact
+work after the ranker phase by predicting when audit is likely to be cheap,
+expensive, or unnecessary under a bounded acceptance rule.
 
-Candidate signals:
+Candidate signals for audit control:
 
 - ranker score margin between the top accepted move and nearby alternatives;
 - disagreement between ranker score and simple geometric/PF improvement
@@ -188,11 +195,12 @@ Candidate signals:
 - number of candidates that the ranker rejected before the accepted move;
 - cache-hit and uncached-query profile in the current window.
 
-Targeted certification should be tested against three controls:
+Trace-calibrated audit control should be tested against four controls:
 
 1. Main certified ranker-audit: `20,30,40,50`, safety `none`.
 2. Wide frontier: `20,50,100,200`.
 3. Broad safety: `all_expansions`.
+4. Targeted safety: `targeted_expansion_capture`.
 
 Acceptance rule:
 
@@ -202,10 +210,11 @@ Acceptance rule:
 - lower uncached boxes and lower subprocess seconds than the main ranker-audit
   policy on paired windows, or a clear quality improvement at comparable cost.
 
-This next iteration would strengthen the paper because it converts the negative
-ablation results into a principled design: exact certification is retained, but
-the certification set is selected by evidence rather than by a large fixed
-frontier or a broad rule.
+This next iteration would strengthen the paper because it directly targets the
+remaining cost after the current strongest method: exact audit is retained as
+the certification mechanism, but its expected incremental cost is modeled and
+reported rather than blindly reduced by validating more candidates during the
+ranker stage.
 
 ## Evidence Map
 
@@ -221,6 +230,8 @@ frontier or a broad rule.
   `BoxDesignSurrogateRL/docs/RANKER_FRONTIER_BUDGET_ABLATION_SEED3_O400_20260705.md`
 - Safety policy ablation:
   `BoxDesignSurrogateRL/docs/RANKER_SAFETY_POLICY_ABLATION_SEED3_O400_20260705.md`
+- Targeted capture safety ablation:
+  `BoxDesignSurrogateRL/docs/RANKER_TARGETED_CAPTURE_SAFETY_ABLATION_SEED3_O400_20260705.md`
 - Algorithm/protocol documentation:
   `BoxDesignSurrogateRL/docs/MILP_BOX_ALGORITHMS.md`
   `BoxDesignSurrogateRL/docs/EXPERIMENT_PROTOCOL.md`
@@ -235,6 +246,7 @@ frontier or a broad rule.
 | Exact audit is required. | Ranker-only diagnostics and certified direction doc. | Supported as method rationale. | Need concise main-text wording. |
 | Wide frontier is not a better default. | Seed3 heavy-window frontier ablation. | Supported as focused ablation. | Single heavy window, not broad proof. |
 | Broad expansion safety is not a better default. | Seed3 heavy-window safety ablation. | Supported as focused ablation. | Single heavy window, not broad proof. |
+| Targeted capture safety is not a better default. | Seed3 heavy-window targeted capture ablation. | Supported as focused ablation. | Single heavy window; does not rule out audit-control variants. |
 | Original paper uses an identical baseline. | Not established in current evidence. | Unsupported. | Requires paper/data/protocol verification. |
 
 ## Same-Agent AC-Style Review
@@ -262,4 +274,3 @@ Required revisions before main-text use:
 - Add hardware and oracle implementation details in appendix.
 - Run a larger paired evaluation or clearly label the current result as a
   multi-window pilot.
-

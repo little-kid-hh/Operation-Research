@@ -159,6 +159,7 @@ def make_row(
         "ranker_milp_validated_candidates": ranker_validated,
         "ranker_candidate_avoidance_rate": ranker_summary.get("milp_avoidance_rate"),
         "ranker_safety_policy": ranker_summary.get("ranker_safety_policy"),
+        "ranker_safety_max_candidates": ranker_summary.get("ranker_safety_max_candidates"),
         "ranker_safety_candidates": ranker_summary.get("ranker_safety_candidates"),
         "ranker_eval_seconds": ranker_summary.get("ranker_eval_seconds"),
         "ranker_prefetch_eval_seconds": ranker_prefetch_elapsed,
@@ -254,9 +255,15 @@ def main() -> None:
     parser.add_argument("--ranker-budget-sequence", action="append", type=parse_budget_sequence, default=None)
     parser.add_argument(
         "--ranker-safety-policy",
-        choices=["none", "all_expansions"],
+        choices=["none", "all_expansions", "targeted_expansion_capture"],
         default="none",
         help="Optional ranker safety set passed to ranker_filtered_greedy.",
+    )
+    parser.add_argument(
+        "--ranker-safety-max-candidates",
+        type=int,
+        default=None,
+        help="Optional maximum safety candidates per iteration for targeted ranker safety policies.",
     )
     parser.add_argument("--run-audit", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument(
@@ -295,6 +302,8 @@ def main() -> None:
         raise ValueError("--ranker-max-elapsed-seconds must be positive when supplied")
     if args.audit_max_elapsed_seconds is not None and args.audit_max_elapsed_seconds <= 0.0:
         raise ValueError("--audit-max-elapsed-seconds must be positive when supplied")
+    if args.ranker_safety_max_candidates is not None and args.ranker_safety_max_candidates <= 0:
+        raise ValueError("--ranker-safety-max-candidates must be positive when supplied")
     if args.orders_offset < 0:
         raise ValueError("--orders-offset must be non-negative")
 
@@ -334,6 +343,8 @@ def main() -> None:
                 ranker_label,
             ]
         )
+        if args.ranker_safety_max_candidates is not None:
+            ranker_cmd.extend(["--ranker-safety-max-candidates", str(args.ranker_safety_max_candidates)])
         ranker_summary = run_summary(ranker_cmd, env=env)
         raw_summaries.append(ranker_summary)
 

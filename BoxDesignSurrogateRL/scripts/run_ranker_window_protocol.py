@@ -158,6 +158,8 @@ def frontier_command(
         "--code-version",
         args.code_version,
     ]
+    if args.ranker_safety_max_candidates is not None:
+        cmd.extend(["--ranker-safety-max-candidates", str(args.ranker_safety_max_candidates)])
     for sequence in args.ranker_budget_sequence:
         cmd.extend(["--ranker-budget-sequence", sequence])
     return cmd
@@ -220,9 +222,15 @@ def main() -> None:
     parser.add_argument("--ranker-budget-sequence", action="append", default=None)
     parser.add_argument(
         "--ranker-safety-policy",
-        choices=["none", "all_expansions"],
+        choices=["none", "all_expansions", "targeted_expansion_capture"],
         default="none",
         help="Optional ranker safety set passed to the query-budgeted frontier runner.",
+    )
+    parser.add_argument(
+        "--ranker-safety-max-candidates",
+        type=int,
+        default=None,
+        help="Optional maximum safety candidates per iteration for targeted ranker safety policies.",
     )
     parser.add_argument("--ranker-max-elapsed-seconds", type=float, default=180.0)
     parser.add_argument("--out-root", type=Path, default=ROOT / "results/ranker_window_protocol")
@@ -239,6 +247,8 @@ def main() -> None:
         raise ValueError("--seeds must be non-negative")
     if args.ranker_max_elapsed_seconds <= 0.0:
         raise ValueError("--ranker-max-elapsed-seconds must be positive")
+    if args.ranker_safety_max_candidates is not None and args.ranker_safety_max_candidates <= 0:
+        raise ValueError("--ranker-safety-max-candidates must be positive when supplied")
     args.ranker_budget_sequence = args.ranker_budget_sequence or ["10,20,30,40,50"]
 
     protocol_id = datetime.now().strftime("protocol_%Y%m%d_%H%M%S")
