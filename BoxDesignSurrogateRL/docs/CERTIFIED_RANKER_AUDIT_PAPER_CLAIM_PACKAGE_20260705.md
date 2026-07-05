@@ -234,6 +234,9 @@ subprocess/wall-clock improvement on `seed3:test[400,500)` while preserving
 audited quality, but it does not reduce uncached MILP queries and it increases
 validations. It should remain an ablation candidate until broader paired-window
 evidence exists.
+The 14-window trace simulation shows the tested thresholds would trigger only
+on that heavy window, so the current controller is not yet a general paper
+claim.
 
 This next iteration would strengthen the paper because it directly targets the
 remaining cost after the current strongest method: exact audit is retained as

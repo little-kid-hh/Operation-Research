@@ -244,6 +244,41 @@ adaptive controller has not reduced uncached MILP query count on this window,
 and the validation increase means it should be treated as an ablation candidate
 rather than a replacement for the certified ranker-audit main method.
 
+## Threshold Generalization Check
+
+The existing no-handoff ranker traces were also used to simulate when the
+tested thresholds would trigger across the available main-window frontier
+summaries. The simulation covers 14 of the 15 main windows; `seed3:test[100,200)`
+is excluded because the historical record is stored as split ranker/audit
+summaries rather than a `frontier_summary.json`.
+
+Simulation configuration:
+
+- thresholds: `1e-5`, `5e-6`, `3e-6`;
+- window: `10` ranker iterations;
+- min iterations: `20`;
+- source traces: current certified ranker-audit no-handoff runs.
+
+Result:
+
+- `seed3:test[400,500)` is the only analyzed window where any of these
+  thresholds would trigger.
+- `1e-5` triggers at iteration `270`.
+- `5e-6` triggers at iteration `294`.
+- `3e-6` triggers at iteration `299`.
+- All other analyzed windows do not trigger for these thresholds before the
+  existing ranker stop point.
+
+This means the current marginal PF-per-validation controller is a targeted
+heavy-window runtime optimization, not a broad replacement for the fixed
+ranker cap. Running `3e-6` across all current windows would mostly reproduce
+the no-handoff policy, with a change only on the heavy seed3 offset-400 window.
+
+Source records:
+
+- threshold simulation:
+  `BoxDesignSurrogateRL/results/adaptive_handoff_threshold_simulation_20260705/threshold_simulation_14of15.json`
+
 Source records:
 
 - no-handoff control:

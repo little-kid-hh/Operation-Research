@@ -178,3 +178,9 @@ reduces subprocess and wall-clock time versus a paired current no-handoff
 control, but it increases validations slightly. This supports further
 multi-window testing of adaptive handoff, not replacing the current certified
 ranker-audit main policy yet.
+
+A 14-window trace simulation narrows this further: thresholds `1e-5`, `5e-6`,
+and `3e-6` would trigger only on `seed3:test[400,500)` among the analyzed main
+windows. Therefore the current marginal PF-per-validation handoff should be
+reported, at most, as a targeted heavy-window ablation. It is not yet a general
+controller contribution.
