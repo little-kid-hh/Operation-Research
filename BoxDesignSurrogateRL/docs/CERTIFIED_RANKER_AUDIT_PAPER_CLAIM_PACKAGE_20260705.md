@@ -122,6 +122,14 @@ Aggregate cost reductions:
 The confidence intervals are descriptive window-bootstrap intervals, not formal
 iid guarantees.
 
+The stricter claim audit in
+`CERTIFIED_RANKER_AUDIT_CLAIM_AUDIT_20260705.md` passes with the following
+gates: at least 15 paired windows, complete PF deltas, no post-audit PF
+regression, exact and ranker-audit feasibility, positive aggregate reductions
+for all four cost metrics, no per-window cost increases, positive descriptive
+bootstrap lower bounds, and sign-test p-values below 0.05 for the four cost
+metrics.
+
 ## Negative And Diagnostic Evidence
 
 Ranker-only should not be the main optimizer. Earlier ranker-only runs can stop
@@ -250,6 +258,8 @@ candidates during the ranker stage.
   `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_CERTIFIED_SUMMARY_20260705.md`
 - Main 15-window statistical summary:
   `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_CERTIFIED_STATS_20260705.md`
+- Main 15-window claim audit:
+  `BoxDesignSurrogateRL/docs/CERTIFIED_RANKER_AUDIT_CLAIM_AUDIT_20260705.md`
 - Seed3 certified summary:
   `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED3_CERTIFIED_SUMMARY_20260705.md`
 - Certified method direction:
@@ -270,9 +280,9 @@ candidates during the ranker stage.
 
 | Claim | Evidence | Status | Caveat |
 | --- | --- | --- | --- |
-| Ranker-audit has no certified PF regression on current paired windows. | 15-window summary and stats. | Supported for current windows. | Not yet full OR2023. |
-| Ranker-audit reduces uncached MILP box queries. | 15-window summary and stats. | Supported for current windows. | Uses current cache and subprocess implementation. |
-| Ranker-audit reduces wall-clock time. | 15-window summary and stats. | Supported for current windows. | Hardware and process-launch overhead should be reported in appendix. |
+| Ranker-audit has no certified PF regression on current paired windows. | 15-window claim audit, summary, and stats. | Supported for current windows. | Not yet full OR2023. |
+| Ranker-audit reduces uncached MILP box queries. | 15-window claim audit, summary, and stats. | Supported for current windows. | Uses current cache and subprocess implementation. |
+| Ranker-audit reduces wall-clock time. | 15-window claim audit, summary, and stats. | Supported for current windows. | Hardware and process-launch overhead should be reported in appendix. |
 | Exact audit is required. | Ranker-only diagnostics and certified direction doc. | Supported as method rationale. | Need concise main-text wording. |
 | Wide frontier is not a better default. | Seed3 heavy-window frontier ablation. | Supported as focused ablation. | Single heavy window, not broad proof. |
 | Broad expansion safety is not a better default. | Seed3 heavy-window safety ablation. | Supported as focused ablation. | Single heavy window, not broad proof. |

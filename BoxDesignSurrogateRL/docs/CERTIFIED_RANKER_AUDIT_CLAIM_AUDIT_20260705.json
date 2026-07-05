@@ -1,0 +1,182 @@
+{
+  "verdict": "PASS",
+  "passed": true,
+  "summary_json": "BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_CERTIFIED_SUMMARY_20260705.json",
+  "thresholds": {
+    "min_windows": 15,
+    "pf_tolerance": 1e-12,
+    "min_coverage": 1.0,
+    "coverage_tolerance": 1e-12,
+    "max_uncovered": 0.0,
+    "min_aggregate_cost_reduction_pct": 0.0,
+    "max_cost_increased_windows": 0,
+    "min_bootstrap_low_pct": 0.0,
+    "max_sign_test_p": 0.05,
+    "bootstrap_iterations": 10000,
+    "bootstrap_seed": 20260705
+  },
+  "checks": [
+    {
+      "name": "paired_window_count",
+      "passed": true,
+      "detail": "windows=15, required>=15"
+    },
+    {
+      "name": "pf_complete",
+      "passed": true,
+      "detail": "PF deltas=15, windows=15"
+    },
+    {
+      "name": "no_pf_regression_after_exact_audit",
+      "passed": true,
+      "detail": "matched/improved/regressed=14/1/0, max_regression=0.0000000000, tolerance=1e-12"
+    },
+    {
+      "name": "exact_baseline_feasible",
+      "passed": true,
+      "detail": "min_coverage=1.0000, uncovered=0"
+    },
+    {
+      "name": "ranker_audit_feasible",
+      "passed": true,
+      "detail": "min_coverage=1.0000, uncovered=0"
+    },
+    {
+      "name": "cost_validations",
+      "passed": true,
+      "detail": "n=15, aggregate_reduction=26.02%, bootstrap95=[16.31%, 37.13%], reduced/tied/increased=15/0/0, sign_p=0.000061"
+    },
+    {
+      "name": "cost_uncached_boxes",
+      "passed": true,
+      "detail": "n=15, aggregate_reduction=11.71%, bootstrap95=[7.30%, 16.79%], reduced/tied/increased=15/0/0, sign_p=0.000061"
+    },
+    {
+      "name": "cost_subprocess_seconds",
+      "passed": true,
+      "detail": "n=15, aggregate_reduction=12.35%, bootstrap95=[7.62%, 17.50%], reduced/tied/increased=15/0/0, sign_p=0.000061"
+    },
+    {
+      "name": "cost_elapsed_seconds",
+      "passed": true,
+      "detail": "n=15, aggregate_reduction=13.93%, bootstrap95=[8.86%, 19.62%], reduced/tied/increased=15/0/0, sign_p=0.000061"
+    }
+  ],
+  "analysis": {
+    "summary_path": "BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_CERTIFIED_SUMMARY_20260705.json",
+    "n_windows": 15,
+    "bootstrap_iterations": 10000,
+    "bootstrap_seed": 20260705,
+    "pf_tolerance": 1e-12,
+    "pf": {
+      "n": 15,
+      "matched": 14,
+      "improved": 1,
+      "regressed": 0,
+      "mean_delta": -0.00041475347387661304,
+      "sd_delta": 0.0016063332971057954,
+      "max_regression": 0.0,
+      "max_improvement": -0.006221302108149196,
+      "sign_test_two_sided_p_excluding_ties": 1.0,
+      "bootstrap": {
+        "iterations": 10000,
+        "mean_delta_ci95": {
+          "low": -0.0012442604216298392,
+          "high": 0.0
+        }
+      }
+    },
+    "coverage": {
+      "min_exact_coverage": 1.0,
+      "min_ranker_audit_coverage": 1.0,
+      "total_exact_uncovered": 0.0,
+      "total_ranker_audit_uncovered": 0.0
+    },
+    "cost": {
+      "validations": {
+        "n": 15,
+        "exact_sum": 210480.0,
+        "ranker_audit_sum": 155710.0,
+        "absolute_delta": -54770.0,
+        "aggregate_reduction_pct": 26.021474724439376,
+        "window_reduction_pct_mean": 28.363081364478376,
+        "window_reduction_pct_sd": 19.83124396749751,
+        "windows_reduced": 15,
+        "windows_tied": 0,
+        "windows_increased": 0,
+        "sign_test_two_sided_p_excluding_ties": 6.103515625e-05,
+        "bootstrap": {
+          "iterations": 10000,
+          "mean_reduction_pct_ci95": {
+            "low": 16.311569153255572,
+            "high": 37.13348009449771
+          }
+        }
+      },
+      "uncached_boxes": {
+        "n": 15,
+        "exact_sum": 19842.0,
+        "ranker_audit_sum": 17518.0,
+        "absolute_delta": -2324.0,
+        "aggregate_reduction_pct": 11.712528978933575,
+        "window_reduction_pct_mean": 12.43892553792878,
+        "window_reduction_pct_sd": 10.006704368674354,
+        "windows_reduced": 15,
+        "windows_tied": 0,
+        "windows_increased": 0,
+        "sign_test_two_sided_p_excluding_ties": 6.103515625e-05,
+        "bootstrap": {
+          "iterations": 10000,
+          "mean_reduction_pct_ci95": {
+            "low": 7.302919765138562,
+            "high": 16.78844128802536
+          }
+        }
+      },
+      "subprocess_seconds": {
+        "n": 15,
+        "exact_sum": 10934.003370145336,
+        "ranker_audit_sum": 9583.48580717668,
+        "absolute_delta": -1350.5175629686564,
+        "aggregate_reduction_pct": 12.351537833399306,
+        "window_reduction_pct_mean": 12.892963290236283,
+        "window_reduction_pct_sd": 10.341965177393384,
+        "windows_reduced": 15,
+        "windows_tied": 0,
+        "windows_increased": 0,
+        "sign_test_two_sided_p_excluding_ties": 6.103515625e-05,
+        "bootstrap": {
+          "iterations": 10000,
+          "mean_reduction_pct_ci95": {
+            "low": 7.623035826389383,
+            "high": 17.49569425405903
+          }
+        }
+      },
+      "elapsed_seconds": {
+        "n": 15,
+        "exact_sum": 14710.191772100516,
+        "ranker_audit_sum": 12661.571235902142,
+        "absolute_delta": -2048.620536198374,
+        "aggregate_reduction_pct": 13.92653860627301,
+        "window_reduction_pct_mean": 14.816818817551333,
+        "window_reduction_pct_sd": 10.98706283115666,
+        "windows_reduced": 15,
+        "windows_tied": 0,
+        "windows_increased": 0,
+        "sign_test_two_sided_p_excluding_ties": 6.103515625e-05,
+        "bootstrap": {
+          "iterations": 10000,
+          "mean_reduction_pct_ci95": {
+            "low": 8.857604282634728,
+            "high": 19.62436374168911
+          }
+        }
+      }
+    },
+    "notes": [
+      "Bootstrap confidence intervals resample windows with replacement and are descriptive, not a formal test of independent random samples.",
+      "Sign tests exclude ties and should be interpreted cautiously when windows share data construction and code paths."
+    ]
+  }
+}
