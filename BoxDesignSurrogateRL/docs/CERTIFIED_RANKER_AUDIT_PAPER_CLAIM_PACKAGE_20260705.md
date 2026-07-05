@@ -130,6 +130,13 @@ for all four cost metrics, no per-window cost increases, positive descriptive
 bootstrap lower bounds, and sign-test p-values below 0.05 for the four cost
 metrics.
 
+The anytime trace replay in
+`RANKER_AUDIT_ANYTIME_BUDGET_ANALYSIS_20260705.md` gives the mechanism-level
+evidence. At 25%, 50%, and 75% of each exact baseline's validation budget,
+ranker-audit has lower PF in all 15 windows. It reaches the exact baseline's
+final PF with 152,360 validations versus 209,580 validations, a 27.30%
+aggregate reduction, with reductions in all 15 windows.
+
 ## Negative And Diagnostic Evidence
 
 Ranker-only should not be the main optimizer. Earlier ranker-only runs can stop
@@ -260,6 +267,8 @@ candidates during the ranker stage.
   `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_CERTIFIED_STATS_20260705.md`
 - Main 15-window claim audit:
   `BoxDesignSurrogateRL/docs/CERTIFIED_RANKER_AUDIT_CLAIM_AUDIT_20260705.md`
+- Main 15-window anytime budget analysis:
+  `BoxDesignSurrogateRL/docs/RANKER_AUDIT_ANYTIME_BUDGET_ANALYSIS_20260705.md`
 - Seed3 certified summary:
   `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED3_CERTIFIED_SUMMARY_20260705.md`
 - Certified method direction:
@@ -283,6 +292,7 @@ candidates during the ranker stage.
 | Ranker-audit has no certified PF regression on current paired windows. | 15-window claim audit, summary, and stats. | Supported for current windows. | Not yet full OR2023. |
 | Ranker-audit reduces uncached MILP box queries. | 15-window claim audit, summary, and stats. | Supported for current windows. | Uses current cache and subprocess implementation. |
 | Ranker-audit reduces wall-clock time. | 15-window claim audit, summary, and stats. | Supported for current windows. | Hardware and process-launch overhead should be reported in appendix. |
+| Ranker-audit reaches better anytime PF under partial exact-validation budgets. | 15-window anytime budget analysis. | Supported for current windows. | Trace replay uses completed-run logs, not interrupted live runs. |
 | Exact audit is required. | Ranker-only diagnostics and certified direction doc. | Supported as method rationale. | Need concise main-text wording. |
 | Wide frontier is not a better default. | Seed3 heavy-window frontier ablation. | Supported as focused ablation. | Single heavy window, not broad proof. |
 | Broad expansion safety is not a better default. | Seed3 heavy-window safety ablation. | Supported as focused ablation. | Single heavy window, not broad proof. |
