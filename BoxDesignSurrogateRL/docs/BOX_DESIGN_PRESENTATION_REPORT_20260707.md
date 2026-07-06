@@ -1,14 +1,34 @@
-# Box Design 项目汇报稿
+# Box Design 项目汇报稿（RL 主线修正版）
 
 日期：2026-07-07
 
+## 0. 重要纠正：项目主线仍然是 RL
+
+本项目的研究目标没有改变：我们要做的是 **Kandula-style / RL-style box design**，也就是在箱型设计问题中学习一个能够选择箱型调整动作的策略。
+
+前一版表述里把当前已有最稳的 `ranker + exact audit` 结果写成了“主方法”，这容易误导。更准确的关系是：
+
+```text
+最终研究主线：RL / learned policy for box design
+当前已验证辅助结果：supervised ranker + exact audit 可以减少 MILP oracle cost
+```
+
+因此，汇报时应该这样定位：
+
+- **RL 是项目主线**：状态、动作、奖励和原论文框架都围绕 RL-style box sizing。
+- **Exact staged greedy 是当前严谨 baseline**：用于提供可比的 exact MILP 搜索参考。
+- **HGBT ranker 不是 RL**：它是目前跑出稳定结果的监督学习辅助模块，用来说明“学习模型可以减少 exact oracle 查询”，也可以作为后续 RL 搜索中的候选筛选/动作优先级模块。
+- **当前最终表格不是 RL policy 的最终胜利**：它是 ranker-audit 的已验证结果，应作为中间证据或辅助模块证据，而不是说项目目标已经从 RL 改成 ranker。
+
 ## 1. 一句话总结
 
-我们现在最稳的结论是：
+我们现在应该汇报成两层结论：
 
-> 在 OR2023 订单箱型设计问题中，我们没有让机器学习直接替代 MILP 可行性判断，而是让机器学习模型对候选箱型调整动作排序；最终可行性和 PF 仍由 MILP 和 exact audit 认证。当前 20 组 paired comparison 显示，方法没有造成 PF 变差，coverage 保持 100%，同时减少了 MILP oracle 调用和运行时间。
+> 项目主线是复现并扩展 RL-style box design：状态是箱型尺寸，动作是调整箱子维度，奖励来自 PF 改善。在当前阶段，我们先建立了 exact MILP baseline，并验证了一个 supervised ranker 辅助模块：它不替代 MILP，而是对候选动作排序，从而减少 MILP oracle 查询。这个 ranker 结果是支持 RL 主线的中间证据，不是最终把 RL 换掉。
 
-当前主方法不是强化学习模型，而是一个监督学习的 candidate ranker。
+所以明天不要说“我们已经不做 RL”。正确说法是：
+
+> 我们的目标仍是 RL box design；当前最稳定的已完成实验是一个可认证的 learned candidate ordering 模块，它可以作为 RL 搜索中的加速/候选筛选组件。
 
 ## 2. 数据集是什么
 
@@ -69,7 +89,7 @@ item 数量分布：
 | --- | ---: | --- |
 | reserved train | 1,500 | 预留，当前主结果没有重点使用 |
 | development orders | 500 | 用来生成训练搜索记录和调方法 |
-| held-out test orders | 500 | 最终比较 baseline 和我们的方法 |
+| held-out test orders | 500 | 最终比较 baseline 和 ranker-audit 辅助模块 |
 
 为了汇报简单，可以说：
 
@@ -152,7 +172,7 @@ Baseline 每一步基本做的是：
 
 它质量可靠，但 MILP 调用很贵。
 
-## 6. 和原论文的关系
+## 6. 和原论文 / RL 的关系
 
 我们早期实现过 Kandula-style 强化学习框架复现。
 
@@ -169,7 +189,7 @@ Baseline 每一步基本做的是：
 | reward | PF 下降给正 reward |
 | policy | PPO actor-critic |
 
-但是这条线只能说是“算法框架复现”，不是严格数值复现原论文。
+这条线是项目主线，但目前只能说是“算法框架复现”，不是严格数值复现原论文。
 
 原因：
 
@@ -180,15 +200,15 @@ Baseline 每一步基本做的是：
 
 所以汇报时应这样说：
 
-> 我们复现了原论文的状态/动作/奖励框架，但当前可发表主结果不是 RL，而是 learned candidate ordering with exact MILP audit。
+> 我们复现了原论文的状态/动作/奖励框架，并把它迁移到 OR2023 exact-MILP box design 问题上。由于原论文私有数据和完整实现不可得，当前不是数值复现，而是框架复现。为了让 RL 主线有严谨参照，我们先固定 exact staged greedy baseline；同时，当前 ranker-audit 结果说明 learned candidate ordering 可以减少 MILP oracle cost，后续可以并入 RL 搜索。
 
-## 7. 我们的方法是什么
+## 7. 当前已验证的辅助方法是什么
 
-当前主方法是：
+当前已验证的辅助方法是：
 
 > certified ranker-audit
 
-它不是 RL，也不是 feasibility predictor。
+它不是 RL，也不是 feasibility predictor。它不是用来替代项目主线的，而是目前已经完成验证的学习型候选排序模块。
 
 它是一个监督学习 ranker，模型是：
 
@@ -224,6 +244,10 @@ ranker 输出是一个 priority score：
 
 ranker 给这 60 个动作分别打分，然后按分数排序。
 
+这个模块和 RL 的关系可以这样讲：
+
+> RL policy 最终也要在一堆箱型调整动作中选择下一步。Ranker 学到的是“哪些候选动作更值得优先检查”的信息，因此可以作为 RL 搜索里的候选动作筛选器、动作 prior，或者用于减少 RL/PAAS 阶段的 MILP oracle 调用。
+
 ## 8. Ranker 看哪些信息
 
 ranker 的特征包括：
@@ -242,7 +266,7 @@ ranker 的特征包括：
 
 有些动作会让某个箱子变大，单看箱子体积似乎不好；但它可能让很多订单从更大的箱子转移到这个箱子，整体 PF 反而下降。ranker 要学习的就是这种搜索经验。
 
-## 9. 我们的方法怎么运行
+## 9. 当前 ranker-audit 辅助模块怎么运行
 
 每一步流程：
 
@@ -273,9 +297,9 @@ ranker 的特征包括：
 
 所以它不是固定只筛 30 个。
 
-## 10. Baseline 和我们方法的核心区别
+## 10. Baseline 和当前辅助模块的核心区别
 
-| 方面 | exact staged baseline | 我们的方法 |
+| 方面 | exact staged baseline | ranker-audit 辅助模块 |
 | --- | --- | --- |
 | 候选动作集合 | 约 60 个 coordinate moves | 同样的约 60 个 coordinate moves |
 | 候选顺序 | 直接 exact 评估 | 先由 HGBT ranker 排序 |
@@ -287,7 +311,7 @@ ranker 的特征包括：
 
 一句话：
 
-> Baseline 是用 MILP 直接搜索；我们是用机器学习先排序候选动作，减少无效 MILP 查询，但最终仍由 MILP 认证。
+> Baseline 是用 MILP 直接搜索；ranker-audit 辅助模块是用机器学习先排序候选动作，减少无效 MILP 查询，但最终仍由 MILP 认证。
 
 ## 11. 测试设置
 
@@ -309,7 +333,7 @@ test orders 400-499
 5 组订单 x 4 个 initial seeds = 20 组 paired comparison
 ```
 
-每一组 paired comparison 中，baseline 和我们的方法共享：
+每一组 paired comparison 中，baseline 和 ranker-audit 辅助模块共享：
 
 - 同一批订单；
 - 同一组初始箱型；
@@ -320,9 +344,9 @@ test orders 400-499
 
 所以这是公平的一一对应比较。
 
-## 12. 最终指标对比
+## 12. 当前已完成的 ranker-audit 指标对比
 
-当前主结果基于 20 组 paired comparison：
+当前已完成结果基于 20 组 paired comparison：
 
 | 指标 | Exact staged baseline | Ranker + exact audit | 变化 |
 | --- | ---: | ---: | ---: |
@@ -342,6 +366,14 @@ test orders 400-499
 - MILP oracle 工作量和运行时间有 aggregate reduction。
 
 当前优势主要体现在减少 exact oracle cost，而不是显著降低 PF。
+
+这张表应该被讲成：
+
+> 当前学习型候选排序模块的已验证结果。
+
+不要讲成：
+
+> 最终 RL policy 已经超过 baseline。
 
 ## 13. 指标怎么解释
 
@@ -378,7 +410,7 @@ test orders 400-499
 
 有一个 hard case：`seed3:test[400,500)`。
 
-在 fixed ranker180 下，我们的方法 PF 更好，但部分成本反而上升。后来试了 adaptive handoff，在这个 hard case 上有更好结果：
+在 fixed ranker180 下，ranker-audit 的 PF 更好，但部分成本反而上升。后来试了 adaptive handoff，在这个 hard case 上有更好结果：
 
 | 指标 | fixed ranker180 | adaptive_3e-6 | 变化 |
 | --- | ---: | ---: | ---: |
@@ -399,27 +431,29 @@ test orders 400-499
 当前可以讲：
 
 1. OR2023 数据中约 39% 是 multi-item orders，主实验用 MILP oracle 判断真实 loading feasibility。
-2. 当前 ranker 不是 feasibility predictor，而是 supervised candidate ranker。
-3. ranker 训练来自 300 个订单上 exact baseline 产生的 7,680 条 candidate move records。
-4. 最终测试在不重叠的 500 个 held-out test orders 上完成。
-5. 在 20 组 paired comparison 中，ranker + exact audit 没有 PF 变差，coverage 保持 100%，uncovered orders 为 0。
-6. 方法减少了 aggregate MILP validations、uncached MILP boxes、subprocess time 和 wall-clock time。
+2. 项目目标仍是 RL-style box design；我们已经实现了状态、动作、奖励形式的框架复现。
+3. 当前 ranker 不是 feasibility predictor，而是 supervised candidate ranker。
+4. ranker 训练来自 300 个订单上 exact baseline 产生的 7,680 条 candidate move records。
+5. 最终测试在不重叠的 500 个 held-out test orders 上完成。
+6. 在 20 组 paired comparison 中，ranker + exact audit 没有 PF 变差，coverage 保持 100%，uncovered orders 为 0。
+7. ranker-audit 辅助模块减少了 aggregate MILP validations、uncached MILP boxes、subprocess time 和 wall-clock time。
 
 ## 17. 不要 claim 什么
 
 当前不要说：
 
 - 我们严格复现了原论文全部实验。
-- 当前主方法是 RL。
+- 当前 ranker 表格就是最终 RL 结果。
 - ML 已经替代了 MILP。
 - ranker 是预测 order-box feasibility。
 - 每个测试组都更快。
 - 500-order 一次性测试一定优势更大。
 - adaptive handoff 已经完成完整 broad validation。
+- 项目目标已经从 RL 改成 ranker。
 
 更稳的表述是：
 
-> 我们复现了原论文的 box-sizing RL/search 框架，但当前最可靠的主结果是 supervised learned candidate ordering with exact MILP audit。
+> 项目主线仍是 RL-style box design。当前最可靠的已验证结果是一个 supervised learned candidate ordering 辅助模块，它可以作为后续 RL/PAAS 搜索减少 MILP oracle cost 的组件。
 
 ## 18. 汇报时推荐讲法
 
@@ -427,18 +461,19 @@ test orders 400-499
 
 1. 数据：OR2023 电商订单，每单 1 到 6 个 items，尺寸为整数，约 39% 是多 item。
 2. 问题：设计 10 个箱型，所有订单都要能装下，同时 PF 尽量低。
-3. Baseline：exact staged greedy，每一步用 MILP 检查候选动作，质量可靠但慢。
-4. 早期尝试：直接用 ML feasibility predictor 替代 MILP 不够安全，容易改变搜索轨迹。
-5. 当前方法：HGBT ranker 对候选箱型调整动作排序，优先检查高分动作。
-6. 保证：最终可行性和 PF 仍由 MILP + exact audit 认证。
-7. 结果：20 组 paired comparison 中无 PF 变差，coverage 100%，MILP validations 降低 11.12%，wall-clock 降低 5.87%。
-8. 下一步：在更大测试规模和 adaptive handoff 上验证是否能进一步扩大加速。
+3. RL 框架：状态是 10 个箱子的三维尺寸，动作是对某个维度加减，奖励来自 PF 改善。
+4. Baseline：exact staged greedy，每一步用 MILP 检查候选动作，质量可靠但慢。
+5. 早期尝试：直接用 ML feasibility predictor 替代 MILP 不够安全，容易改变搜索轨迹。
+6. 当前辅助模块：HGBT ranker 对候选箱型调整动作排序，优先检查高分动作。
+7. 保证：ranker-audit 结果的最终可行性和 PF 仍由 MILP + exact audit 认证。
+8. 当前证据：20 组 paired comparison 中无 PF 变差，coverage 100%，MILP validations 降低 11.12%，wall-clock 降低 5.87%。
+9. 下一步：把 learned candidate ordering / adaptive handoff 并入 RL/PAAS 主线，并在更大测试规模上验证。
 
 ## 19. 最短版本
 
 如果只讲一页：
 
-> 我们的问题是 OR2023 多 item 订单的箱型设计。数据里有 12,864 个 unique orders，约 39% 是多 item，item 尺寸都是整数。当前实验用 300 个订单生成训练搜索记录，用另外 500 个不重叠订单测试。Baseline 是 exact staged greedy，每一步用 MILP 检查候选箱型调整动作。我们的方法不是用 ML 替代 MILP，而是用 HGBT ranker 对候选动作排序，优先检查最可能有价值的动作，最后再用 exact audit 认证结果。在 20 组 paired comparison 中，我们的方法 PF 没有变差，coverage 保持 100%，同时 MILP validations 减少 11.12%，wall-clock time 减少 5.87%。
+> 我们的问题是 OR2023 多 item 订单的箱型设计。数据里有 12,864 个 unique orders，约 39% 是多 item，item 尺寸都是整数。项目主线是 RL-style box design：状态是 10 个箱子的尺寸，动作是调整某个箱子的某个维度，奖励来自 PF 改善。为了建立严谨对照，我们使用 exact staged greedy 作为 baseline，每一步由 MILP 检查候选动作。当前已验证的学习模块是 HGBT candidate ranker，它不替代 MILP，而是对候选动作排序，优先检查更有价值的动作，最后再用 exact audit 认证结果。在 20 组 paired comparison 中，ranker-audit PF 没有变差，coverage 保持 100%，同时 MILP validations 减少 11.12%，wall-clock time 减少 5.87%。下一步是把这个 learned candidate ordering 机制整合回 RL/PAAS 主线。
 
 ## 20. 证据文档
 
