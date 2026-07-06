@@ -1,0 +1,82 @@
+[
+  {
+    "label": "seed1:test[0,100)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed1_offset0_20260705\\protocol_20260705_013941\\seed1_test0_100\\exact\\staged_greedy\\run_20260705_013943_252662\\summary.json"
+  },
+  {
+    "label": "seed1:test[100,200)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed1_offset100_20260705\\protocol_20260705_020930\\s1_o100\\e\\staged_greedy\\run_20260705_020932_158758\\summary.json"
+  },
+  {
+    "label": "seed1:test[200,300)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed1_offset200_20260705\\protocol_20260705_031522\\s1_o200\\e\\staged_greedy\\run_20260705_031524_540993\\summary.json"
+  },
+  {
+    "label": "seed1:test[300,400)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed1_offset300_20260705\\protocol_20260705_034349\\s1_o300\\e\\staged_greedy\\run_20260705_034351_204536\\summary.json"
+  },
+  {
+    "label": "seed1:test[400,500)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed1_offset400_20260705\\protocol_20260705_042122\\s1_o400\\e\\staged_greedy\\run_20260705_042124_108806\\summary.json"
+  },
+  {
+    "label": "seed2:test[0,100)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o0\\e\\staged_greedy\\run_20260705_044332_997247\\summary.json"
+  },
+  {
+    "label": "seed2:test[100,200)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o100\\e\\staged_greedy\\run_20260705_050315_090641\\summary.json"
+  },
+  {
+    "label": "seed2:test[200,300)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o200\\e\\staged_greedy\\run_20260705_054048_841547\\summary.json"
+  },
+  {
+    "label": "seed2:test[300,400)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o300\\e\\staged_greedy\\run_20260705_060348_025500\\summary.json"
+  },
+  {
+    "label": "seed2:test[400,500)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\ranker_window_protocol_seed2_offsets0_400_20260705\\protocol_20260705_044331\\s2_o400\\e\\staged_greedy\\run_20260705_062428_460628\\summary.json"
+  },
+  {
+    "label": "seed3:test[0,100)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o0\\e\\staged_greedy\\run_20260706_160143_152586\\summary.json"
+  },
+  {
+    "label": "seed3:test[100,200)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o100\\e\\staged_greedy\\run_20260706_162056_182653\\summary.json"
+  },
+  {
+    "label": "seed3:test[200,300)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o200\\e\\staged_greedy\\run_20260706_170556_182363\\summary.json"
+  },
+  {
+    "label": "seed3:test[300,400)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o300\\e\\staged_greedy\\run_20260706_173826_569812\\summary.json"
+  },
+  {
+    "label": "seed3:test[400,500)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o400\\e\\staged_greedy\\run_20260706_180744_800816\\summary.json"
+  },
+  {
+    "label": "seed4:test[0,100)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o0\\e\\staged_greedy\\run_20260706_015057_265081\\summary.json"
+  },
+  {
+    "label": "seed4:test[100,200)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o100\\e\\staged_greedy\\run_20260706_020806_287462\\summary.json"
+  },
+  {
+    "label": "seed4:test[200,300)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o200\\e\\staged_greedy\\run_20260706_024657_152105\\summary.json"
+  },
+  {
+    "label": "seed4:test[300,400)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o300\\e\\staged_greedy\\run_20260706_031118_939097\\summary.json"
+  },
+  {
+    "label": "seed4:test[400,500)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed4_ranker180_extension_20260706_run\\protocol_20260706_015055\\s4_o400\\e\\staged_greedy\\run_20260706_035220_301727\\summary.json"
+  }
+]
