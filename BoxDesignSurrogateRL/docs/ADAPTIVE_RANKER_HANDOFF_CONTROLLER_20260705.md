@@ -239,6 +239,41 @@ Comparison of `3e-6` against paired no-handoff control:
 - subprocess seconds: `-11.7347`;
 - wall-clock seconds: `-14.6520`.
 
+## Comparison Against Fixed Ranker180
+
+A follow-up comparison also evaluates the same hard window against the
+cap-unified fixed-180 main policy:
+`ADAPTIVE_RANKER_BUDGET_SEED3_O400_COMPARISON_20260706.md`.
+
+This comparison uses `fixed_ranker180_audit` as the reference. On
+`seed3:test[400,500)`, `fixed_ranker180_audit` reaches audited PF
+`1.8251207019`, which is better than exact staged PF `1.8313420040`, but it
+uses more validations, more uncached MILP boxes, and more wall-clock time than
+exact staged. The adaptive 900-second diagnostics keep the same audited PF and
+full coverage while reducing the fixed-180 cost on that same window.
+
+Best wall-clock variant in this comparison:
+
+| metric | fixed ranker180 | adaptive 3e-6 | change vs fixed |
+| --- | ---: | ---: | ---: |
+| audited PF | 1.8251207019 | 1.8251207019 | 0.0000000000 |
+| coverage | 1.0000 | 1.0000 | 0.0000 |
+| uncovered orders | 0 | 0 | 0 |
+| validations | 20920 | 12800 | -38.8% |
+| uncached MILP boxes | 1960 | 1626 | -17.0% |
+| subprocess seconds | 1038.2414 | 839.2221 | -19.2% |
+| wall-clock seconds | 1458.5628 | 1100.4007 | -24.6% |
+
+Interpretation:
+
+- The fixed-180 cap is too short for this hard window: exact audit recovers
+  quality, but the combined path can spend extra oracle work.
+- Allowing a larger outer ranker budget and handing off by marginal PF gain can
+  reduce the downstream exact-audit burden on this same window.
+- This remains a single-window diagnostic. It supports adaptive budget control
+  as the next method direction, but it is not a paper-wide result until tested
+  on the remaining paired windows.
+
 This is a modest single-window runtime win, not yet a main-paper claim. The
 adaptive controller has not reduced uncached MILP query count on this window,
 and the validation increase means it should be treated as an ablation candidate

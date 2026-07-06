@@ -145,10 +145,15 @@ increase windows.
 The important hard-window diagnostic is seed3:test[400,500). With the
 cap-unified 180-second policy, ranker-audit improves PF by `-0.0062213021` but
 uses `0.8%` more validations, `2.1%` more uncached boxes, and `3.0%` more
-wall-clock time on that window. The earlier 900-second seed3 diagnostic reached
-the same improved PF on this window with lower oracle cost. This is evidence
-against a fixed short ranker cap and for an adaptive ranker/audit budget
-controller.
+wall-clock time on that window. The focused adaptive-budget comparison in
+`ADAPTIVE_RANKER_BUDGET_SEED3_O400_COMPARISON_20260706.md` shows that all
+tested 900-second ranker diagnostics reach the same audited PF, complete
+coverage, and zero uncovered orders. The best wall-clock variant,
+`adaptive_3e-6`, keeps the same audited PF and reduces cost relative to
+`fixed_ranker180_audit`: `38.8%` fewer validations, `17.0%` fewer uncached
+MILP boxes, `19.2%` less subprocess time, and `24.6%` lower wall-clock time.
+This is single-window diagnostic evidence against a fixed short ranker cap and
+for an adaptive ranker/audit budget controller, not yet a broad main claim.
 
 During this rerun, an initial seed3 180-second attempt accidentally used the
 full unique-order XML instead of the calibrated test-split XML. That run was
@@ -363,10 +368,12 @@ is larger than its own expected oracle cost.
 The first implementation of that controller is documented in
 `ADAPTIVE_RANKER_HANDOFF_CONTROLLER_20260705.md`. It is experimental and
 disabled by default; any paper claim still requires paired exact-audit results.
-The current threshold evidence is single-window only: `3e-6` gives a modest
-subprocess/wall-clock improvement on `seed3:test[400,500)` while preserving
-audited quality, but it does not reduce uncached MILP queries and it increases
-validations. It should remain an ablation candidate until broader paired-window
+The current threshold evidence is single-window only. Relative to the paired
+900-second no-handoff diagnostic, `3e-6` preserves audited quality and reduces
+subprocess and wall-clock time, but it ties uncached MILP queries and increases
+validations. Relative to the cap-unified fixed-180 main policy on the same
+hard window, it preserves audited quality and reduces all four tracked cost
+metrics. It should remain an ablation candidate until broader paired-window
 evidence exists.
 The 14-window trace simulation shows the tested thresholds would trigger only
 on that heavy window, so the current controller is not yet a general paper
@@ -424,6 +431,8 @@ validating more candidates during the ranker stage.
   `BoxDesignSurrogateRL/docs/RANKER_TARGETED_CAPTURE_SAFETY_ABLATION_SEED3_O400_20260705.md`
 - Ranker time-budget ablation:
   `BoxDesignSurrogateRL/docs/RANKER_TIME_BUDGET_ABLATION_SEED3_O400_20260705.md`
+- Adaptive ranker budget comparison:
+  `BoxDesignSurrogateRL/docs/ADAPTIVE_RANKER_BUDGET_SEED3_O400_COMPARISON_20260706.md`
 - Algorithm/protocol documentation:
   `BoxDesignSurrogateRL/docs/MILP_BOX_ALGORITHMS.md`
   `BoxDesignSurrogateRL/docs/EXPERIMENT_PROTOCOL.md`
@@ -443,6 +452,7 @@ validating more candidates during the ranker stage.
 | Broad expansion safety is not a better default. | Seed3 heavy-window safety ablation. | Supported as focused ablation. | Single heavy window, not broad proof. |
 | Targeted capture safety is not a better default. | Seed3 heavy-window targeted capture ablation. | Supported as focused ablation. | Single heavy window; does not rule out audit-control variants. |
 | Fixed shorter ranker caps are not a better default. | Seed3 heavy-window time-budget ablation. | Supported as focused ablation. | Single heavy window; adaptive handoff remains open. |
+| Adaptive budget control can repair the fixed-180 hard-window cost increase. | Seed3:test[400,500) adaptive budget comparison. | Supported as focused diagnostic. | Single hard window; not yet broad main evidence. |
 | Original paper uses an identical baseline. | Not established in current evidence. | Unsupported. | Requires paper/data/protocol verification. |
 
 ## Same-Agent AC-Style Review
