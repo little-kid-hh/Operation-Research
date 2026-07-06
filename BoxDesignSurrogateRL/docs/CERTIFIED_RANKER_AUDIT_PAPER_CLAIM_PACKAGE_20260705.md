@@ -1,6 +1,6 @@
 # Certified Ranker-Audit Paper Claim Package, 2026-07-05
 
-Updated with seed4 extension evidence on 2026-07-06.
+Updated with cap-unified ranker180 test-split evidence on 2026-07-06.
 
 This document fixes the current paper-facing story for the OR2023
 MILP-backed box design experiments. It is a claim and evidence package, not a
@@ -52,17 +52,18 @@ The current main ranker policy is:
 
 - ranker frontier budgets: `20,30,40,50`;
 - ranker safety policy: `none`;
+- ranker wall-clock cap: `180` seconds for the cap-unified main evidence;
 - final exact audit: required;
 - ranker-only output: diagnostic or ablation only.
 
 This makes the central contribution a learned ordering policy with exact
 certification, not a standalone feasibility predictor.
 
-The current combined evidence records the ranker wall-clock cap as a protocol
-parameter rather than treating it as already finalized: seed1, seed2, and seed4
-use a 180-second ranker cap, while seed3 uses a 900-second cap. A final
-paper-facing main table should either stratify by cap or rerun a cap-unified
-protocol.
+The previous mixed-cap table is retained as diagnostic evidence only: seed1,
+seed2, and seed4 used a 180-second ranker cap, while seed3 used a 900-second
+cap. The current main evidence fixes that protocol issue by rerunning seed3
+with the same 180-second ranker cap on the same OR2023 test split XML used by
+seed1, seed2, and seed4.
 
 ## Baseline Contract
 
@@ -95,8 +96,72 @@ current oracle implementation.
 
 ## Main Evidence
 
-The primary strict paired evidence covers fifteen 100-order OR2023 test windows
-across seed1, seed2, and seed3 initial conditions.
+The current main evidence is the cap-unified ranker180 test-split evaluation:
+twenty 100-order OR2023 test windows across seed1, seed2, seed3, and seed4
+initial conditions.
+
+Configuration:
+
+- dataset: OR2023 test split windows;
+- XML: `BoxDesignSurrogateRL/results/splits_calibration/or2023_seed20260701_limit2500/or2023_bsp_unique_orders_test.xml`;
+- window size: 100 orders;
+- seeds: 1, 2, 3, 4 initial conditions;
+- schedule: `0.25:1000`;
+- K: 10;
+- ranker cap: 180 seconds for every seed;
+- ranker frontier budgets: `20,30,40,50`;
+- ranker safety policy: `none`;
+- final quality: exact staged-greedy audit from the ranker result.
+
+Current main result:
+
+- PF matched/improved/regressed: 19/1/0.
+- Mean PF delta: `-0.0003110651`.
+- Max PF regression: `0.0000000000`.
+- Max PF improvement: `-0.0062213021`.
+- Minimum exact coverage: `1.0000`.
+- Minimum ranker-audit coverage: `1.0000`.
+- Total exact uncovered orders: `0`.
+- Total ranker-audit uncovered orders: `0`.
+
+Current main aggregate cost reductions:
+
+| metric | aggregate reduction | descriptive bootstrap 95% CI | windows reduced/tied/increased | sign-test p |
+| --- | ---: | ---: | ---: | ---: |
+| validations | 11.12% | [7.84%, 15.50%] | 19/0/1 | 0.0000 |
+| uncached boxes | 4.84% | [2.93%, 7.42%] | 18/1/1 | 0.0001 |
+| subprocess seconds | 5.57% | [3.75%, 8.17%] | 19/0/1 | 0.0000 |
+| elapsed seconds | 5.87% | [3.65%, 8.78%] | 19/0/1 | 0.0000 |
+
+The current strict audit in
+`ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_RANKER180_TESTSPLIT_STRICT_CLAIM_AUDIT_20260706.md`
+fails because it requires zero per-window cost increases. The aggregate claim
+audit in
+`ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_RANKER180_TESTSPLIT_AGGREGATE_CLAIM_AUDIT_20260706.md`
+passes when the claim is stated as no certified PF regression, complete
+coverage, positive aggregate cost reductions, and at most two per-metric cost
+increase windows.
+
+The important hard-window diagnostic is seed3:test[400,500). With the
+cap-unified 180-second policy, ranker-audit improves PF by `-0.0062213021` but
+uses `0.8%` more validations, `2.1%` more uncached boxes, and `3.0%` more
+wall-clock time on that window. The earlier 900-second seed3 diagnostic reached
+the same improved PF on this window with lower oracle cost. This is evidence
+against a fixed short ranker cap and for an adaptive ranker/audit budget
+controller.
+
+During this rerun, an initial seed3 180-second attempt accidentally used the
+full unique-order XML instead of the calibrated test-split XML. That run was
+discarded and is not included in any main evidence. The accepted seed3
+ranker180 rerun matches the test-split protocol: for seed3:test[0,100), the
+raw exact summary has `mean_order_volume=35630.33`,
+`milp_validated_candidates=8580`, and exact PF `1.9780321464`, matching the
+prior test-split seed3 exact baseline.
+
+Earlier mixed-cap evidence covers fifteen 100-order OR2023 test windows across
+seed1, seed2, and seed3 initial conditions. It is useful as diagnostic evidence
+but should not be used as the current main table because seed3 used a longer
+900-second ranker cap.
 
 Configuration:
 
@@ -109,7 +174,7 @@ Configuration:
   seed3 uses the certified 900-second protocol;
 - final quality: exact staged-greedy audit from the ranker result.
 
-Main result:
+Mixed-cap 15-window result:
 
 - PF matched/improved/regressed: 14/1/0.
 - Mean PF delta: `-0.0004147535`.
@@ -120,7 +185,7 @@ Main result:
 - Total exact uncovered orders: `0`.
 - Total ranker-audit uncovered orders: `0`.
 
-Aggregate cost reductions:
+Mixed-cap aggregate cost reductions:
 
 | metric | aggregate reduction | descriptive bootstrap 95% CI | windows reduced/tied/increased | sign-test p |
 | --- | ---: | ---: | ---: | ---: |
@@ -140,13 +205,13 @@ for all four cost metrics, no per-window cost increases, positive descriptive
 bootstrap lower bounds, and sign-test p-values below 0.05 for the four cost
 metrics.
 
-Expanded evidence now covers twenty 100-order OR2023 test windows after adding
-seed4 with the same `K=10`, `0.25:1000` exact staged baseline, frontier
-budgets, safety policy, and exact-audit requirement. Seed4 uses the 180-second
-ranker cap. This extension is important because it preserves the quality
-conclusion but rejects an overly strong runtime claim.
+The earlier expanded mixed-cap evidence covers twenty 100-order OR2023 test
+windows after adding seed4 with the same `K=10`, `0.25:1000` exact staged
+baseline, frontier budgets, safety policy, and exact-audit requirement. It
+mixes the 900-second seed3 diagnostic with 180-second seed1, seed2, and seed4
+runs, so it should not be the main table.
 
-Expanded 20-window result:
+Mixed-cap 20-window result:
 
 - PF matched/improved/regressed: 19/1/0.
 - Mean PF delta: `-0.0003110651`.
@@ -157,7 +222,7 @@ Expanded 20-window result:
 - Total exact uncovered orders: `0`.
 - Total ranker-audit uncovered orders: `0`.
 
-Expanded aggregate cost reductions:
+Mixed-cap aggregate cost reductions:
 
 | metric | aggregate reduction | descriptive bootstrap 95% CI | windows reduced/tied/increased | sign-test p |
 | --- | ---: | ---: | ---: | ---: |
@@ -166,7 +231,7 @@ Expanded aggregate cost reductions:
 | subprocess seconds | 10.56% | [6.63%, 14.99%] | 19/0/1 | 0.0000 |
 | elapsed seconds | 11.87% | [7.58%, 16.69%] | 20/0/0 | 0.0000 |
 
-The expanded strict audit in
+The mixed-cap strict audit in
 `ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_STRICT_CLAIM_AUDIT_20260706.md`
 fails only because it requires zero per-window increases for every cost metric:
 seed4:test[100,200) has a `0.5%` subprocess-time increase and an uncached-box
@@ -207,16 +272,16 @@ same certified final PF and is time-comparable, but it uses one additional
 uncached MILP box query and 94 additional validations. With cap=3 it is worse
 than safety `none` on all main cost metrics.
 
-Fixed shorter ranker time budgets are also not a clean replacement for the
-current 900-second cap on this heavy window. A 600-second cap reaches the same
-certified final PF and is 12.4017 seconds faster wall-clock, but uses 13 more
-uncached box queries, 1320 more validations, and 0.9781 more subprocess
-seconds. A 300-second cap is worse than the 900-second cap on every main cost
-metric.
+Fixed shorter ranker time budgets were tested on the heavy seed3:test[400,500)
+diagnostic. A 600-second cap reaches the same certified final PF as the
+900-second diagnostic and is 12.4017 seconds faster wall-clock, but uses 13
+more uncached box queries, 1320 more validations, and 0.9781 more subprocess
+seconds. A 300-second cap is worse than the 900-second diagnostic on every main
+cost metric.
 
-These ablations support keeping safety `none` and the current 900-second heavy
-window cap as the main policy. Simply adding protected candidates or using a
-fixed shorter ranker cap is not the strongest next direction.
+These ablations support keeping safety `none` and treating ranker budget as an
+adaptive control problem. Simply adding protected candidates or choosing a
+single fixed shorter ranker cap is not the strongest next direction.
 
 ## Defensible Claims
 
@@ -226,20 +291,21 @@ The current evidence supports the following conservative claims:
    preserves or improves exact staged final PF after exact audit.
 2. In the same paired windows, coverage remains complete and uncovered orders
    remain zero.
-3. In the primary 15-window strict audit, the certified ranker-audit path
-   reduces validations, uncached MILP box queries, Java/Gurobi subprocess time,
-   and wall-clock time in every window relative to exact staged search.
-4. In the expanded 20-window evidence, the certified ranker-audit path has no
-   PF regression and reduces aggregate oracle cost: `22.49%` fewer validations,
-   `9.89%` fewer uncached MILP box queries, `10.56%` less subprocess time, and
-   `11.87%` lower wall-clock time. The expanded evidence should not be worded
-   as "every cost metric decreases in every window" because one subprocess-time
-   window increases slightly.
+3. In the cap-unified 20-window ranker180 test-split evidence, the certified
+   ranker-audit path has no PF regression and reduces aggregate oracle cost:
+   `11.12%` fewer validations, `4.84%` fewer uncached MILP box queries,
+   `5.57%` less subprocess time, and `5.87%` lower wall-clock time.
+4. The current main evidence should not be worded as "every cost metric
+   decreases in every window." Most windows reduce every main cost metric, but
+   seed3:test[400,500) trades extra validations, uncached boxes, and wall-clock
+   time for a better PF, and seed4:test[100,200) has a small subprocess-time
+   increase with unchanged PF.
 5. Exact audit is essential: the paper should not claim that the learned ranker
    alone is a reliable replacement for exact optimization.
-6. More exact validation is not automatically better: both wider frontier and
-   broad safety-set ablations spend more oracle budget without improving the
-   certified final solution on the tested heavy window.
+6. A fixed short ranker cap is not automatically best. The seed3:test[400,500)
+   comparison between 180-second and 900-second ranker diagnostics indicates
+   that hard windows can benefit from spending more ranker-side effort before
+   exact audit.
 
 ## Non-Claims
 
@@ -307,21 +373,33 @@ on that heavy window, so the current controller is not yet a general paper
 claim.
 
 This next iteration would strengthen the paper because it directly targets the
-remaining cost after the current strongest method: exact audit is retained as
-the certification mechanism, but the ranker/audit handoff is chosen by expected
-incremental oracle cost rather than by a fixed time cap or by validating more
-candidates during the ranker stage.
+remaining weakness in the cap-unified ranker180 result: exact audit is retained
+as the certification mechanism, but the ranker/audit handoff is chosen by
+expected incremental oracle cost rather than by a fixed time cap or by
+validating more candidates during the ranker stage.
 
 ## Evidence Map
 
-- Main 15-window summary:
+- Mixed-cap 15-window summary:
   `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_CERTIFIED_SUMMARY_20260705.md`
-- Main 15-window statistical summary:
+- Mixed-cap 15-window statistical summary:
   `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_CERTIFIED_STATS_20260705.md`
-- Main 15-window claim audit:
+- Mixed-cap 15-window claim audit:
   `BoxDesignSurrogateRL/docs/CERTIFIED_RANKER_AUDIT_CLAIM_AUDIT_20260705.md`
-- Main 15-window anytime budget analysis:
+- Mixed-cap 15-window anytime budget analysis:
   `BoxDesignSurrogateRL/docs/RANKER_AUDIT_ANYTIME_BUDGET_ANALYSIS_20260705.md`
+- Seed3 ranker180 test-split cap-unified summary:
+  `BoxDesignSurrogateRL/docs/SEED3_RANKER180_TESTSPLIT_CAP_UNIFIED_SUMMARY_20260706.md`
+- Seed3 ranker180 test-split cap-unified statistical summary:
+  `BoxDesignSurrogateRL/docs/SEED3_RANKER180_TESTSPLIT_CAP_UNIFIED_STATS_20260706.md`
+- Cap-unified 20-window ranker180 test-split summary:
+  `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_RANKER180_TESTSPLIT_SUMMARY_20260706.md`
+- Cap-unified 20-window ranker180 test-split statistical summary:
+  `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_RANKER180_TESTSPLIT_STATS_20260706.md`
+- Cap-unified 20-window ranker180 strict claim audit:
+  `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_RANKER180_TESTSPLIT_STRICT_CLAIM_AUDIT_20260706.md`
+- Cap-unified 20-window ranker180 aggregate claim audit:
+  `BoxDesignSurrogateRL/docs/ASSIGNMENT_AWARE_SEED1_SEED2_SEED3_SEED4_RANKER180_TESTSPLIT_AGGREGATE_CLAIM_AUDIT_20260706.md`
 - Seed4 extension summary:
   `BoxDesignSurrogateRL/docs/SEED4_RANKER180_EXTENSION_SUMMARY_20260706.md`
 - Seed4 extension statistical summary:
@@ -354,11 +432,11 @@ candidates during the ranker stage.
 
 | Claim | Evidence | Status | Caveat |
 | --- | --- | --- | --- |
-| Ranker-audit has no certified PF regression on current paired windows. | 20-window combined aggregate audit, summary, and stats. | Supported for current windows. | Not yet full OR2023. |
-| Ranker-audit reduces aggregate uncached MILP box queries. | 20-window combined aggregate audit, summary, and stats. | Supported for current windows. | One expanded window ties on uncached boxes; uses current cache and subprocess implementation. |
-| Ranker-audit reduces aggregate wall-clock time. | 20-window combined aggregate audit, summary, and stats. | Supported for current windows. | Hardware and process-launch overhead should be reported in appendix. |
-| Ranker-audit reduces every cost metric in every evaluated window. | 20-window strict audit. | Unsupported as a general claim. | Fails because one seed4 window has a slight subprocess-time increase. |
-| Ranker-audit reduces every cost metric in every primary 15-window strict-audit window. | 15-window claim audit, summary, and stats. | Supported for the primary strict audit only. | Do not generalize this wording to the 20-window extension. |
+| Ranker-audit has no certified PF regression on current paired windows. | Cap-unified 20-window ranker180 aggregate audit, summary, and stats. | Supported for current windows. | Not yet full OR2023. |
+| Ranker-audit reduces aggregate uncached MILP box queries. | Cap-unified 20-window ranker180 aggregate audit, summary, and stats. | Supported for current windows. | One window increases and one ties on uncached boxes; uses current cache and subprocess implementation. |
+| Ranker-audit reduces aggregate wall-clock time. | Cap-unified 20-window ranker180 aggregate audit, summary, and stats. | Supported for current windows. | One window increases wall-clock because it reaches a better PF; hardware and process-launch overhead should be reported in appendix. |
+| Ranker-audit reduces every cost metric in every evaluated window. | Cap-unified 20-window ranker180 strict audit. | Unsupported as a general claim. | Fails because hard windows can trade extra oracle work for equal or better PF. |
+| Mixed-cap ranker-audit has larger aggregate reductions. | Mixed-cap 20-window summary and stats. | Diagnostic only. | Not a main claim because seed3 uses a 900-second ranker cap while other seeds use 180 seconds. |
 | Ranker-audit reaches better anytime PF under partial exact-validation budgets. | 15-window anytime budget analysis. | Supported for current windows. | Trace replay uses completed-run logs, not interrupted live runs. |
 | Exact audit is required. | Ranker-only diagnostics and certified direction doc. | Supported as method rationale. | Need concise main-text wording. |
 | Wide frontier is not a better default. | Seed3 heavy-window frontier ablation. | Supported as focused ablation. | Single heavy window, not broad proof. |
@@ -376,13 +454,15 @@ memo.
 
 Major risks:
 
-- The expanded empirical evidence currently covers 20 paired 100-order windows,
+- The current empirical evidence covers 20 paired 100-order windows,
   not the full OR2023 dataset.
 - The method claim must stay centered on certified candidate ordering. A claim
   that ML replaces MILP would be misleading.
-- The expanded evidence does not support saying every cost metric decreases in
-  every window; that stronger wording is only valid for the 15-window strict
-  audit.
+- The current cap-unified evidence does not support saying every cost metric
+  decreases in every window; it supports no PF regression, full coverage, and
+  positive aggregate reductions.
+- The fixed 180-second cap is scientifically useful as a controlled protocol
+  but is not necessarily the best method policy on hard windows.
 - Runtime reductions are partly implementation-dependent because the current
   oracle uses Java/Gurobi subprocess calls.
 - Literature claims about the original baseline and prior box-sizing work still

@@ -1,0 +1,27 @@
+[
+  {
+    "label": "seed3:test[0,100)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o0\\e\\staged_greedy\\run_20260706_160143_152586\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o0\\r\\frontier_20260706_161153\\frontier_summary.json"
+  },
+  {
+    "label": "seed3:test[100,200)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o100\\e\\staged_greedy\\run_20260706_162056_182653\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o100\\r\\frontier_20260706_164338\\frontier_summary.json"
+  },
+  {
+    "label": "seed3:test[200,300)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o200\\e\\staged_greedy\\run_20260706_170556_182363\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o200\\r\\frontier_20260706_172233\\frontier_summary.json"
+  },
+  {
+    "label": "seed3:test[300,400)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o300\\e\\staged_greedy\\run_20260706_173826_569812\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o300\\r\\frontier_20260706_175325\\frontier_summary.json"
+  },
+  {
+    "label": "seed3:test[400,500)",
+    "exact_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o400\\e\\staged_greedy\\run_20260706_180744_800816\\summary.json",
+    "frontier_summary": "BoxDesignSurrogateRL\\results\\aa_seed3_ranker180_testsplit_cap_unified_20260706\\protocol_20260706_160128\\s3_o400\\r\\frontier_20260706_183121\\frontier_summary.json"
+  }
+]
