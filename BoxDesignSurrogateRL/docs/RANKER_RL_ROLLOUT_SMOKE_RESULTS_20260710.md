@@ -58,10 +58,34 @@ after the policy changes candidate choices on dev. In parallel, the exact and
 ranker baselines must be run beyond 50 iterations because every iteration in
 this smoke still improved PF; these runs do not establish convergence.
 
+## Convergence Follow-up
+
+The exact and ranker-only paths were continued from their respective 50-step
+checkpoints with step `0.25` and a 200-iteration cap. Both stopped before the
+cap. Because the first ranker stop did not inspect the final ten candidates, a
+separate run enabled `ranker_noop_fallback` to exact-audit the terminal state.
+The audit found four additional improving moves and then certified a noop.
+
+| Full path | Final PF | Validations | Uncached boxes | Subprocess s | Wall s |
+|---|---:|---:|---:|---:|---:|
+| Exact to local convergence | **1.890870** | 10620 | 1042 | 410.38 | 645.15 |
+| Ranker + terminal exact audit | **1.890870** | **6300** | **938** | **357.68** | **515.51** |
+
+The final `best_boxes.json` files are byte-identical. Relative to exact, the
+audited ranker path reduces candidate validations by 40.7%, uncached box queries
+by 10.0%, Java/Gurobi subprocess time by 12.8%, and wall-clock time by 20.1%.
+
+This is the strongest result from the current experiment: learned candidate
+ordering plus a terminal exact audit preserves the exact local-search endpoint
+at lower oracle cost. It remains a ranker result, not evidence of an independent
+RL gain, and must be repeated across held-out windows before a general claim.
+
 ## Artifacts
 
 - Exact: `results/rl_rollout_smoke_20260710/staged_greedy/run_20260710_181518_008013`
 - Ranker-only: `results/rl_rollout_smoke_20260710/ranker_filtered_greedy/run_20260710_182159_581400`
 - Legacy transfer: `results/rl_rollout_smoke_20260710/ranker_policy_rollout_greedy/run_20260710_181913_153236`
 - Matched train-only: `results/rl_rollout_smoke_20260710/ranker_policy_rollout_greedy/run_20260710_183911_165510`
-
+- Exact continuation: `results/convergence_continuation_20260710/staged_greedy/run_20260710_184502_682970`
+- Ranker continuation: `results/convergence_continuation_20260710/ranker_filtered_greedy/run_20260710_185256_865978`
+- Ranker terminal audit: `results/convergence_continuation_20260710/ranker_filtered_greedy/run_20260710_185914_691679`
