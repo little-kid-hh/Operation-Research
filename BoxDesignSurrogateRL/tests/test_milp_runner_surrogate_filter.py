@@ -85,6 +85,11 @@ class WidthShrinkRanker:
         ]
 
 
+class NeutralRanker:
+    def predict_scores(self, rows):
+        return [float(idx) for idx, _row in enumerate(rows)]
+
+
 class HeightExpansionBestOracle:
     def __init__(self) -> None:
         self.evaluated_boxes: list[Box] = []
@@ -109,6 +114,36 @@ class TargetedCaptureOracle:
         if box0.width > 2.0:
             return _milp_score_with_assignments(4.0, (0,))
         return _milp_score_with_assignments(11.0, (1,))
+
+
+class LengthOneStepWidthRolloutOracle:
+    def __init__(self) -> None:
+        self.evaluated_boxes: list[Box] = []
+
+    def evaluate(self, orders, boxes):
+        box = boxes[0]
+        self.evaluated_boxes.append(box)
+        if box.length < 3.0:
+            return _milp_score(4.0)
+        if box.width < 3.0:
+            return _milp_score(5.0)
+        return _milp_score(11.0)
+
+
+class WidthPreferredRolloutScorer:
+    def __init__(self, runner) -> None:
+        self.runner = runner
+        self.scored_boxes: list[Box] = []
+
+    def score_candidate(self, *, oracle, orders, boxes, first_score, step):
+        box = boxes[0]
+        self.scored_boxes.append(box)
+        weighted_pf = 1.0 if box.width < 3.0 else 9.0
+        return self.runner.PolicyRolloutScore(
+            rank=(0.0, 0.0, weighted_pf),
+            weighted_packaging_factor=weighted_pf,
+            milp_validations=2,
+        )
 
 
 class SurrogateFilterTest(unittest.TestCase):
@@ -289,6 +324,38 @@ class SurrogateFilterTest(unittest.TestCase):
         self.assertEqual(metrics["ranker_scored_candidates"], 6)
         self.assertEqual(metrics["milp_validated_candidates"], 1)
         self.assertEqual(metrics["milp_candidate_evaluations_avoided"], 5)
+
+    def test_ranker_policy_rollout_selects_long_horizon_candidate(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+        current = [Box(0, 3.0, 3.0, 3.0)]
+        oracle = LengthOneStepWidthRolloutOracle()
+        rollout_scorer = WidthPreferredRolloutScorer(runner)
+
+        best_boxes, best_score, action, metrics = runner.best_single_action_ranker_filtered(
+            oracle=oracle,
+            ranker=NeutralRanker(),
+            orders=orders,
+            current=current,
+            current_score=_milp_score(10.0),
+            step=1.0,
+            stage=1,
+            iteration=1,
+            top_k=6,
+            adaptive_top_k=None,
+            noop_fallback=False,
+            rollout_scorer=rollout_scorer,
+        )
+
+        self.assertEqual(action, "0:width:-1.000000")
+        self.assertEqual(best_score.packaging_factor, 5.0)
+        self.assertEqual(best_boxes[0].width, 2.0)
+        self.assertEqual(metrics["candidate_evaluations"], 6)
+        self.assertEqual(metrics["policy_rollout_scored_candidates"], 2)
+        self.assertEqual(metrics["policy_rollout_milp_validations"], 4)
+        self.assertEqual(metrics["milp_validated_candidates"], 10)
+        self.assertEqual(metrics["policy_rollout_selected_weighted_pf"], 1.0)
+        self.assertEqual(len(rollout_scorer.scored_boxes), 2)
 
     def test_ranker_expansion_safety_recovers_low_ranked_expansion(self) -> None:
         runner = _load_runner_module()

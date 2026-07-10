@@ -11,7 +11,7 @@ import time
 from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, NamedTuple, Protocol
 
 ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = ROOT.parent
@@ -37,6 +37,7 @@ from box_design_surrogate.search import apply_move, coordinate_moves
 
 RANKER_SAFETY_POLICIES = ("none", "all_expansions", "targeted_expansion_capture")
 RANKER_HANDOFF_POLICIES = ("none", "marginal_pf_per_validation")
+RANKER_ALGORITHMS = ("ranker_filtered_greedy", "ranker_policy_rollout_greedy")
 DEFAULT_TARGETED_SAFETY_MAX_CANDIDATES = 5
 
 
@@ -53,6 +54,25 @@ class CandidateSurrogate(Protocol):
         assignment_mode: str = "risk_adjusted",
         candidate_batch_size: int | None = None,
     ) -> list[BoxSetEvaluation]:
+        ...
+
+
+class PolicyRolloutScore(NamedTuple):
+    rank: tuple[float, float, float]
+    weighted_packaging_factor: float
+    milp_validations: int
+
+
+class CandidateRolloutScorer(Protocol):
+    def score_candidate(
+        self,
+        *,
+        oracle: BoxSetOracle,
+        orders: list,
+        boxes: list[Box],
+        first_score: MilpBoxSetScore,
+        step: float,
+    ) -> PolicyRolloutScore:
         ...
 
 
@@ -173,6 +193,9 @@ def time_limit_row(
         "generated_candidates": 0,
         "surrogate_scored_candidates": 0,
         "ranker_scored_candidates": 0,
+        "policy_rollout_scored_candidates": 0,
+        "policy_rollout_milp_validations": 0,
+        "policy_rollout_eval_seconds": 0.0,
         "milp_validated_candidates": 0,
         "milp_candidate_evaluations_avoided": 0,
         "milp_avoidance_rate": 0.0,
@@ -258,6 +281,182 @@ def make_candidate_ranker(args: argparse.Namespace) -> CandidateRanker:
     if args.candidate_ranker_path is None:
         raise ValueError("--candidate-ranker-path is required for ranker_filtered_greedy")
     return CandidateRanker.load(args.candidate_ranker_path)
+
+
+def weighted_packaging_factor(values: list[float], beta: float) -> float:
+    total = 0.0
+    weight = 1.0
+    for value in values:
+        total += weight * float(value)
+        weight *= beta
+    return float(total)
+
+
+def apply_policy_action(
+    boxes: list[Box],
+    action: int,
+    *,
+    k: int,
+    step: float,
+    min_dimension: float,
+) -> list[Box] | None:
+    resign_action = 6 * k
+    if action == resign_action:
+        return None
+    if action < 0 or action >= resign_action:
+        raise ValueError(f"policy action out of range for K={k}: {action}")
+
+    direction = -1.0 if action < 3 * k else 1.0
+    flat_idx = action if action < 3 * k else action - 3 * k
+    box_position = flat_idx // 3
+    dim_idx = flat_idx % 3
+    sorted_boxes = sorted(boxes, key=lambda box: box.box_id)
+    if box_position >= len(sorted_boxes):
+        raise ValueError(f"policy action references missing box position {box_position}")
+
+    out: list[Box] = []
+    for idx, box in enumerate(sorted_boxes):
+        dims = [box.length, box.width, box.height]
+        if idx == box_position:
+            dims[dim_idx] = max(min_dimension, dims[dim_idx] + direction * step)
+            dims = sorted(dims, reverse=True)
+        out.append(Box(box.box_id, float(dims[0]), float(dims[1]), float(dims[2])))
+    return out
+
+
+class ExactPolicyRolloutScorer:
+    """Score exact-MILP child states by short Kandula-style policy rollouts."""
+
+    def __init__(
+        self,
+        *,
+        model: object,
+        k: int,
+        initial_boxes: list[Box],
+        rollout_steps: int,
+        rollout_samples: int,
+        beta: float,
+        sample_policy: bool,
+        seed: int,
+        min_dimension: float = 0.01,
+    ) -> None:
+        if rollout_steps < 0:
+            raise ValueError("rollout_steps must be non-negative")
+        if rollout_samples <= 0:
+            raise ValueError("rollout_samples must be positive")
+        if beta <= 0.0:
+            raise ValueError("beta must be positive")
+        self.model = model
+        self.k = int(k)
+        self.rollout_steps = int(rollout_steps)
+        self.rollout_samples = int(rollout_samples)
+        self.beta = float(beta)
+        self.sample_policy = bool(sample_policy)
+        self.seed = int(seed)
+        self.min_dimension = float(min_dimension)
+        self.scale_dim = max(max(box.length, box.width, box.height) for box in initial_boxes)
+        self._action_calls = 0
+
+    def observation_for_boxes(self, boxes: list[Box]) -> Any:
+        import numpy as _np
+
+        values: list[float] = []
+        for box in sorted(boxes, key=lambda item: item.box_id):
+            values.extend([float(box.length), float(box.width), float(box.height)])
+        obs = _np.asarray(values, dtype=_np.float32)
+        return obs / max(self.scale_dim, 1e-9)
+
+    def policy_action(self, boxes: list[Box]) -> int:
+        from scripts.train_kandula_paper_policy import ensure_torch
+
+        torch, _, Categorical = ensure_torch()
+        obs = self.observation_for_boxes(boxes)
+        obs_t = torch.as_tensor(obs, dtype=torch.float32).unsqueeze(0)
+        with torch.no_grad():
+            logits, _value = self.model(obs_t)
+            if self.sample_policy:
+                torch.manual_seed(self.seed + self._action_calls)
+                self._action_calls += 1
+                dist = Categorical(logits=logits)
+                return int(dist.sample().item())
+            return int(torch.argmax(logits, dim=-1).item())
+
+    def score_candidate(
+        self,
+        *,
+        oracle: BoxSetOracle,
+        orders: list,
+        boxes: list[Box],
+        first_score: MilpBoxSetScore,
+        step: float,
+    ) -> PolicyRolloutScore:
+        weighted_values: list[float] = []
+        worst_uncovered = int(first_score.uncovered_orders)
+        worst_unknown = int(first_score.unknown_pairs)
+        milp_validations = 0
+
+        for _sample in range(self.rollout_samples):
+            sample_boxes = list(boxes)
+            values = [float(first_score.packaging_factor)]
+            sample_uncovered = int(first_score.uncovered_orders)
+            sample_unknown = int(first_score.unknown_pairs)
+            for _step in range(self.rollout_steps):
+                action = self.policy_action(sample_boxes)
+                next_boxes = apply_policy_action(
+                    sample_boxes,
+                    action,
+                    k=self.k,
+                    step=step,
+                    min_dimension=self.min_dimension,
+                )
+                if next_boxes is None:
+                    break
+                sample_boxes = next_boxes
+                score = oracle.evaluate(orders, sample_boxes)
+                milp_validations += 1
+                values.append(float(score.packaging_factor))
+                sample_uncovered = max(sample_uncovered, int(score.uncovered_orders))
+                sample_unknown = max(sample_unknown, int(score.unknown_pairs))
+                if score.uncovered_orders > 0 or score.unknown_pairs > 0:
+                    break
+            weighted_values.append(weighted_packaging_factor(values, self.beta))
+            worst_uncovered = max(worst_uncovered, sample_uncovered)
+            worst_unknown = max(worst_unknown, sample_unknown)
+
+        weighted_pf = float(sum(weighted_values) / len(weighted_values))
+        return PolicyRolloutScore(
+            rank=(float(worst_uncovered), float(worst_unknown), weighted_pf),
+            weighted_packaging_factor=weighted_pf,
+            milp_validations=milp_validations,
+        )
+
+
+def make_policy_rollout_scorer(
+    args: argparse.Namespace,
+    *,
+    initial_boxes: list[Box],
+) -> ExactPolicyRolloutScorer:
+    if args.policy_path is None:
+        raise ValueError("--policy-path is required for ranker_policy_rollout_greedy")
+    from scripts.run_kandula_paper_paas import load_policy
+
+    model, checkpoint = load_policy(args.policy_path)
+    expected_action_count = 6 * args.k + 1
+    if int(checkpoint["action_count"]) != expected_action_count:
+        raise ValueError(
+            f"policy action_count {checkpoint['action_count']} does not match requested K={args.k} "
+            f"({expected_action_count} actions)"
+        )
+    return ExactPolicyRolloutScorer(
+        model=model,
+        k=args.k,
+        initial_boxes=initial_boxes,
+        rollout_steps=args.policy_rollout_steps,
+        rollout_samples=args.policy_rollout_samples,
+        beta=args.policy_rollout_beta,
+        sample_policy=args.sample_policy_rollout,
+        seed=args.seed,
+    )
 
 
 def select_order_window(orders: list, *, offset: int = 0, limit: int | None = None) -> list:
@@ -358,7 +557,7 @@ def ranker_marginal_handoff_metrics(
     ranker_rows = [
         row
         for row in trace
-        if row.get("phase") == "ranker_filtered_greedy"
+        if row.get("phase") in RANKER_ALGORITHMS
         and row.get("stop_reason") in {None, ""}
         and row.get("action") not in {"init", "time_limit", "adaptive_handoff"}
     ]
@@ -699,6 +898,7 @@ def best_single_action_ranker_filtered(
     safety_policy: str = "none",
     safety_max_candidates: int | None = None,
     prefetch_candidate_statuses_enabled: bool = False,
+    rollout_scorer: CandidateRolloutScorer | None = None,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
     moves = list(coordinate_moves(current, step))
     candidates = [apply_move(current, move) for move in moves]
@@ -708,6 +908,10 @@ def best_single_action_ranker_filtered(
             "candidate_evaluations": 0,
             "generated_candidates": 0,
             "ranker_scored_candidates": 0,
+            "policy_rollout_scored_candidates": 0,
+            "policy_rollout_milp_validations": 0,
+            "policy_rollout_eval_seconds": 0.0,
+            "policy_rollout_selected_weighted_pf": "",
             "milp_validated_candidates": 0,
             "milp_candidate_evaluations_avoided": 0,
             "milp_avoidance_rate": 0.0,
@@ -767,8 +971,13 @@ def best_single_action_ranker_filtered(
     best_boxes = current
     best_score = current_score
     best_action = "noop"
+    best_rollout_rank: tuple[float, ...] | None = None
+    best_rollout_weighted_pf: float | str = ""
     milp_eval_seconds = 0.0
     prefetch_eval_seconds = 0.0
+    policy_rollout_eval_seconds = 0.0
+    policy_rollout_milp_validations = 0
+    policy_rollout_scored_candidates = 0
     validated_indices: set[int] = set()
     tiers_evaluated = 0
     noop_fallback_used = False
@@ -796,11 +1005,36 @@ def best_single_action_ranker_filtered(
             eval_started = time.perf_counter()
             score = oracle.evaluate(orders, candidates[idx])
             milp_eval_seconds += time.perf_counter() - eval_started
-            if score_rank(score) < score_rank(best_score):
-                best_boxes = candidates[idx]
-                best_score = score
+            if score_rank(score) < score_rank(current_score):
                 move = moves[idx]
-                best_action = f"{move.box_id}:{move.dimension}:{move.delta:+.6f}"
+                if rollout_scorer is None:
+                    if score_rank(score) < score_rank(best_score):
+                        best_boxes = candidates[idx]
+                        best_score = score
+                        best_action = f"{move.box_id}:{move.dimension}:{move.delta:+.6f}"
+                else:
+                    rollout_started = time.perf_counter()
+                    rollout_score = rollout_scorer.score_candidate(
+                        oracle=oracle,
+                        orders=orders,
+                        boxes=candidates[idx],
+                        first_score=score,
+                        step=step,
+                    )
+                    policy_rollout_eval_seconds += time.perf_counter() - rollout_started
+                    policy_rollout_scored_candidates += 1
+                    policy_rollout_milp_validations += rollout_score.milp_validations
+                    candidate_rollout_rank = (
+                        *rollout_score.rank,
+                        float(score.packaging_factor),
+                        float(idx),
+                    )
+                    if best_rollout_rank is None or candidate_rollout_rank < best_rollout_rank:
+                        best_rollout_rank = candidate_rollout_rank
+                        best_rollout_weighted_pf = rollout_score.weighted_packaging_factor
+                        best_boxes = candidates[idx]
+                        best_score = score
+                        best_action = f"{move.box_id}:{move.dimension}:{move.delta:+.6f}"
         if score_rank(best_score) < score_rank(current_score):
             break
 
@@ -809,12 +1043,16 @@ def best_single_action_ranker_filtered(
         "candidate_evaluations": len(validated_indices),
         "generated_candidates": generated_candidates,
         "ranker_scored_candidates": generated_candidates,
-        "milp_validated_candidates": len(validated_indices),
+        "policy_rollout_scored_candidates": policy_rollout_scored_candidates,
+        "policy_rollout_milp_validations": policy_rollout_milp_validations,
+        "policy_rollout_eval_seconds": policy_rollout_eval_seconds,
+        "policy_rollout_selected_weighted_pf": best_rollout_weighted_pf,
+        "milp_validated_candidates": len(validated_indices) + policy_rollout_milp_validations,
         "milp_candidate_evaluations_avoided": avoided,
         "milp_avoidance_rate": avoided / generated_candidates if generated_candidates else 0.0,
         "ranker_eval_seconds": ranker_eval_seconds,
         "prefetch_eval_seconds": prefetch_eval_seconds,
-        "milp_eval_seconds": milp_eval_seconds,
+        "milp_eval_seconds": milp_eval_seconds + policy_rollout_eval_seconds,
         "ranker_top_k_sequence": ",".join(str(value) for value in top_k_sequence),
         "ranker_safety_policy": safety_policy,
         "ranker_safety_max_candidates": safety_max_candidates,
@@ -1080,6 +1318,8 @@ def run_ranker_filtered_greedy(
     handoff_min_iterations: int = 0,
     handoff_window: int = 10,
     handoff_min_pf_improvement_per_validation: float = 0.0,
+    rollout_scorer: CandidateRolloutScorer | None = None,
+    phase_name: str = "ranker_filtered_greedy",
     initial_score: MilpBoxSetScore | None = None,
     initial_phase: str = "initial",
     deadline: float | None = None,
@@ -1097,6 +1337,10 @@ def run_ranker_filtered_greedy(
             "candidate_evaluations": 0,
             "generated_candidates": 0,
             "ranker_scored_candidates": 0,
+            "policy_rollout_scored_candidates": 0,
+            "policy_rollout_milp_validations": 0,
+            "policy_rollout_eval_seconds": 0.0,
+            "policy_rollout_selected_weighted_pf": "",
             "milp_validated_candidates": 0,
             "milp_candidate_evaluations_avoided": 0,
             "milp_avoidance_rate": 0.0,
@@ -1118,7 +1362,7 @@ def run_ranker_filtered_greedy(
             if deadline_reached(deadline):
                 trace.append(
                     time_limit_row(
-                        phase="ranker_filtered_greedy",
+                        phase=phase_name,
                         iteration=global_iteration + 1,
                         stage=stage_idx,
                         step=step,
@@ -1142,11 +1386,12 @@ def run_ranker_filtered_greedy(
                 safety_policy=safety_policy,
                 safety_max_candidates=safety_max_candidates,
                 prefetch_candidate_statuses_enabled=prefetch_candidate_statuses_enabled,
+                rollout_scorer=rollout_scorer,
             )
             improved = score_rank(best_score) < score_rank(current_score)
             trace.append(
                 {
-                    "phase": "ranker_filtered_greedy",
+                    "phase": phase_name,
                     "iteration": global_iteration,
                     "stage": stage_idx,
                     "step": step,
@@ -1170,7 +1415,7 @@ def run_ranker_filtered_greedy(
                 if handoff_metrics is not None:
                     trace.append(
                         {
-                            "phase": "ranker_filtered_greedy",
+                            "phase": phase_name,
                             "iteration": global_iteration + 1,
                             "stage": stage_idx,
                             "step": step,
@@ -1180,6 +1425,10 @@ def run_ranker_filtered_greedy(
                             "candidate_evaluations": 0,
                             "generated_candidates": 0,
                             "ranker_scored_candidates": 0,
+                            "policy_rollout_scored_candidates": 0,
+                            "policy_rollout_milp_validations": 0,
+                            "policy_rollout_eval_seconds": 0.0,
+                            "policy_rollout_selected_weighted_pf": "",
                             "milp_validated_candidates": 0,
                             "milp_candidate_evaluations_avoided": 0,
                             "milp_avoidance_rate": 0.0,
@@ -1226,9 +1475,13 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "milp_avoidance_rate",
         "surrogate_eval_seconds",
         "ranker_scored_candidates",
+        "policy_rollout_scored_candidates",
+        "policy_rollout_milp_validations",
         "ranker_eval_seconds",
+        "policy_rollout_eval_seconds",
         "prefetch_eval_seconds",
         "milp_eval_seconds",
+        "policy_rollout_selected_weighted_pf",
         "surrogate_top_k_sequence",
         "surrogate_tiers_evaluated",
         "surrogate_noop_fallback_used",
@@ -1269,12 +1522,21 @@ def main() -> None:
             "surrogate_filtered_greedy uses a learned surrogate to filter "
             "candidate actions before MILP-verified acceptance; "
             "ranker_filtered_greedy uses a candidate-level learned ranker "
-            "with the same MILP-verified acceptance rule."
+            "with the same MILP-verified acceptance rule; "
+            "ranker_policy_rollout_greedy keeps the ranker query budget but "
+            "uses a trained Kandula-style policy rollout to score exact-verified "
+            "improving children."
         )
     )
     parser.add_argument(
         "--algorithm",
-        choices=["paper_fixed_step", "staged_greedy", "surrogate_filtered_greedy", "ranker_filtered_greedy"],
+        choices=[
+            "paper_fixed_step",
+            "staged_greedy",
+            "surrogate_filtered_greedy",
+            "ranker_filtered_greedy",
+            "ranker_policy_rollout_greedy",
+        ],
         required=True,
     )
     parser.add_argument("--k", type=int, default=10)
@@ -1422,6 +1684,36 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--policy-path",
+        type=Path,
+        default=None,
+        help="Kandula-style PPO policy checkpoint used by ranker_policy_rollout_greedy.",
+    )
+    parser.add_argument(
+        "--policy-rollout-steps",
+        type=int,
+        default=3,
+        help="Number of policy-controlled future steps used to score each exact-verified child.",
+    )
+    parser.add_argument(
+        "--policy-rollout-samples",
+        type=int,
+        default=1,
+        help="Number of rollout trajectories per child; use >1 only with --sample-policy-rollout.",
+    )
+    parser.add_argument(
+        "--policy-rollout-beta",
+        type=float,
+        default=0.95,
+        help="Discount/weight factor for packaging factors observed along policy rollouts.",
+    )
+    parser.add_argument(
+        "--sample-policy-rollout",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Sample from the policy during rollout instead of using deterministic argmax actions.",
+    )
+    parser.add_argument(
         "--prefetch-candidate-statuses",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -1500,6 +1792,14 @@ def main() -> None:
         raise ValueError("--ranker-adaptive-top-k values must be positive")
     if args.ranker_safety_max_candidates is not None and args.ranker_safety_max_candidates <= 0:
         raise ValueError("--ranker-safety-max-candidates must be positive when supplied")
+    if args.policy_rollout_steps < 0:
+        raise ValueError("--policy-rollout-steps must be non-negative")
+    if args.policy_rollout_samples <= 0:
+        raise ValueError("--policy-rollout-samples must be positive")
+    if args.policy_rollout_beta <= 0.0:
+        raise ValueError("--policy-rollout-beta must be positive")
+    if args.algorithm == "ranker_policy_rollout_greedy" and args.policy_path is None:
+        raise ValueError("--policy-path is required for ranker_policy_rollout_greedy")
     if args.ranker_handoff_min_iterations < 0:
         raise ValueError("--ranker-handoff-min-iterations must be non-negative")
     if args.ranker_handoff_window <= 0:
@@ -1527,7 +1827,12 @@ def main() -> None:
             raise ValueError(f"--initial-boxes-json contains {len(initial_boxes)} boxes, expected --k={args.k}")
     oracle = make_oracle(args)
     surrogate = make_surrogate_evaluator(args, orders) if args.algorithm == "surrogate_filtered_greedy" else None
-    ranker = make_candidate_ranker(args) if args.algorithm == "ranker_filtered_greedy" else None
+    ranker = make_candidate_ranker(args) if args.algorithm in RANKER_ALGORITHMS else None
+    rollout_scorer = (
+        make_policy_rollout_scorer(args, initial_boxes=initial_boxes)
+        if args.algorithm == "ranker_policy_rollout_greedy"
+        else None
+    )
 
     run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S_%f")
     run_dir = args.out_root / args.algorithm / run_id
@@ -1558,7 +1863,7 @@ def main() -> None:
         "milp_time_limit_seconds": args.milp_time_limit_seconds,
         "oracle_cache_dir": str(args.oracle_cache_dir) if args.oracle_cache_dir is not None else None,
         "model_path": str(args.model_path) if args.algorithm == "surrogate_filtered_greedy" else None,
-        "candidate_ranker_path": str(args.candidate_ranker_path) if args.algorithm == "ranker_filtered_greedy" else None,
+        "candidate_ranker_path": str(args.candidate_ranker_path) if args.algorithm in RANKER_ALGORITHMS else None,
         "tau": args.tau if args.algorithm == "surrogate_filtered_greedy" else None,
         "tau_high": args.tau_high if args.algorithm == "surrogate_filtered_greedy" else None,
         "lambda_risk": args.lambda_risk if args.algorithm == "surrogate_filtered_greedy" else None,
@@ -1573,24 +1878,37 @@ def main() -> None:
             args.surrogate_candidate_batch_size if args.algorithm == "surrogate_filtered_greedy" else None
         ),
         "surrogate_rank_mode": args.surrogate_rank_mode if args.algorithm == "surrogate_filtered_greedy" else None,
-        "ranker_top_k": args.ranker_top_k if args.algorithm == "ranker_filtered_greedy" else None,
+        "ranker_top_k": args.ranker_top_k if args.algorithm in RANKER_ALGORITHMS else None,
         "ranker_adaptive_top_k": (
-            args.ranker_adaptive_top_k if args.algorithm == "ranker_filtered_greedy" else None
+            args.ranker_adaptive_top_k if args.algorithm in RANKER_ALGORITHMS else None
         ),
-        "ranker_noop_fallback": args.ranker_noop_fallback if args.algorithm == "ranker_filtered_greedy" else None,
-        "ranker_safety_policy": args.ranker_safety_policy if args.algorithm == "ranker_filtered_greedy" else None,
+        "ranker_noop_fallback": args.ranker_noop_fallback if args.algorithm in RANKER_ALGORITHMS else None,
+        "ranker_safety_policy": args.ranker_safety_policy if args.algorithm in RANKER_ALGORITHMS else None,
         "ranker_safety_max_candidates": (
-            args.ranker_safety_max_candidates if args.algorithm == "ranker_filtered_greedy" else None
+            args.ranker_safety_max_candidates if args.algorithm in RANKER_ALGORITHMS else None
         ),
-        "ranker_handoff_policy": args.ranker_handoff_policy if args.algorithm == "ranker_filtered_greedy" else None,
+        "ranker_handoff_policy": args.ranker_handoff_policy if args.algorithm in RANKER_ALGORITHMS else None,
         "ranker_handoff_min_iterations": (
-            args.ranker_handoff_min_iterations if args.algorithm == "ranker_filtered_greedy" else None
+            args.ranker_handoff_min_iterations if args.algorithm in RANKER_ALGORITHMS else None
         ),
-        "ranker_handoff_window": args.ranker_handoff_window if args.algorithm == "ranker_filtered_greedy" else None,
+        "ranker_handoff_window": args.ranker_handoff_window if args.algorithm in RANKER_ALGORITHMS else None,
         "ranker_handoff_min_pf_improvement_per_validation": (
             args.ranker_handoff_min_pf_improvement_per_validation
-            if args.algorithm == "ranker_filtered_greedy"
+            if args.algorithm in RANKER_ALGORITHMS
             else None
+        ),
+        "policy_path": str(args.policy_path) if args.algorithm == "ranker_policy_rollout_greedy" else None,
+        "policy_rollout_steps": (
+            args.policy_rollout_steps if args.algorithm == "ranker_policy_rollout_greedy" else None
+        ),
+        "policy_rollout_samples": (
+            args.policy_rollout_samples if args.algorithm == "ranker_policy_rollout_greedy" else None
+        ),
+        "policy_rollout_beta": (
+            args.policy_rollout_beta if args.algorithm == "ranker_policy_rollout_greedy" else None
+        ),
+        "sample_policy_rollout": (
+            args.sample_policy_rollout if args.algorithm == "ranker_policy_rollout_greedy" else None
         ),
         "prefetch_candidate_statuses": args.prefetch_candidate_statuses,
         "candidate_trace_csv": str(args.candidate_trace_csv) if args.candidate_trace_csv is not None else None,
@@ -1683,6 +2001,8 @@ def main() -> None:
     else:
         if ranker is None:
             raise RuntimeError("candidate ranker was not initialized")
+        if args.algorithm == "ranker_policy_rollout_greedy" and rollout_scorer is None:
+            raise RuntimeError("policy rollout scorer was not initialized")
         best_boxes, best_score, search_trace = run_ranker_filtered_greedy(
             oracle=oracle,
             ranker=ranker,
@@ -1698,6 +2018,8 @@ def main() -> None:
             handoff_min_iterations=args.ranker_handoff_min_iterations,
             handoff_window=args.ranker_handoff_window,
             handoff_min_pf_improvement_per_validation=args.ranker_handoff_min_pf_improvement_per_validation,
+            rollout_scorer=rollout_scorer,
+            phase_name=args.algorithm,
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
             deadline=deadline,
@@ -1720,6 +2042,12 @@ def main() -> None:
         "generated_candidates": int(sum(row.get("generated_candidates", 0) for row in trace)),
         "surrogate_scored_candidates": int(sum(row.get("surrogate_scored_candidates", 0) for row in trace)),
         "ranker_scored_candidates": int(sum(row.get("ranker_scored_candidates", 0) for row in trace)),
+        "policy_rollout_scored_candidates": int(
+            sum(row.get("policy_rollout_scored_candidates", 0) for row in trace)
+        ),
+        "policy_rollout_milp_validations": int(
+            sum(row.get("policy_rollout_milp_validations", 0) for row in trace)
+        ),
         "milp_validated_candidates": int(sum(row.get("milp_validated_candidates", 0) for row in trace)),
         "milp_candidate_evaluations_avoided": int(
             sum(row.get("milp_candidate_evaluations_avoided", 0) for row in trace)
@@ -1732,6 +2060,7 @@ def main() -> None:
         ),
         "surrogate_eval_seconds": float(sum(row.get("surrogate_eval_seconds", 0.0) for row in trace)),
         "ranker_eval_seconds": float(sum(row.get("ranker_eval_seconds", 0.0) for row in trace)),
+        "policy_rollout_eval_seconds": float(sum(row.get("policy_rollout_eval_seconds", 0.0) for row in trace)),
         "prefetch_eval_seconds": float(sum(row.get("prefetch_eval_seconds", 0.0) for row in trace)),
         "milp_eval_seconds": float(sum(row.get("milp_eval_seconds", 0.0) for row in trace)),
         "surrogate_tiers_evaluated": int(sum(row.get("surrogate_tiers_evaluated", 0) for row in trace)),
