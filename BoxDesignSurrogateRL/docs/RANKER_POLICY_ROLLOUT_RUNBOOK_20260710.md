@@ -70,10 +70,24 @@ python BoxDesignSurrogateRL/scripts/run_milp_box_algorithms.py \
   --policy-rollout-samples 1 \
   --policy-rollout-beta 0.95 \
   --no-sample-policy-rollout \
+  --allow-policy-step-transfer \
   --prefetch-candidate-statuses \
   --out-root BoxDesignSurrogateRL/results/rl_rollout_smoke_20260710 \
   --config-label ranker_policy_rollout_top20_30_40_50_r3
 ```
+
+The bundled checkpoint above was trained at step `0.5`, so this command is an
+explicit transfer diagnostic. A main comparison must use a train-only policy
+whose checkpoint step matches the search schedule; the runner now rejects a
+silent mismatch.
+
+## Smoke Outcome
+
+The paired experiment and ranker-only ablation are recorded in
+`RANKER_RL_ROLLOUT_SMOKE_RESULTS_20260710.md`. Ranker-only improved PF and
+reduced exact-oracle cost relative to exact staged. Neither the legacy transfer
+policy nor the matched-step train-only policy demonstrated an independent RL
+gain, so the broader matrix below is paused pending a better RL training signal.
 
 ## Acceptance For Smoke
 

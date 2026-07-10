@@ -147,6 +147,33 @@ class WidthPreferredRolloutScorer:
 
 
 class SurrogateFilterTest(unittest.TestCase):
+    def test_policy_step_schedule_requires_explicit_transfer(self) -> None:
+        runner = _load_runner_module()
+
+        self.assertTrue(runner.validate_policy_step_schedule(0.25, [(0.25, 50)], allow_transfer=False))
+        with self.assertRaisesRegex(ValueError, "allow-policy-step-transfer"):
+            runner.validate_policy_step_schedule(0.5, [(0.25, 50)], allow_transfer=False)
+        self.assertFalse(runner.validate_policy_step_schedule(0.5, [(0.25, 50)], allow_transfer=True))
+
+    def test_policy_rollout_uses_checkpoint_normalization_scale(self) -> None:
+        runner = _load_runner_module()
+        scorer = runner.ExactPolicyRolloutScorer(
+            model=object(),
+            k=1,
+            initial_boxes=[Box(0, 10.0, 5.0, 2.0)],
+            rollout_steps=1,
+            rollout_samples=1,
+            beta=0.95,
+            sample_policy=False,
+            seed=0,
+            scale_dim=20.0,
+        )
+
+        self.assertEqual(scorer.scale_dim_source, "checkpoint")
+        observed = scorer.observation_for_boxes([Box(0, 10.0, 5.0, 2.0)]).tolist()
+        for actual, expected in zip(observed, [0.5, 0.25, 0.1], strict=True):
+            self.assertAlmostEqual(actual, expected)
+
     def test_filter_only_sends_top_k_candidates_to_milp(self) -> None:
         runner = _load_runner_module()
         orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]

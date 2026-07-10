@@ -292,6 +292,29 @@ def weighted_packaging_factor(values: list[float], beta: float) -> float:
     return float(total)
 
 
+def policy_step_matches_schedule(checkpoint_step: float | None, schedule: list[tuple[float, int]]) -> bool:
+    if checkpoint_step is None:
+        return False
+    return all(abs(float(step) - float(checkpoint_step)) <= 1e-12 for step, _iterations in schedule)
+
+
+def validate_policy_step_schedule(
+    checkpoint_step: float | None,
+    schedule: list[tuple[float, int]],
+    *,
+    allow_transfer: bool,
+) -> bool:
+    matches = policy_step_matches_schedule(checkpoint_step, schedule)
+    if not matches and not allow_transfer:
+        schedule_steps = sorted({float(step) for step, _iterations in schedule})
+        raise ValueError(
+            "policy checkpoint step_size does not match the search schedule: "
+            f"checkpoint={checkpoint_step!r}, schedule={schedule_steps}. "
+            "Train a matched policy or pass --allow-policy-step-transfer to mark this as an explicit transfer run."
+        )
+    return matches
+
+
 def apply_policy_action(
     boxes: list[Box],
     action: int,
@@ -338,6 +361,13 @@ class ExactPolicyRolloutScorer:
         beta: float,
         sample_policy: bool,
         seed: int,
+        scale_dim: float | None = None,
+        checkpoint_mode: str = "",
+        checkpoint_step_size: float | None = None,
+        checkpoint_training_order_count: int | None = None,
+        checkpoint_training_xml_sha256: str = "",
+        step_matches_schedule: bool = False,
+        step_transfer_allowed: bool = False,
         min_dimension: float = 0.01,
     ) -> None:
         if rollout_steps < 0:
@@ -354,7 +384,15 @@ class ExactPolicyRolloutScorer:
         self.sample_policy = bool(sample_policy)
         self.seed = int(seed)
         self.min_dimension = float(min_dimension)
-        self.scale_dim = max(max(box.length, box.width, box.height) for box in initial_boxes)
+        inferred_scale = max(max(box.length, box.width, box.height) for box in initial_boxes)
+        self.scale_dim = float(scale_dim) if scale_dim is not None else float(inferred_scale)
+        self.scale_dim_source = "checkpoint" if scale_dim is not None else "inference_initial_boxes"
+        self.checkpoint_mode = str(checkpoint_mode)
+        self.checkpoint_step_size = checkpoint_step_size
+        self.checkpoint_training_order_count = checkpoint_training_order_count
+        self.checkpoint_training_xml_sha256 = str(checkpoint_training_xml_sha256)
+        self.step_matches_schedule = bool(step_matches_schedule)
+        self.step_transfer_allowed = bool(step_transfer_allowed)
         self._action_calls = 0
 
     def observation_for_boxes(self, boxes: list[Box]) -> Any:
@@ -447,6 +485,13 @@ def make_policy_rollout_scorer(
             f"policy action_count {checkpoint['action_count']} does not match requested K={args.k} "
             f"({expected_action_count} actions)"
         )
+    checkpoint_step = float(checkpoint["step_size"]) if checkpoint.get("step_size") is not None else None
+    step_matches = validate_policy_step_schedule(
+        checkpoint_step,
+        args.schedule,
+        allow_transfer=args.allow_policy_step_transfer,
+    )
+    checkpoint_scale = float(checkpoint["scale_dim"]) if checkpoint.get("scale_dim") is not None else None
     return ExactPolicyRolloutScorer(
         model=model,
         k=args.k,
@@ -456,6 +501,17 @@ def make_policy_rollout_scorer(
         beta=args.policy_rollout_beta,
         sample_policy=args.sample_policy_rollout,
         seed=args.seed,
+        scale_dim=checkpoint_scale,
+        checkpoint_mode=str(checkpoint.get("mode", "")),
+        checkpoint_step_size=checkpoint_step,
+        checkpoint_training_order_count=(
+            int(checkpoint["training_order_count"])
+            if checkpoint.get("training_order_count") is not None
+            else None
+        ),
+        checkpoint_training_xml_sha256=str(checkpoint.get("training_xml_sha256", "")),
+        step_matches_schedule=step_matches,
+        step_transfer_allowed=args.allow_policy_step_transfer,
     )
 
 
@@ -1714,6 +1770,15 @@ def main() -> None:
         help="Sample from the policy during rollout instead of using deterministic argmax actions.",
     )
     parser.add_argument(
+        "--allow-policy-step-transfer",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help=(
+            "Allow a policy trained with a different step size to score this schedule. "
+            "The mismatch is recorded in the manifest and must be reported as transfer."
+        ),
+    )
+    parser.add_argument(
         "--prefetch-candidate-statuses",
         action=argparse.BooleanOptionalAction,
         default=False,
@@ -1909,6 +1974,20 @@ def main() -> None:
         ),
         "sample_policy_rollout": (
             args.sample_policy_rollout if args.algorithm == "ranker_policy_rollout_greedy" else None
+        ),
+        "policy_checkpoint_mode": getattr(rollout_scorer, "checkpoint_mode", None),
+        "policy_checkpoint_step_size": getattr(rollout_scorer, "checkpoint_step_size", None),
+        "policy_checkpoint_scale_dim": getattr(rollout_scorer, "scale_dim", None),
+        "policy_checkpoint_scale_dim_source": getattr(rollout_scorer, "scale_dim_source", None),
+        "policy_checkpoint_training_order_count": getattr(
+            rollout_scorer, "checkpoint_training_order_count", None
+        ),
+        "policy_checkpoint_training_xml_sha256": getattr(
+            rollout_scorer, "checkpoint_training_xml_sha256", None
+        ),
+        "policy_step_matches_schedule": getattr(rollout_scorer, "step_matches_schedule", None),
+        "allow_policy_step_transfer": (
+            args.allow_policy_step_transfer if args.algorithm == "ranker_policy_rollout_greedy" else None
         ),
         "prefetch_candidate_statuses": args.prefetch_candidate_statuses,
         "candidate_trace_csv": str(args.candidate_trace_csv) if args.candidate_trace_csv is not None else None,

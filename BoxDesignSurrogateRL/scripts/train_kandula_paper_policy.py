@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import os
 import platform
@@ -153,6 +154,14 @@ def git_output(args: list[str]) -> str:
         return subprocess.check_output(args, cwd=REPO_ROOT, text=True).strip()
     except Exception:
         return "unavailable"
+
+
+def file_sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
 
 
 def discounted_returns(rewards: list[float], gamma: float) -> list[float]:
@@ -587,9 +596,13 @@ def main() -> None:
                 "hidden_dim": args.hidden_dim,
                 "hidden_layers": args.hidden_layers,
                 "normalize_observation": env.normalize_observation,
+                "scale_dim": float(env.scale_dim),
                 "mode": args.mode,
                 "objective_mode": getattr(env, "objective_mode", ""),
                 "reward_scale": reward_scale,
+                "training_order_count": len(orders),
+                "training_xml_path": str(args.xml_path),
+                "training_xml_sha256": file_sha256(args.xml_path),
             },
             out_dir / "policy_final.pt",
         )
