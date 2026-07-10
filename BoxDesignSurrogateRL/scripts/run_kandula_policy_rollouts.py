@@ -26,6 +26,7 @@ if str(REPO_ROOT) not in sys.path:
 from box_design_surrogate import SurrogateEvaluator, read_order_summaries  # noqa: E402
 from box_design_surrogate.kandula_paper import KandulaBoxSizingGame  # noqa: E402
 from box_design_surrogate.kandula_repro import initial_boxes_kmeans  # noqa: E402
+from box_design_surrogate.policy_context import ORDER_CONTEXT_SCHEMA  # noqa: E402
 from box_design_surrogate.surrogate_game import SurrogateBoxSizingGame  # noqa: E402
 from scripts.run_kandula_paper_paas import boxes_to_rows, load_boxes_json, load_policy  # noqa: E402
 from scripts.train_kandula_paper_policy import ensure_torch, environment_metrics, result_metrics  # noqa: E402
@@ -200,6 +201,7 @@ def build_env(args: argparse.Namespace, orders, initial_boxes):
         objective_mode=args.objective_mode,
         terminate_on_worse_than_initial=args.terminate_on_worse_than_initial,
         candidate_batch_size=args.candidate_batch_size,
+        include_order_context=args.include_order_context,
     )
 
 
@@ -222,6 +224,8 @@ def apply_checkpoint_environment_metadata(env, checkpoint: dict[str, object], *,
         "training_order_count": checkpoint.get("training_order_count"),
         "training_xml_sha256": checkpoint.get("training_xml_sha256", ""),
         "reward_definition": checkpoint.get("reward_definition", ""),
+        "include_order_context": checkpoint.get("include_order_context", False),
+        "order_context_schema": checkpoint.get("order_context_schema", []),
     }
 
 
@@ -370,6 +374,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run direct RL policy rollouts for Kandula-style box design.")
     parser.add_argument("--policy-path", type=Path, required=True)
     parser.add_argument("--mode", choices=["paper", "surrogate"], default="paper")
+    parser.add_argument(
+        "--include-order-context",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
     parser.add_argument("--policy-mode", choices=["sample", "greedy", "both"], default="sample")
     parser.add_argument("--rollouts", type=int, default=16)
     parser.add_argument("--orders-offset", type=int, default=0)
@@ -468,6 +477,14 @@ def main() -> None:
             raise ValueError(
                 f"policy objective_mode {checkpoint.get('objective_mode')} does not match requested objective_mode {args.objective_mode}"
             )
+        checkpoint_has_context = bool(checkpoint.get("include_order_context", False))
+        if checkpoint_has_context != args.include_order_context:
+            raise ValueError(
+                f"policy include_order_context={checkpoint_has_context} does not match requested "
+                f"include_order_context={args.include_order_context}"
+            )
+        if checkpoint_has_context and checkpoint.get("order_context_schema") != list(ORDER_CONTEXT_SCHEMA):
+            raise ValueError("policy order_context_schema does not match this code version")
 
         policy_modes = ["sample", "greedy"] if args.policy_mode == "both" else [args.policy_mode]
         summary_rows: list[dict[str, object]] = []

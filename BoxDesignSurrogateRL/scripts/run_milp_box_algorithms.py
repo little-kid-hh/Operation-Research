@@ -32,6 +32,7 @@ from box_design_surrogate.milp_oracle import (
     MilpBoxSetScore,
     MilpLabelTableOracle,
 )
+from box_design_surrogate.policy_context import ORDER_CONTEXT_SCHEMA, order_distribution_context
 from box_design_surrogate.search import apply_move, coordinate_moves
 
 
@@ -356,6 +357,7 @@ class ExactPolicyRolloutScorer:
         model: object,
         k: int,
         initial_boxes: list[Box],
+        orders: list,
         rollout_steps: int,
         rollout_samples: int,
         beta: float,
@@ -368,6 +370,7 @@ class ExactPolicyRolloutScorer:
         checkpoint_training_xml_sha256: str = "",
         step_matches_schedule: bool = False,
         step_transfer_allowed: bool = False,
+        include_order_context: bool = False,
         min_dimension: float = 0.01,
     ) -> None:
         if rollout_steps < 0:
@@ -393,6 +396,8 @@ class ExactPolicyRolloutScorer:
         self.checkpoint_training_xml_sha256 = str(checkpoint_training_xml_sha256)
         self.step_matches_schedule = bool(step_matches_schedule)
         self.step_transfer_allowed = bool(step_transfer_allowed)
+        self.orders = list(orders)
+        self.include_order_context = bool(include_order_context)
         self._action_calls = 0
 
     def observation_for_boxes(self, boxes: list[Box]) -> Any:
@@ -402,7 +407,12 @@ class ExactPolicyRolloutScorer:
         for box in sorted(boxes, key=lambda item: item.box_id):
             values.extend([float(box.length), float(box.width), float(box.height)])
         obs = _np.asarray(values, dtype=_np.float32)
-        return obs / max(self.scale_dim, 1e-9)
+        obs = obs / max(self.scale_dim, 1e-9)
+        if self.include_order_context:
+            obs = _np.concatenate(
+                [obs, order_distribution_context(self.orders, scale_dim=self.scale_dim, normalize=True)]
+            )
+        return obs
 
     def policy_action(self, boxes: list[Box]) -> int:
         from scripts.train_kandula_paper_policy import ensure_torch
@@ -473,6 +483,7 @@ def make_policy_rollout_scorer(
     args: argparse.Namespace,
     *,
     initial_boxes: list[Box],
+    orders: list,
 ) -> ExactPolicyRolloutScorer:
     if args.policy_path is None:
         raise ValueError("--policy-path is required for ranker_policy_rollout_greedy")
@@ -492,10 +503,19 @@ def make_policy_rollout_scorer(
         allow_transfer=args.allow_policy_step_transfer,
     )
     checkpoint_scale = float(checkpoint["scale_dim"]) if checkpoint.get("scale_dim") is not None else None
+    include_order_context = bool(checkpoint.get("include_order_context", False))
+    expected_obs_dim = 3 * args.k + (len(ORDER_CONTEXT_SCHEMA) if include_order_context else 0)
+    if int(checkpoint["obs_dim"]) != expected_obs_dim:
+        raise ValueError(
+            f"policy obs_dim {checkpoint['obs_dim']} does not match context configuration ({expected_obs_dim})"
+        )
+    if include_order_context and checkpoint.get("order_context_schema") != list(ORDER_CONTEXT_SCHEMA):
+        raise ValueError("policy order_context_schema does not match this code version")
     return ExactPolicyRolloutScorer(
         model=model,
         k=args.k,
         initial_boxes=initial_boxes,
+        orders=orders,
         rollout_steps=args.policy_rollout_steps,
         rollout_samples=args.policy_rollout_samples,
         beta=args.policy_rollout_beta,
@@ -512,6 +532,7 @@ def make_policy_rollout_scorer(
         checkpoint_training_xml_sha256=str(checkpoint.get("training_xml_sha256", "")),
         step_matches_schedule=step_matches,
         step_transfer_allowed=args.allow_policy_step_transfer,
+        include_order_context=include_order_context,
     )
 
 
@@ -1894,7 +1915,7 @@ def main() -> None:
     surrogate = make_surrogate_evaluator(args, orders) if args.algorithm == "surrogate_filtered_greedy" else None
     ranker = make_candidate_ranker(args) if args.algorithm in RANKER_ALGORITHMS else None
     rollout_scorer = (
-        make_policy_rollout_scorer(args, initial_boxes=initial_boxes)
+        make_policy_rollout_scorer(args, initial_boxes=initial_boxes, orders=orders)
         if args.algorithm == "ranker_policy_rollout_greedy"
         else None
     )
@@ -1979,6 +2000,7 @@ def main() -> None:
         "policy_checkpoint_step_size": getattr(rollout_scorer, "checkpoint_step_size", None),
         "policy_checkpoint_scale_dim": getattr(rollout_scorer, "scale_dim", None),
         "policy_checkpoint_scale_dim_source": getattr(rollout_scorer, "scale_dim_source", None),
+        "policy_checkpoint_include_order_context": getattr(rollout_scorer, "include_order_context", None),
         "policy_checkpoint_training_order_count": getattr(
             rollout_scorer, "checkpoint_training_order_count", None
         ),

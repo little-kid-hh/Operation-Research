@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import unittest
 
+from box_design_surrogate.policy_context import ORDER_CONTEXT_SCHEMA, order_distribution_context
+from box_design_surrogate.features import summarize_items
+
 from scripts.train_kandula_paper_policy import (
     make_training_order_windows,
     policy_training_reward,
@@ -10,6 +13,17 @@ from scripts.train_kandula_paper_policy import (
 
 
 class PolicyTrainingRewardTest(unittest.TestCase):
+    def test_order_context_has_fixed_normalized_schema(self) -> None:
+        orders = [
+            summarize_items("toy.xml", "0", [(2.0, 4.0, 8.0)]),
+            summarize_items("toy.xml", "1", [(1.0, 3.0, 6.0)]),
+        ]
+        context = order_distribution_context(orders, scale_dim=10.0)
+
+        self.assertEqual(len(context), len(ORDER_CONTEXT_SCHEMA))
+        self.assertTrue(all(value >= 0.0 for value in context))
+        self.assertLessEqual(float(max(context[:6])), 1.0)
+
     def test_training_windows_are_complete_and_non_overlapping_by_default_stride(self) -> None:
         windows = make_training_order_windows(list(range(10)), window_size=4, window_stride=0)
 

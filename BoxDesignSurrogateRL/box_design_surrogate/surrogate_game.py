@@ -7,6 +7,7 @@ import numpy as np
 
 from .evaluator import BatchSurrogateEvaluator, Box, BoxSetEvaluation, SurrogateEvaluator
 from .features import OrderSummary
+from .policy_context import ORDER_CONTEXT_SCHEMA, order_distribution_context
 
 
 @dataclass(frozen=True)
@@ -69,6 +70,7 @@ class SurrogateBoxSizingGame:
         objective_mode: Literal["paper_pf_surrogate", "risk_aware_surrogate"] = "paper_pf_surrogate",
         terminate_on_worse_than_initial: bool = False,
         candidate_batch_size: int | None = None,
+        include_order_context: bool = False,
     ) -> None:
         if not orders:
             raise ValueError("orders must be non-empty")
@@ -99,10 +101,11 @@ class SurrogateBoxSizingGame:
         if candidate_batch_size is not None and candidate_batch_size <= 0:
             raise ValueError("candidate_batch_size must be positive")
         self.candidate_batch_size = candidate_batch_size
+        self.include_order_context = bool(include_order_context)
         self.k = len(self.initial_boxes)
         self.resign_action = 6 * self.k
         self.action_count = 6 * self.k + 1
-        self.observation_dim = 3 * self.k
+        self.observation_dim = 3 * self.k + (len(ORDER_CONTEXT_SCHEMA) if self.include_order_context else 0)
         self.scale_dim = max(max(box.length, box.width, box.height) for box in self.initial_boxes)
         self.initial_evaluation = self.evaluate_box_set(self.initial_boxes)
         self.initial_objective = self.objective(self.initial_evaluation)
@@ -269,6 +272,17 @@ class SurrogateBoxSizingGame:
         obs = np.asarray(values, dtype=np.float32)
         if self.normalize_observation:
             obs = obs / max(self.scale_dim, 1e-9)
+        if self.include_order_context:
+            obs = np.concatenate(
+                [
+                    obs,
+                    order_distribution_context(
+                        self.orders,
+                        scale_dim=self.scale_dim,
+                        normalize=self.normalize_observation,
+                    ),
+                ]
+            )
         return obs
 
     @staticmethod

@@ -161,6 +161,7 @@ class SurrogateFilterTest(unittest.TestCase):
             model=object(),
             k=1,
             initial_boxes=[Box(0, 10.0, 5.0, 2.0)],
+            orders=[summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])],
             rollout_steps=1,
             rollout_samples=1,
             beta=0.95,

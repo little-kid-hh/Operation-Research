@@ -32,6 +32,7 @@ if str(REPO_ROOT) not in sys.path:
 from box_design_surrogate import SurrogateEvaluator, read_order_summaries  # noqa: E402
 from box_design_surrogate.kandula_paper import KandulaBoxSizingGame  # noqa: E402
 from box_design_surrogate.kandula_repro import initial_boxes_kmeans  # noqa: E402
+from box_design_surrogate.policy_context import ORDER_CONTEXT_SCHEMA  # noqa: E402
 from box_design_surrogate.surrogate_game import SurrogateBoxSizingGame  # noqa: E402
 from src.ensemble_train import load_ensemble_pipeline  # noqa: E402
 
@@ -492,6 +493,12 @@ def main() -> None:
         help="Stride between training windows; 0 defaults to the window size.",
     )
     parser.add_argument("--mode", choices=["paper", "surrogate"], default="paper")
+    parser.add_argument(
+        "--include-order-context",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="Append a fixed order-distribution summary to the Kx3 box state for the learned variant.",
+    )
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--step-size", type=float, default=0.5)
@@ -639,6 +646,7 @@ def main() -> None:
                     probability_weight=args.surrogate_probability_weight,
                     objective_mode=args.objective_mode,
                     terminate_on_worse_than_initial=args.terminate_on_worse_than_initial,
+                    include_order_context=args.include_order_context,
                 )
             envs.append(env)
             window_manifest.append(
@@ -734,6 +742,8 @@ def main() -> None:
                 "hidden_layers": args.hidden_layers,
                 "normalize_observation": env.normalize_observation,
                 "scale_dim": shared_scale_dim,
+                "include_order_context": args.include_order_context,
+                "order_context_schema": list(ORDER_CONTEXT_SCHEMA) if args.include_order_context else [],
                 "mode": args.mode,
                 "objective_mode": getattr(env, "objective_mode", ""),
                 "reward_scale": reward_scale,

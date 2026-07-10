@@ -59,10 +59,37 @@ which order distribution it is optimizing. The next variant should add a fixed,
 train-derived order-distribution summary to the RL state, then repeat surrogate
 dev screening before any exact MILP gate.
 
+## Order-context Follow-up
+
+An explicit learned-state variant appended eight normalized train-derived
+statistics: mean and p90 of order maximum length/width/height, plus mean and p90
+total order volume. The original paper state remains the default; the extended
+checkpoint records `obs_dim=38` and the exact context schema.
+
+With the same 15x100 train environments and 150-episode budget, deterministic
+surrogate dev rollout produced:
+
+| Dev offset | Initial uncovered | No-context best uncovered / PF | Context best uncovered / PF |
+|---:|---:|---:|---:|
+| 0 | 0 | 0 / 1.603867 | 0 / 1.608200 |
+| 100 | 1 | **0 / 1.674458** | 1 / 1.582700 |
+| 200 | 0 | 0 / 1.723306 | **0 / 1.712249** |
+| 300 | 1 | 1 / **1.499941** | 1 / 1.502450 |
+| 400 | 1 | 1 / 1.597798 | 1 / **1.596667** |
+
+The context policy is better on PF in two windows but loses the no-context
+policy's coverage repair at offset 100. More importantly, its deterministic
+rollout collapses to the same repeated action 10 on all five windows. It fails
+the surrogate dev gate, so no exact-MILP experiment was run for this variant.
+
+This result weakens the direct-action PPO direction. The next RL formulation
+should target sequential oracle-budget control (candidate tier, audit, or stop),
+where the existing ranker already supplies useful candidate ordering and a
+terminal exact audit can preserve solution quality.
+
 Artifacts:
 
 - Policy: `results/kandula_surrogate_policy_train15x100_step0p25_tau0p5_rewardfix_ep150_seed1/run_20260710_192245`
 - Exact: `results/rl_rollout_dev_gate_20260710/staged_greedy/run_20260710_193018_351696`
 - Ranker-only: `results/rl_rollout_dev_gate_20260710/ranker_filtered_greedy/run_20260710_193726_315675`
 - RL rollout: `results/rl_rollout_dev_gate_20260710/ranker_policy_rollout_greedy/run_20260710_194311_046189`
-
