@@ -13,6 +13,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, NamedTuple, Protocol
 
+import numpy as np
+
 ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = ROOT.parent
 if str(ROOT) not in sys.path:
@@ -25,6 +27,7 @@ from box_design_surrogate.candidate_ranker import (
     candidate_feature_row,
     candidate_trace_rows as build_candidate_trace_rows,
 )
+from box_design_surrogate.budget_policy import BudgetFQIPolicy, budget_state_features
 from box_design_surrogate.features import read_order_summaries
 from box_design_surrogate.kandula_repro import initial_boxes_kmeans, order_requirement
 from box_design_surrogate.milp_oracle import (
@@ -38,7 +41,11 @@ from box_design_surrogate.search import apply_move, coordinate_moves
 
 RANKER_SAFETY_POLICIES = ("none", "all_expansions", "targeted_expansion_capture")
 RANKER_HANDOFF_POLICIES = ("none", "marginal_pf_per_validation")
-RANKER_ALGORITHMS = ("ranker_filtered_greedy", "ranker_policy_rollout_greedy")
+RANKER_ALGORITHMS = (
+    "ranker_filtered_greedy",
+    "ranker_policy_rollout_greedy",
+    "budget_rl_ranker_greedy",
+)
 DEFAULT_TARGETED_SAFETY_MAX_CANDIDATES = 5
 
 
@@ -62,6 +69,53 @@ class PolicyRolloutScore(NamedTuple):
     rank: tuple[float, float, float]
     weighted_packaging_factor: float
     milp_validations: int
+
+
+class BudgetSelection(NamedTuple):
+    budget: int
+    q_margin: float
+    q_values: tuple[float, ...]
+
+
+class CandidateBudgetSelector(Protocol):
+    def select_budget(
+        self,
+        *,
+        feature_rows: list[dict[str, Any]],
+        predicted_scores: list[float],
+        iteration: int,
+        max_iterations: int,
+    ) -> BudgetSelection:
+        ...
+
+
+class FQIBudgetSelector:
+    def __init__(self, policy: BudgetFQIPolicy) -> None:
+        self.policy = policy
+
+    def select_budget(
+        self,
+        *,
+        feature_rows: list[dict[str, Any]],
+        predicted_scores: list[float],
+        iteration: int,
+        max_iterations: int,
+    ) -> BudgetSelection:
+        state = budget_state_features(
+            feature_rows,
+            predicted_scores,
+            iteration=iteration,
+            max_iterations=max_iterations,
+        )
+        q_values = self.policy.predict_q(state)[0]
+        order = np.argsort(q_values)
+        best_idx = int(order[-1])
+        second = float(q_values[order[-2]]) if len(order) > 1 else float(q_values[best_idx])
+        return BudgetSelection(
+            budget=int(self.policy.budgets[best_idx]),
+            q_margin=float(q_values[best_idx] - second),
+            q_values=tuple(float(value) for value in q_values),
+        )
 
 
 class CandidateRolloutScorer(Protocol):
@@ -282,6 +336,12 @@ def make_candidate_ranker(args: argparse.Namespace) -> CandidateRanker:
     if args.candidate_ranker_path is None:
         raise ValueError("--candidate-ranker-path is required for ranker_filtered_greedy")
     return CandidateRanker.load(args.candidate_ranker_path)
+
+
+def make_budget_selector(args: argparse.Namespace) -> FQIBudgetSelector:
+    if args.budget_policy_path is None:
+        raise ValueError("--budget-policy-path is required for budget_rl_ranker_greedy")
+    return FQIBudgetSelector(BudgetFQIPolicy.load(args.budget_policy_path))
 
 
 def weighted_packaging_factor(values: list[float], beta: float) -> float:
@@ -972,10 +1032,12 @@ def best_single_action_ranker_filtered(
     top_k: int,
     adaptive_top_k: list[int] | None,
     noop_fallback: bool,
+    max_iterations: int = 1,
     safety_policy: str = "none",
     safety_max_candidates: int | None = None,
     prefetch_candidate_statuses_enabled: bool = False,
     rollout_scorer: CandidateRolloutScorer | None = None,
+    budget_selector: CandidateBudgetSelector | None = None,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
     moves = list(coordinate_moves(current, step))
     candidates = [apply_move(current, move) for move in moves]
@@ -1001,6 +1063,9 @@ def best_single_action_ranker_filtered(
             "ranker_safety_candidates": 0,
             "ranker_tiers_evaluated": 0,
             "ranker_noop_fallback_used": False,
+            "budget_policy_selected_budget": "",
+            "budget_policy_q_margin": "",
+            "budget_policy_q_values": "",
         }
 
     feature_rows = [
@@ -1027,7 +1092,17 @@ def best_single_action_ranker_filtered(
             f"{len(predicted_scores)} for {generated_candidates} candidates"
         )
 
-    requested_top_k = adaptive_top_k if adaptive_top_k is not None else [top_k]
+    budget_selection: BudgetSelection | None = None
+    if budget_selector is not None:
+        budget_selection = budget_selector.select_budget(
+            feature_rows=feature_rows,
+            predicted_scores=[float(value) for value in predicted_scores],
+            iteration=iteration,
+            max_iterations=max_iterations,
+        )
+        requested_top_k = [budget_selection.budget]
+    else:
+        requested_top_k = adaptive_top_k if adaptive_top_k is not None else [top_k]
     top_k_sequence: list[int] = []
     for value in requested_top_k:
         keep = min(value, generated_candidates)
@@ -1136,6 +1211,13 @@ def best_single_action_ranker_filtered(
         "ranker_safety_candidates": len(safety_indices),
         "ranker_tiers_evaluated": tiers_evaluated,
         "ranker_noop_fallback_used": noop_fallback_used,
+        "budget_policy_selected_budget": budget_selection.budget if budget_selection is not None else "",
+        "budget_policy_q_margin": budget_selection.q_margin if budget_selection is not None else "",
+        "budget_policy_q_values": (
+            ",".join(f"{value:.12g}" for value in budget_selection.q_values)
+            if budget_selection is not None
+            else ""
+        ),
     }
     return best_boxes, best_score, best_action, metrics
 
@@ -1396,6 +1478,7 @@ def run_ranker_filtered_greedy(
     handoff_window: int = 10,
     handoff_min_pf_improvement_per_validation: float = 0.0,
     rollout_scorer: CandidateRolloutScorer | None = None,
+    budget_selector: CandidateBudgetSelector | None = None,
     phase_name: str = "ranker_filtered_greedy",
     initial_score: MilpBoxSetScore | None = None,
     initial_phase: str = "initial",
@@ -1434,6 +1517,7 @@ def run_ranker_filtered_greedy(
         }
     ]
     global_iteration = 0
+    total_iterations = sum(iterations for _step, iterations in schedule)
     for stage_idx, (step, iterations) in enumerate(schedule, start=1):
         for _ in range(iterations):
             if deadline_reached(deadline):
@@ -1457,6 +1541,7 @@ def run_ranker_filtered_greedy(
                 step=step,
                 stage=stage_idx,
                 iteration=global_iteration,
+                max_iterations=total_iterations,
                 top_k=top_k,
                 adaptive_top_k=adaptive_top_k,
                 noop_fallback=noop_fallback,
@@ -1464,6 +1549,7 @@ def run_ranker_filtered_greedy(
                 safety_max_candidates=safety_max_candidates,
                 prefetch_candidate_statuses_enabled=prefetch_candidate_statuses_enabled,
                 rollout_scorer=rollout_scorer,
+                budget_selector=budget_selector,
             )
             improved = score_rank(best_score) < score_rank(current_score)
             trace.append(
@@ -1568,6 +1654,9 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "ranker_safety_candidates",
         "ranker_tiers_evaluated",
         "ranker_noop_fallback_used",
+        "budget_policy_selected_budget",
+        "budget_policy_q_margin",
+        "budget_policy_q_values",
         "ranker_handoff_policy",
         "ranker_handoff_min_iterations",
         "ranker_handoff_window",
@@ -1602,7 +1691,8 @@ def main() -> None:
             "with the same MILP-verified acceptance rule; "
             "ranker_policy_rollout_greedy keeps the ranker query budget but "
             "uses a trained Kandula-style policy rollout to score exact-verified "
-            "improving children."
+            "improving children; budget_rl_ranker_greedy uses a fitted-Q policy "
+            "to choose the exact candidate-validation budget at each state."
         )
     )
     parser.add_argument(
@@ -1613,6 +1703,7 @@ def main() -> None:
             "surrogate_filtered_greedy",
             "ranker_filtered_greedy",
             "ranker_policy_rollout_greedy",
+            "budget_rl_ranker_greedy",
         ],
         required=True,
     )
@@ -1767,6 +1858,12 @@ def main() -> None:
         help="Kandula-style PPO policy checkpoint used by ranker_policy_rollout_greedy.",
     )
     parser.add_argument(
+        "--budget-policy-path",
+        type=Path,
+        default=None,
+        help="Fitted-Q budget policy artifact used by budget_rl_ranker_greedy.",
+    )
+    parser.add_argument(
         "--policy-rollout-steps",
         type=int,
         default=3,
@@ -1886,6 +1983,10 @@ def main() -> None:
         raise ValueError("--policy-rollout-beta must be positive")
     if args.algorithm == "ranker_policy_rollout_greedy" and args.policy_path is None:
         raise ValueError("--policy-path is required for ranker_policy_rollout_greedy")
+    if args.algorithm == "budget_rl_ranker_greedy" and args.budget_policy_path is None:
+        raise ValueError("--budget-policy-path is required for budget_rl_ranker_greedy")
+    if args.algorithm == "budget_rl_ranker_greedy" and not args.ranker_noop_fallback:
+        raise ValueError("budget_rl_ranker_greedy requires --ranker-noop-fallback for exact terminal audit")
     if args.ranker_handoff_min_iterations < 0:
         raise ValueError("--ranker-handoff-min-iterations must be non-negative")
     if args.ranker_handoff_window <= 0:
@@ -1919,6 +2020,7 @@ def main() -> None:
         if args.algorithm == "ranker_policy_rollout_greedy"
         else None
     )
+    budget_selector = make_budget_selector(args) if args.algorithm == "budget_rl_ranker_greedy" else None
 
     run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S_%f")
     run_dir = args.out_root / args.algorithm / run_id
@@ -1984,6 +2086,12 @@ def main() -> None:
             else None
         ),
         "policy_path": str(args.policy_path) if args.algorithm == "ranker_policy_rollout_greedy" else None,
+        "budget_policy_path": (
+            str(args.budget_policy_path) if args.algorithm == "budget_rl_ranker_greedy" else None
+        ),
+        "budget_policy_budgets": (
+            list(budget_selector.policy.budgets) if budget_selector is not None else None
+        ),
         "policy_rollout_steps": (
             args.policy_rollout_steps if args.algorithm == "ranker_policy_rollout_greedy" else None
         ),
@@ -2120,6 +2228,7 @@ def main() -> None:
             handoff_window=args.ranker_handoff_window,
             handoff_min_pf_improvement_per_validation=args.ranker_handoff_min_pf_improvement_per_validation,
             rollout_scorer=rollout_scorer,
+            budget_selector=budget_selector,
             phase_name=args.algorithm,
             initial_score=search_initial_score,
             initial_phase="search_initial" if pre_search_trace else "initial",
@@ -2173,6 +2282,10 @@ def main() -> None:
         "ranker_noop_fallback_uses": int(
             sum(1 for row in trace if str(row.get("ranker_noop_fallback_used", "")).lower() == "true")
         ),
+        "budget_policy_selected_budget_counts": {
+            str(budget): sum(1 for row in trace if row.get("budget_policy_selected_budget") == budget)
+            for budget in (budget_selector.policy.budgets if budget_selector is not None else [])
+        },
         "elapsed_seconds": elapsed_seconds,
         "stop_reason": next(
             (

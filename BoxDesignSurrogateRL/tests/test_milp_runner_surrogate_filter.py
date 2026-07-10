@@ -146,7 +146,50 @@ class WidthPreferredRolloutScorer:
         )
 
 
+class FixedBudgetSelector:
+    def __init__(self, runner, budget: int) -> None:
+        self.runner = runner
+        self.budget = budget
+        self.calls = 0
+
+    def select_budget(self, *, feature_rows, predicted_scores, iteration, max_iterations):
+        self.calls += 1
+        return self.runner.BudgetSelection(self.budget, 0.25, (1.0, 0.75))
+
+
 class SurrogateFilterTest(unittest.TestCase):
+    def test_budget_selector_controls_ranker_validation_tier(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+        current = [Box(0, 3.0, 3.0, 3.0)]
+        oracle = WidthImprovesOracle()
+        selector = FixedBudgetSelector(runner, 1)
+
+        best_boxes, best_score, action, metrics = runner.best_single_action_ranker_filtered(
+            oracle=oracle,
+            ranker=WidthShrinkRanker(),
+            orders=orders,
+            current=current,
+            current_score=_milp_score(10.0),
+            step=1.0,
+            stage=1,
+            iteration=2,
+            max_iterations=10,
+            top_k=10,
+            adaptive_top_k=[10, 30],
+            noop_fallback=False,
+            budget_selector=selector,
+        )
+
+        self.assertEqual(selector.calls, 1)
+        self.assertEqual(len(oracle.evaluated_boxes), 1)
+        self.assertEqual(action, "0:width:-1.000000")
+        self.assertEqual(best_score.packaging_factor, 5.0)
+        self.assertEqual(best_boxes[0].width, 2.0)
+        self.assertEqual(metrics["budget_policy_selected_budget"], 1)
+        self.assertEqual(metrics["budget_policy_q_margin"], 0.25)
+        self.assertEqual(metrics["milp_validated_candidates"], 1)
+
     def test_policy_step_schedule_requires_explicit_transfer(self) -> None:
         runner = _load_runner_module()
 
