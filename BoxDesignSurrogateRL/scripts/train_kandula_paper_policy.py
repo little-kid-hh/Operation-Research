@@ -38,6 +38,7 @@ from src.ensemble_train import load_ensemble_pipeline  # noqa: E402
 
 SUMMARY_FIELDS = [
     "episode",
+    "environment_id",
     "mode",
     "objective_mode",
     "steps",
@@ -69,6 +70,7 @@ SUMMARY_FIELDS = [
 ]
 TRAJECTORY_FIELDS = [
     "episode",
+    "environment_id",
     "mode",
     "objective_mode",
     "step",
@@ -199,11 +201,41 @@ def policy_training_reward(
     return float(coverage_delta + previous_pf - current_pf)
 
 
+def make_training_order_windows(
+    orders: list,
+    *,
+    window_size: int,
+    window_stride: int,
+) -> list[tuple[int, int, list]]:
+    if window_size <= 0 or window_size >= len(orders):
+        return [(0, 0, list(orders))]
+    if window_stride <= 0:
+        window_stride = window_size
+    windows = [
+        (window_id, start, list(orders[start : start + window_size]))
+        for window_id, start in enumerate(range(0, len(orders) - window_size + 1, window_stride))
+    ]
+    if not windows:
+        raise ValueError("training window configuration produced no complete windows")
+    return windows
+
+
+def shuffled_environment_indices(*, count: int, episodes: int, seed: int) -> list[int]:
+    if count <= 0:
+        raise ValueError("environment count must be positive")
+    rng = np.random.default_rng(seed)
+    indices: list[int] = []
+    while len(indices) < episodes:
+        indices.extend(int(value) for value in rng.permutation(count))
+    return indices[:episodes]
+
+
 def collect_episode(
     *,
     env,
     model: ActorCritic,
     episode: int,
+    environment_id: int,
     mode: str,
     gamma: float,
     reward_scale: float,
@@ -254,6 +286,7 @@ def collect_episode(
         trajectory.append(
             {
                 "episode": episode,
+                "environment_id": environment_id,
                 "mode": mode,
                 "objective_mode": getattr(env, "objective_mode", ""),
                 "step": step,
@@ -285,6 +318,7 @@ def collect_episode(
     final_metrics = environment_metrics(env)
     summary = {
         "episode": episode,
+        "environment_id": environment_id,
         "mode": mode,
         "objective_mode": getattr(env, "objective_mode", ""),
         "steps": len(rewards),
@@ -445,6 +479,18 @@ def write_rows(path: Path, fields: list[str], rows: list[dict[str, object]]) -> 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--orders-limit", type=int, default=500)
+    parser.add_argument(
+        "--training-window-size",
+        type=int,
+        default=0,
+        help="Train across complete order windows of this size; 0 uses one environment with all selected orders.",
+    )
+    parser.add_argument(
+        "--training-window-stride",
+        type=int,
+        default=0,
+        help="Stride between training windows; 0 defaults to the window size.",
+    )
     parser.add_argument("--mode", choices=["paper", "surrogate"], default="paper")
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
@@ -528,7 +574,10 @@ def main() -> None:
             "stage": "Stage 2 box-sizing game",
             "state": "K x 3 box dimensions",
             "actions": "6K transforming actions plus one resignation action",
-            "reward": "paper mode uses PF reward; surrogate mode uses ML surrogate objective difference",
+            "reward": (
+                "paper mode uses PF reward; paper_pf_surrogate uses coverage-count delta plus PF delta; "
+                "risk-aware surrogate mode uses ML surrogate objective difference"
+            ),
             "learning": "PPO actor-critic local implementation; paper uses PPO and gives exact hyperparameters in online companion not present locally",
         },
         "git_commit": git_output(["git", "rev-parse", "HEAD"]),
@@ -549,10 +598,15 @@ def main() -> None:
         orders = read_order_summaries(args.xml_path)
         if args.orders_limit:
             orders = orders[: args.orders_limit]
-        initial_boxes = initial_boxes_kmeans(orders, args.k, random_state=args.seed)
-        if args.mode == "paper":
-            env = KandulaBoxSizingGame(orders, initial_boxes, step_size=args.step_size, max_steps=args.max_steps)
-        else:
+        order_windows = make_training_order_windows(
+            orders,
+            window_size=args.training_window_size,
+            window_stride=args.training_window_stride,
+        )
+        if any(len(window_orders) < args.k for _window_id, _start, window_orders in order_windows):
+            raise ValueError(f"every training window must contain at least K={args.k} orders")
+        evaluator = None
+        if args.mode == "surrogate":
             model_pack = load_ensemble_pipeline(args.model_path)
             evaluator = SurrogateEvaluator(
                 model=model_pack,
@@ -561,18 +615,48 @@ def main() -> None:
                 lambda_risk=args.lambda_risk,
                 uncovered_penalty=args.uncovered_penalty,
             )
-            env = SurrogateBoxSizingGame(
-                orders,
-                initial_boxes,
-                evaluator,
-                step_size=args.step_size,
-                max_steps=args.max_steps,
-                uncovered_weight=args.surrogate_uncovered_weight,
-                low_margin_weight=args.surrogate_low_margin_weight,
-                probability_weight=args.surrogate_probability_weight,
-                objective_mode=args.objective_mode,
-                terminate_on_worse_than_initial=args.terminate_on_worse_than_initial,
+        envs = []
+        window_manifest = []
+        for window_id, start, window_orders in order_windows:
+            initial_boxes = initial_boxes_kmeans(window_orders, args.k, random_state=args.seed + window_id)
+            if args.mode == "paper":
+                env = KandulaBoxSizingGame(
+                    window_orders,
+                    initial_boxes,
+                    step_size=args.step_size,
+                    max_steps=args.max_steps,
+                )
+            else:
+                assert evaluator is not None
+                env = SurrogateBoxSizingGame(
+                    window_orders,
+                    initial_boxes,
+                    evaluator,
+                    step_size=args.step_size,
+                    max_steps=args.max_steps,
+                    uncovered_weight=args.surrogate_uncovered_weight,
+                    low_margin_weight=args.surrogate_low_margin_weight,
+                    probability_weight=args.surrogate_probability_weight,
+                    objective_mode=args.objective_mode,
+                    terminate_on_worse_than_initial=args.terminate_on_worse_than_initial,
+                )
+            envs.append(env)
+            window_manifest.append(
+                {
+                    "environment_id": window_id,
+                    "orders_start": start,
+                    "orders_count": len(window_orders),
+                    "initial_uncovered": environment_metrics(env)["uncovered_orders"],
+                    "initial_packaging_factor": environment_metrics(env)["packaging_factor"],
+                }
             )
+        shared_scale_dim = max(float(env.scale_dim) for env in envs)
+        for env in envs:
+            env.scale_dim = shared_scale_dim
+        env = envs[0]
+        manifest["training_environments"] = window_manifest
+        manifest["shared_scale_dim"] = shared_scale_dim
+        (out_dir / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
         torch, _, _ = ensure_torch()
         torch.manual_seed(args.seed)
         device = torch.device("cpu")
@@ -583,11 +667,18 @@ def main() -> None:
         summary_path = out_dir / "train_summary.csv"
         trajectory_path = out_dir / "train_trajectories.csv"
         batch: list[EpisodeBatch] = []
-        for episode in range(args.episodes):
+        environment_indices = shuffled_environment_indices(
+            count=len(envs),
+            episodes=args.episodes,
+            seed=args.seed + 104729,
+        )
+        for episode, environment_id in enumerate(environment_indices):
+            env = envs[environment_id]
             ep = collect_episode(
                 env=env,
                 model=model,
                 episode=episode,
+                environment_id=environment_id,
                 mode=args.mode,
                 gamma=args.gamma,
                 reward_scale=reward_scale,
@@ -598,7 +689,7 @@ def main() -> None:
             write_rows(summary_path, SUMMARY_FIELDS, [ep.summary])
             write_rows(trajectory_path, TRAJECTORY_FIELDS, ep.trajectory)
             print(
-                f"episode={episode} steps={ep.summary['steps']} "
+                f"episode={episode} env={environment_id} steps={ep.summary['steps']} "
                 f"reward={ep.summary['total_reward']:.6f} "
                 f"obj={float(ep.summary['initial_objective']):.6f}->{float(ep.summary['final_objective']):.6f} "
                 f"reason={ep.summary['terminal_reason']}",
@@ -642,7 +733,7 @@ def main() -> None:
                 "hidden_dim": args.hidden_dim,
                 "hidden_layers": args.hidden_layers,
                 "normalize_observation": env.normalize_observation,
-                "scale_dim": float(env.scale_dim),
+                "scale_dim": shared_scale_dim,
                 "mode": args.mode,
                 "objective_mode": getattr(env, "objective_mode", ""),
                 "reward_scale": reward_scale,
@@ -653,6 +744,9 @@ def main() -> None:
                 ),
                 "paper_surrogate_coverage_reward_weight": args.paper_surrogate_coverage_reward_weight,
                 "training_order_count": len(orders),
+                "training_window_count": len(envs),
+                "training_window_size": args.training_window_size,
+                "training_window_stride": args.training_window_stride,
                 "training_xml_path": str(args.xml_path),
                 "training_xml_sha256": file_sha256(args.xml_path),
             },
