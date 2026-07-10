@@ -80,9 +80,10 @@ def evaluate_policy(policy, dataset: BudgetTransitionDataset) -> dict[str, Any]:
     effective_with_full_audit = np.where(preserves, budgets, policy.max_budget)
     return {
         "states": len(dataset.states),
-        "preservation_rate": float(np.mean(preserves)),
+        "exact_action_preservation_rate": float(np.mean(preserves)),
         "mean_selected_budget": float(np.mean(budgets)),
-        "mean_effective_budget_with_full_audit_on_miss": float(np.mean(effective_with_full_audit)),
+        "mean_oracle_hindsight_audit_cost": float(np.mean(effective_with_full_audit)),
+        "oracle_hindsight_audit_is_online_detectable": False,
         "selected_budget_counts": {
             str(budget): int(np.sum(budgets == budget)) for budget in policy.budgets
         },
@@ -95,16 +96,18 @@ def evaluate_fixed_budgets(dataset: BudgetTransitionDataset, budgets: tuple[int,
         preserves = dataset.preserves[:, action_idx]
         effective = np.where(preserves, budget, max(budgets))
         out[str(budget)] = {
-            "preservation_rate": float(np.mean(preserves)),
-            "mean_effective_budget_with_full_audit_on_miss": float(np.mean(effective)),
+            "exact_action_preservation_rate": float(np.mean(preserves)),
+            "mean_oracle_hindsight_audit_cost": float(np.mean(effective)),
+            "oracle_hindsight_audit_is_online_detectable": False,
         }
     minimum = np.asarray(
         [next(budget for budget, preserve in zip(budgets, row) if preserve) for row in dataset.preserves],
         dtype=np.int64,
     )
     out["oracle_minimum"] = {
-        "preservation_rate": 1.0,
-        "mean_effective_budget_with_full_audit_on_miss": float(np.mean(minimum)),
+        "exact_action_preservation_rate": 1.0,
+        "mean_oracle_hindsight_audit_cost": float(np.mean(minimum)),
+        "oracle_hindsight_audit_is_online_detectable": False,
     }
     return out
 
@@ -182,6 +185,8 @@ def main() -> None:
         "candidate_ranker_path": str(args.candidate_ranker_path),
         "budgets": list(args.budgets),
         "feature_names": list(BUDGET_STATE_FEATURES),
+        "action_feature": "selected_budget / max_budget",
+        "model_structure": "shared_state_action_fitted_q",
         "train": evaluate_policy(policy, train),
         "dev": evaluate_policy(policy, dev),
         "train_fixed_budget_baselines": evaluate_fixed_budgets(train, args.budgets),

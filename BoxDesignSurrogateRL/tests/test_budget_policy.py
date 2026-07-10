@@ -6,6 +6,7 @@ import numpy as np
 
 from box_design_surrogate.budget_policy import (
     BUDGET_STATE_FEATURES,
+    BudgetFQIPolicy,
     budget_state_features,
     counterfactual_budget_preservation,
 )
@@ -39,9 +40,28 @@ class BudgetPolicyTest(unittest.TestCase):
 
         metrics = evaluate_fixed_budgets(dataset, (10, 20))
 
-        self.assertEqual(metrics["10"]["preservation_rate"], 0.5)
-        self.assertEqual(metrics["10"]["mean_effective_budget_with_full_audit_on_miss"], 15.0)
-        self.assertEqual(metrics["oracle_minimum"]["mean_effective_budget_with_full_audit_on_miss"], 15.0)
+        self.assertEqual(metrics["10"]["exact_action_preservation_rate"], 0.5)
+        self.assertEqual(metrics["10"]["mean_oracle_hindsight_audit_cost"], 15.0)
+        self.assertEqual(metrics["oracle_minimum"]["mean_oracle_hindsight_audit_cost"], 15.0)
+        self.assertFalse(metrics["10"]["oracle_hindsight_audit_is_online_detectable"])
+
+    def test_shared_q_model_receives_state_and_budget_feature(self) -> None:
+        class SumModel:
+            def predict(self, values: np.ndarray) -> np.ndarray:
+                return np.sum(values, axis=1)
+
+        policy = BudgetFQIPolicy(
+            budgets=(10, 20),
+            feature_names=("state",),
+            model=SumModel(),
+            gamma=0.9,
+            miss_penalty=10.0,
+            max_budget=20,
+        )
+
+        q_values = policy.predict_q(np.asarray([[1.0], [2.0]]))
+
+        np.testing.assert_allclose(q_values, [[1.5, 2.0], [2.5, 3.0]])
 
     def test_state_features_are_fixed_and_finite(self) -> None:
         rows = [candidate(idx, 1.0 + idx) for idx in range(6)]

@@ -146,14 +146,21 @@ class BudgetTransitionDataset:
 class BudgetFQIPolicy:
     budgets: tuple[int, ...]
     feature_names: tuple[str, ...]
-    models: list[Any]
+    model: Any
     gamma: float
     miss_penalty: float
     max_budget: int
 
     def predict_q(self, states: np.ndarray) -> np.ndarray:
         x = np.atleast_2d(np.asarray(states, dtype=np.float64))
-        return np.column_stack([model.predict(x) for model in self.models])
+        action_features = np.asarray(self.budgets, dtype=np.float64) / float(self.max_budget)
+        state_action = np.column_stack(
+            [
+                np.repeat(x, len(self.budgets), axis=0),
+                np.tile(action_features, len(x)),
+            ]
+        )
+        return self.model.predict(state_action).reshape(len(x), len(self.budgets))
 
     def select_budget(self, state: np.ndarray) -> int:
         q_values = self.predict_q(np.asarray(state, dtype=np.float64))[0]
@@ -188,36 +195,39 @@ def fit_budget_fqi(
     if len(budget_values) != dataset.preserves.shape[1]:
         raise ValueError("budget count must match preservation columns")
     max_budget = max(budget_values)
-    models = [
-        HistGradientBoostingRegressor(
+    action_features = np.asarray(budget_values, dtype=np.float64) / float(max_budget)
+    state_action = np.column_stack(
+        [
+            np.repeat(dataset.states, len(budget_values), axis=0),
+            np.tile(action_features, len(dataset.states)),
+        ]
+    )
+    next_q = np.zeros(len(dataset.states), dtype=np.float64)
+    model = None
+    budget_cost = action_features[None, :]
+    for iteration in range(iterations):
+        reward = -budget_cost - miss_penalty * (~dataset.preserves)
+        continuation = np.zeros_like(reward, dtype=np.float64)
+        has_next = dataset.next_indices >= 0
+        for action_idx in range(len(budget_values)):
+            valid = dataset.preserves[:, action_idx] & has_next
+            continuation[valid, action_idx] = gamma * next_q[dataset.next_indices[valid]]
+        model = HistGradientBoostingRegressor(
             max_iter=100,
             max_depth=3,
             learning_rate=0.08,
             l2_regularization=1.0,
-            random_state=random_state + idx,
+            random_state=random_state + iteration,
         )
-        for idx in range(len(budget_values))
-    ]
-    next_q = np.zeros(len(dataset.states), dtype=np.float64)
-    for _iteration in range(iterations):
-        fitted = []
-        for action_idx, budget in enumerate(budget_values):
-            reward = -float(budget) / float(max_budget) - miss_penalty * (~dataset.preserves[:, action_idx])
-            continuation = np.zeros(len(dataset.states), dtype=np.float64)
-            valid = dataset.preserves[:, action_idx] & (dataset.next_indices >= 0)
-            continuation[valid] = gamma * next_q[dataset.next_indices[valid]]
-            model = models[action_idx]
-            model.fit(dataset.states, reward + continuation)
-            fitted.append(model)
-        models = fitted
-        q_values = np.column_stack([model.predict(dataset.states) for model in models])
+        model.fit(state_action, (reward + continuation).reshape(-1))
+        q_values = model.predict(state_action).reshape(len(dataset.states), len(budget_values))
         next_q = np.max(q_values, axis=1)
+    assert model is not None
     return BudgetFQIPolicy(
         budgets=budget_values,
         feature_names=BUDGET_STATE_FEATURES,
-        models=models,
+        model=model,
         gamma=float(gamma),
         miss_penalty=float(miss_penalty),
         max_budget=max_budget,
     )
-
