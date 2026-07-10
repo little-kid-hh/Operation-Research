@@ -75,6 +75,7 @@ TRAJECTORY_FIELDS = [
     "action",
     "action_type",
     "reward",
+    "environment_reward",
     "objective",
     "uncovered_orders",
     "low_margin_assignments",
@@ -179,6 +180,25 @@ def action_type(action: int, k: int) -> str:
     return "decrement" if action < 3 * k else "increment"
 
 
+def policy_training_reward(
+    *,
+    previous_metrics: dict[str, object],
+    current_metrics: dict[str, object],
+    environment_reward: float,
+    mode: str,
+    objective_mode: str,
+    coverage_reward_weight: float,
+) -> float:
+    if mode != "surrogate" or objective_mode != "paper_pf_surrogate":
+        return float(environment_reward)
+    previous_uncovered = int(previous_metrics["uncovered_orders"])
+    current_uncovered = int(current_metrics["uncovered_orders"])
+    previous_pf = float(previous_metrics["packaging_factor"])
+    current_pf = float(current_metrics["packaging_factor"])
+    coverage_delta = coverage_reward_weight * (previous_uncovered - current_uncovered)
+    return float(coverage_delta + previous_pf - current_pf)
+
+
 def collect_episode(
     *,
     env,
@@ -187,6 +207,7 @@ def collect_episode(
     mode: str,
     gamma: float,
     reward_scale: float,
+    coverage_reward_weight: float,
     device: torch.device,
 ) -> EpisodeBatch:
     torch, _, Categorical = ensure_torch()
@@ -200,6 +221,7 @@ def collect_episode(
     obs = env.reset()
     initial_metrics = environment_metrics(env)
     best_objective = float(initial_metrics["objective"])
+    previous_metrics = initial_metrics
     terminal_reason = ""
 
     for step in range(env.max_steps):
@@ -216,7 +238,15 @@ def collect_episode(
         observations.append(obs)
         actions.append(action)
         old_log_probs.append(float(log_prob.item()))
-        raw_reward = float(result.reward)
+        environment_reward = float(result.reward)
+        raw_reward = policy_training_reward(
+            previous_metrics=previous_metrics,
+            current_metrics=metrics,
+            environment_reward=environment_reward,
+            mode=mode,
+            objective_mode=getattr(env, "objective_mode", ""),
+            coverage_reward_weight=coverage_reward_weight,
+        )
         raw_rewards.append(raw_reward)
         rewards.append(raw_reward * reward_scale)
         values.append(float(value.item()))
@@ -229,7 +259,8 @@ def collect_episode(
                 "step": step,
                 "action": action,
                 "action_type": action_type(action, env.k),
-                "reward": result.reward,
+                "reward": raw_reward,
+                "environment_reward": environment_reward,
                 "objective": metrics["objective"],
                 "uncovered_orders": metrics["uncovered_orders"],
                 "low_margin_assignments": metrics["low_margin_assignments"],
@@ -244,6 +275,7 @@ def collect_episode(
                 "terminal_reason": result.terminal_reason,
             }
         )
+        previous_metrics = metrics
         obs = env.observation()
         if result.done:
             break
@@ -434,6 +466,15 @@ def main() -> None:
         default=0.0,
         help="Scale rewards before PPO returns/advantages. Use 0 for mode-aware default.",
     )
+    parser.add_argument(
+        "--paper-surrogate-coverage-reward-weight",
+        type=float,
+        default=1.0,
+        help=(
+            "Coverage-count reward weight for paper_pf_surrogate PPO training. "
+            "PF improvement remains unscaled in the same decomposed reward."
+        ),
+    )
     parser.add_argument("--skip-policy-update", action="store_true")
     parser.add_argument("--tau", type=float, default=0.95)
     parser.add_argument("--tau-high", type=float, default=0.99)
@@ -468,7 +509,11 @@ def main() -> None:
     args = parser.parse_args()
     reward_scale = args.reward_scale
     if reward_scale == 0.0:
-        reward_scale = 1e-6 if args.mode == "surrogate" else 1.0
+        reward_scale = (
+            1.0
+            if args.mode != "surrogate" or args.objective_mode == "paper_pf_surrogate"
+            else 1e-6
+        )
 
     np.random.seed(args.seed)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -546,6 +591,7 @@ def main() -> None:
                 mode=args.mode,
                 gamma=args.gamma,
                 reward_scale=reward_scale,
+                coverage_reward_weight=args.paper_surrogate_coverage_reward_weight,
                 device=device,
             )
             batch.append(ep)
@@ -600,6 +646,12 @@ def main() -> None:
                 "mode": args.mode,
                 "objective_mode": getattr(env, "objective_mode", ""),
                 "reward_scale": reward_scale,
+                "reward_definition": (
+                    "coverage_count_delta_plus_pf_delta"
+                    if args.mode == "surrogate" and args.objective_mode == "paper_pf_surrogate"
+                    else "environment_objective_delta"
+                ),
+                "paper_surrogate_coverage_reward_weight": args.paper_surrogate_coverage_reward_weight,
                 "training_order_count": len(orders),
                 "training_xml_path": str(args.xml_path),
                 "training_xml_sha256": file_sha256(args.xml_path),
