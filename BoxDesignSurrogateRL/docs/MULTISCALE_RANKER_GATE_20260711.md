@@ -83,10 +83,38 @@ batches as the remaining systems bottleneck.
 The result now has two development-window replications, but this is still too
 small for a final statistical claim and still does not establish an RL gain.
 
+The frozen configuration was then evaluated on a third non-overlapping window,
+OR2023 train `[400,500)`:
+
+| method | terminal PF | coverage | rounds | validations | uncached boxes | subprocess s | wall s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| fine exact, fixed 0.25 | 2.114560 | 100% | 304 | 18,240 | 1,741 | 587.23 | 852.12 |
+| multiscale ranker | **1.937439** | 100% | **87** | **7,240** | **1,131** | **428.91** | **554.80** |
+
+Here multiscale ranker improves PF by 8.38%, reduces rounds by 71.4%,
+validations by 60.3%, uncached boxes by 35.0%, subprocess time by 27.0%, and
+wall time by 34.9%.
+
+Across the three converged development windows `[200,500)`:
+
+| aggregate metric | fine exact | multiscale ranker | change |
+| --- | ---: | ---: | ---: |
+| mean PF | 1.984467 | **1.888892** | **-4.82%** |
+| coverage | 100% on 3/3 | 100% on 3/3 | tied |
+| rounds | 957 | **277** | **-71.1%** |
+| validations | 57,420 | **17,570** | **-69.4%** |
+| uncached boxes | 5,432 | **3,384** | **-37.7%** |
+| subprocess seconds | 2,126.54 | **1,896.49** | **-10.8%** |
+| wall seconds | 3,124.38 | **2,275.63** | **-27.2%** |
+
+These are paired descriptive development results. Three windows are not enough
+for inferential uncertainty or a final generalization claim.
+
 ## Acceptance State
 
-- Passed: two-window dev comparison against converged fine exact baselines.
-- In progress: broader independent development-window replication.
+- Passed: three-window dev comparison against converged fine exact baselines.
+- In progress: broader replication and an RL ablation against this frozen
+  supervised baseline.
 - Not passed: RL ablation against the multiscale supervised ranker.
 - Not run: untouched test set.
 
