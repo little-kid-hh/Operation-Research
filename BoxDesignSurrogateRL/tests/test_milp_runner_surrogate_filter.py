@@ -85,6 +85,15 @@ class WidthShrinkRanker:
         ]
 
 
+class CapturingWidthShrinkRanker(WidthShrinkRanker):
+    def __init__(self) -> None:
+        self.rows = []
+
+    def predict_scores(self, rows):
+        self.rows.extend(rows)
+        return super().predict_scores(rows)
+
+
 class NeutralRanker:
     def predict_scores(self, rows):
         return [float(idx) for idx, _row in enumerate(rows)]
@@ -160,6 +169,50 @@ class FixedBudgetSelector:
 
 
 class SurrogateFilterTest(unittest.TestCase):
+    def test_multiscale_exact_search_can_accept_a_larger_move(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+
+        best_boxes, best_score, action, metrics = runner.best_single_action(
+            oracle=WidthImprovesOracle(),
+            orders=orders,
+            current=[Box(0, 3.0, 3.0, 3.0)],
+            current_score=_milp_score(10.0),
+            step=1.0,
+            action_steps=[2.0, 1.0],
+        )
+
+        self.assertEqual(action, "0:width:-2.000000")
+        self.assertEqual(best_boxes[0].width, 1.0)
+        self.assertEqual(best_score.packaging_factor, 5.0)
+        self.assertEqual(metrics["generated_candidates"], 12)
+
+    def test_multiscale_ranker_features_use_each_move_magnitude(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+        ranker = CapturingWidthShrinkRanker()
+
+        _boxes, _score, _action, metrics = runner.best_single_action_ranker_filtered(
+            oracle=WidthImprovesOracle(),
+            ranker=ranker,
+            orders=orders,
+            current=[Box(0, 3.0, 3.0, 3.0)],
+            current_score=_milp_score(10.0),
+            step=0.25,
+            stage=1,
+            iteration=1,
+            max_iterations=10,
+            top_k=1,
+            adaptive_top_k=None,
+            noop_fallback=False,
+            action_steps=[2.0, 1.0],
+        )
+
+        self.assertEqual({row["step"] for row in ranker.rows}, {1.0, 2.0})
+        self.assertEqual({row["abs_move_delta"] for row in ranker.rows}, {1.0, 2.0})
+        self.assertEqual(metrics["generated_candidates"], 12)
+        self.assertEqual(metrics["milp_validated_candidates"], 1)
+
     def test_resumed_budget_search_preserves_iteration_context(self) -> None:
         runner = _load_runner_module()
         orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]

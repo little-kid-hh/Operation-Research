@@ -45,6 +45,7 @@ RANKER_ALGORITHMS = (
     "ranker_filtered_greedy",
     "ranker_policy_rollout_greedy",
     "budget_rl_ranker_greedy",
+    "multiscale_ranker_greedy",
 )
 DEFAULT_TARGETED_SAFETY_MAX_CANDIDATES = 5
 
@@ -164,6 +165,19 @@ def parse_int_list(value: str) -> list[int]:
     if any(value <= 0 for value in values):
         raise argparse.ArgumentTypeError("all integer-list values must be positive")
     return values
+
+
+def parse_positive_float_list(value: str) -> list[float]:
+    values = [float(part.strip()) for part in value.split(",") if part.strip()]
+    if not values or any(item <= 0.0 for item in values):
+        raise argparse.ArgumentTypeError("values must be a comma-separated list of positive numbers")
+    if len(set(values)) != len(values):
+        raise argparse.ArgumentTypeError("values must be unique")
+    return values
+
+
+def multiscale_coordinate_moves(boxes: list[Box], steps: list[float]) -> list:
+    return [move for step in steps for move in coordinate_moves(boxes, step)]
 
 
 def score_rank(score: MilpBoxSetScore) -> tuple[int, int, float]:
@@ -823,6 +837,7 @@ def best_single_action(
     candidate_trace: list[dict] | None = None,
     candidate_trace_context: dict[str, Any] | None = None,
     prefetch_candidate_statuses_enabled: bool = False,
+    action_steps: list[float] | None = None,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
     best_boxes = current
     best_score = current_score
@@ -830,7 +845,11 @@ def best_single_action(
     candidate_evaluations = 0
     milp_eval_seconds = 0.0
     prefetch_eval_seconds = 0.0
-    moves = list(coordinate_moves(current, step))
+    moves = (
+        multiscale_coordinate_moves(current, action_steps)
+        if action_steps is not None
+        else list(coordinate_moves(current, step))
+    )
     candidates: list[list[Box]] = []
     candidate_scores: list[MilpBoxSetScore] = []
     for move in moves:
@@ -1038,8 +1057,13 @@ def best_single_action_ranker_filtered(
     prefetch_candidate_statuses_enabled: bool = False,
     rollout_scorer: CandidateRolloutScorer | None = None,
     budget_selector: CandidateBudgetSelector | None = None,
+    action_steps: list[float] | None = None,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
-    moves = list(coordinate_moves(current, step))
+    moves = (
+        multiscale_coordinate_moves(current, action_steps)
+        if action_steps is not None
+        else list(coordinate_moves(current, step))
+    )
     candidates = [apply_move(current, move) for move in moves]
     generated_candidates = len(candidates)
     if generated_candidates == 0:
@@ -1074,7 +1098,7 @@ def best_single_action_ranker_filtered(
             candidate_boxes=candidate,
             move=move,
             current_score=current_score,
-            step=step,
+            step=abs(float(move.delta)),
             stage=stage,
             iteration=iteration,
             candidate_index=idx,
@@ -1308,6 +1332,8 @@ def run_staged_greedy(
     deadline: float | None = None,
     prefetch_candidate_statuses_enabled: bool = False,
     iteration_offset: int = 0,
+    action_steps: list[float] | None = None,
+    phase_name: str = "staged_greedy",
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -1328,7 +1354,7 @@ def run_staged_greedy(
             if deadline_reached(deadline):
                 trace.append(
                     time_limit_row(
-                        phase="staged_greedy",
+                        phase=phase_name,
                         iteration=global_iteration + 1,
                         stage=stage_idx,
                         step=step,
@@ -1346,17 +1372,18 @@ def run_staged_greedy(
                 candidate_trace=candidate_trace,
                 candidate_trace_context={
                     "source_run_id": source_run_id,
-                    "algorithm": "staged_greedy",
-                    "phase": "staged_greedy",
+                    "algorithm": phase_name,
+                    "phase": phase_name,
                     "stage": stage_idx,
                     "iteration": global_iteration,
                 },
                 prefetch_candidate_statuses_enabled=prefetch_candidate_statuses_enabled,
+                action_steps=action_steps,
             )
             improved = score_rank(best_score) < score_rank(current_score)
             trace.append(
                 {
-                    "phase": "staged_greedy",
+                    "phase": phase_name,
                     "iteration": global_iteration,
                     "stage": stage_idx,
                     "step": step,
@@ -1487,6 +1514,7 @@ def run_ranker_filtered_greedy(
     prefetch_candidate_statuses_enabled: bool = False,
     iteration_offset: int = 0,
     iteration_horizon: int | None = None,
+    action_steps: list[float] | None = None,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -1556,6 +1584,7 @@ def run_ranker_filtered_greedy(
                 prefetch_candidate_statuses_enabled=prefetch_candidate_statuses_enabled,
                 rollout_scorer=rollout_scorer,
                 budget_selector=budget_selector,
+                action_steps=action_steps,
             )
             improved = score_rank(best_score) < score_rank(current_score)
             trace.append(
@@ -1698,7 +1727,8 @@ def main() -> None:
             "ranker_policy_rollout_greedy keeps the ranker query budget but "
             "uses a trained Kandula-style policy rollout to score exact-verified "
             "improving children; budget_rl_ranker_greedy uses a fitted-Q policy "
-            "to choose the exact candidate-validation budget at each state."
+            "to choose the exact candidate-validation budget at each state; "
+            "multiscale variants expose several move magnitudes in one state."
         )
     )
     parser.add_argument(
@@ -1710,6 +1740,8 @@ def main() -> None:
             "ranker_filtered_greedy",
             "ranker_policy_rollout_greedy",
             "budget_rl_ranker_greedy",
+            "multiscale_greedy",
+            "multiscale_ranker_greedy",
         ],
         required=True,
     )
@@ -1725,6 +1757,12 @@ def main() -> None:
     parser.add_argument("--fixed-step", type=float, default=0.5)
     parser.add_argument("--iterations", type=int, default=3)
     parser.add_argument("--schedule", type=parse_schedule, default=parse_schedule("0.5:2,0.25:2"))
+    parser.add_argument(
+        "--action-steps",
+        type=parse_positive_float_list,
+        default=parse_positive_float_list("2.0,1.0,0.5,0.25"),
+        help="Move magnitudes exposed simultaneously by multiscale algorithms.",
+    )
     parser.add_argument(
         "--iteration-offset",
         type=int,
@@ -2067,6 +2105,7 @@ def main() -> None:
         "schedule": [{"step": step, "iterations": iters} for step, iters in args.schedule],
         "iteration_offset": args.iteration_offset,
         "iteration_horizon": args.iteration_horizon,
+        "action_steps": args.action_steps if args.algorithm.startswith("multiscale_") else None,
         "initial_boxes_json": str(args.initial_boxes_json) if args.initial_boxes_json is not None else None,
         "xml_path": str(args.xml_path),
         "labels_path": str(args.labels_path),
@@ -2199,7 +2238,7 @@ def main() -> None:
             deadline=deadline,
             prefetch_candidate_statuses_enabled=args.prefetch_candidate_statuses,
         )
-    elif args.algorithm == "staged_greedy":
+    elif args.algorithm in {"staged_greedy", "multiscale_greedy"}:
         best_boxes, best_score, search_trace = run_staged_greedy(
             oracle=oracle,
             orders=orders,
@@ -2212,6 +2251,8 @@ def main() -> None:
             deadline=deadline,
             prefetch_candidate_statuses_enabled=args.prefetch_candidate_statuses,
             iteration_offset=args.iteration_offset,
+            action_steps=args.action_steps if args.algorithm == "multiscale_greedy" else None,
+            phase_name=args.algorithm,
         )
     elif args.algorithm == "surrogate_filtered_greedy":
         if surrogate is None:
@@ -2261,6 +2302,7 @@ def main() -> None:
             prefetch_candidate_statuses_enabled=args.prefetch_candidate_statuses,
             iteration_offset=args.iteration_offset,
             iteration_horizon=args.iteration_horizon,
+            action_steps=args.action_steps if args.algorithm == "multiscale_ranker_greedy" else None,
         )
     trace = pre_search_trace + search_trace
     elapsed_seconds = time.perf_counter() - started

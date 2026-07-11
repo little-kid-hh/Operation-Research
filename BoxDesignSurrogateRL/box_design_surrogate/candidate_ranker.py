@@ -376,7 +376,7 @@ def candidate_trace_rows(
             candidate_boxes=candidate,
             move=move,
             current_score=current_score,
-            step=step,
+            step=abs(float(move.delta)),
             stage=stage,
             iteration=iteration,
             candidate_index=idx,
