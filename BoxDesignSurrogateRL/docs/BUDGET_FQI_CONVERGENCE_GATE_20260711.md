@@ -80,10 +80,32 @@ Do not promote the current budget FQI as the main method and do not run it on
 the untouched test set. The exact-baseline reduction is real, but the simpler
 supervised ranker explains a stronger reduction without RL.
 
-The next RL iteration should target candidate long-term value or search-path
-length, where a sequential policy can add information beyond one-step ranker
+The next RL iteration should target state-dependent step magnitude, where a
+sequential policy can reduce search-path length beyond one-step ranker
 ordering. Further tuning of the scalar budget miss penalty is not justified by
 this gate.
+
+## Fixed-Step Structural Finding
+
+The terminal `best_boxes.json` files from exact, fixed ranker, and budget FQI
+have the same SHA-256 hash:
+
+```text
+0E029828A69D960C76B99B90BE766C04FA10C613CAD48A23312F3AE670C5947F
+```
+
+Across the complete 355-round trajectories, every method accepts exactly 354
+improving actions: 353 dimension shrinks and one expansion. More strongly, the
+counter of the 23 distinct `(box, dimension, signed 0.25 step)` actions is
+identical across all methods. The methods only permute the same action
+multiset.
+
+This explains why learned candidate ordering cannot reduce the number of
+fixed-step improvements on this window. A sequential method needs a richer
+action space to improve path length. The next gate therefore uses the stronger
+global `0.5-to-stop -> 0.25-to-stop` exact baseline and investigates learned
+state-dependent step magnitude; it does not continue tuning fixed-0.25 action
+ordering.
 
 ## Artifacts
 
