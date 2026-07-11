@@ -64,10 +64,29 @@ explains the result. The remaining cost is concentrated in late wide/full
 fallbacks, which is the next target for a sequential policy that jointly
 chooses move magnitude and verification depth.
 
+## Independent Development Replication
+
+After freezing the action steps and ranker tiers above, the same configuration
+was run on the non-overlapping OR2023 train `[300,400)` window. Both methods
+were resumed after matched 600-second checkpoints and then stopped naturally.
+
+| method | terminal PF | coverage | rounds | validations | uncached boxes | subprocess s | wall s |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| fine exact, fixed 0.25 | 1.832082 | 100% | 298 | 17,880 | 1,728 | 698.40 | 1,052.83 |
+| multiscale ranker | **1.771564** | 100% | **74** | **4,240** | **1,072** | 757.11 | **893.58** |
+
+On this second window, multiscale ranker improves PF by 3.30%, reduces rounds
+by 75.2%, validations by 76.3%, uncached boxes by 38.0%, and wall time by
+15.1%. Subprocess time increases by 8.4%, again identifying wide/full fallback
+batches as the remaining systems bottleneck.
+
+The result now has two development-window replications, but this is still too
+small for a final statistical claim and still does not establish an RL gain.
+
 ## Acceptance State
 
-- Passed: one-window dev comparison against exact staged/fine baselines.
-- Not passed: replication across independent development windows.
+- Passed: two-window dev comparison against converged fine exact baselines.
+- In progress: broader independent development-window replication.
 - Not passed: RL ablation against the multiscale supervised ranker.
 - Not run: untouched test set.
 
@@ -82,3 +101,5 @@ chooses move magnitude and verification depth.
 - Multiscale ranker continuation:
   `results/adaptive_step_dev_o200_20260711/multiscale_ranker_greedy/run_20260711_183844_918692`
 - Implementation commit: `cd38360`.
+- Independent replication root:
+  `results/adaptive_step_dev_replication_20260711`.
