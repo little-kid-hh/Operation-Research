@@ -151,13 +151,39 @@ class FixedBudgetSelector:
         self.runner = runner
         self.budget = budget
         self.calls = 0
+        self.iteration_contexts: list[tuple[int, int]] = []
 
     def select_budget(self, *, feature_rows, predicted_scores, iteration, max_iterations):
         self.calls += 1
+        self.iteration_contexts.append((iteration, max_iterations))
         return self.runner.BudgetSelection(self.budget, 0.25, (1.0, 0.75))
 
 
 class SurrogateFilterTest(unittest.TestCase):
+    def test_resumed_budget_search_preserves_iteration_context(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+        selector = FixedBudgetSelector(runner, 1)
+
+        _boxes, _score, trace = runner.run_ranker_filtered_greedy(
+            oracle=WidthImprovesOracle(),
+            ranker=WidthShrinkRanker(),
+            orders=orders,
+            boxes=[Box(0, 3.0, 3.0, 3.0)],
+            schedule=[(1.0, 1)],
+            top_k=10,
+            adaptive_top_k=None,
+            noop_fallback=False,
+            budget_selector=selector,
+            initial_score=_milp_score(10.0),
+            iteration_offset=250,
+            iteration_horizon=500,
+        )
+
+        self.assertEqual(trace[0]["iteration"], 250)
+        self.assertEqual(trace[1]["iteration"], 251)
+        self.assertEqual(selector.iteration_contexts, [(251, 500)])
+
     def test_budget_selector_controls_ranker_validation_tier(self) -> None:
         runner = _load_runner_module()
         orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]

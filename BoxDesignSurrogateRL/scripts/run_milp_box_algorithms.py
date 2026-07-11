@@ -1307,13 +1307,14 @@ def run_staged_greedy(
     source_run_id: str = "",
     deadline: float | None = None,
     prefetch_candidate_statuses_enabled: bool = False,
+    iteration_offset: int = 0,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
     trace = [
         {
             "phase": initial_phase,
-            "iteration": 0,
+            "iteration": iteration_offset,
             "stage": 0,
             "step": schedule[0][0],
             "action": "init",
@@ -1321,7 +1322,7 @@ def run_staged_greedy(
             **score_to_dict(current_score),
         }
     ]
-    global_iteration = 0
+    global_iteration = iteration_offset
     for stage_idx, (step, iterations) in enumerate(schedule, start=1):
         for _ in range(iterations):
             if deadline_reached(deadline):
@@ -1484,13 +1485,15 @@ def run_ranker_filtered_greedy(
     initial_phase: str = "initial",
     deadline: float | None = None,
     prefetch_candidate_statuses_enabled: bool = False,
+    iteration_offset: int = 0,
+    iteration_horizon: int | None = None,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
     trace = [
         {
             "phase": initial_phase,
-            "iteration": 0,
+            "iteration": iteration_offset,
             "stage": 0,
             "step": schedule[0][0],
             "action": "init",
@@ -1516,8 +1519,11 @@ def run_ranker_filtered_greedy(
             **score_to_dict(current_score),
         }
     ]
-    global_iteration = 0
-    total_iterations = sum(iterations for _step, iterations in schedule)
+    global_iteration = iteration_offset
+    scheduled_iterations = sum(iterations for _step, iterations in schedule)
+    total_iterations = iteration_horizon or iteration_offset + scheduled_iterations
+    if total_iterations < iteration_offset + scheduled_iterations:
+        raise ValueError("iteration_horizon must cover iteration_offset plus the scheduled iterations")
     for stage_idx, (step, iterations) in enumerate(schedule, start=1):
         for _ in range(iterations):
             if deadline_reached(deadline):
@@ -1719,6 +1725,18 @@ def main() -> None:
     parser.add_argument("--fixed-step", type=float, default=0.5)
     parser.add_argument("--iterations", type=int, default=3)
     parser.add_argument("--schedule", type=parse_schedule, default=parse_schedule("0.5:2,0.25:2"))
+    parser.add_argument(
+        "--iteration-offset",
+        type=int,
+        default=0,
+        help="Completed search iterations before this run; preserves iteration-dependent model features on resume.",
+    )
+    parser.add_argument(
+        "--iteration-horizon",
+        type=int,
+        default=None,
+        help="Total planned search horizon used to normalize budget-policy iteration state.",
+    )
     parser.add_argument(
         "--initial-boxes-json",
         type=Path,
@@ -1952,6 +1970,10 @@ def main() -> None:
         help="Optional manually supplied code version, e.g. the pushed GitHub commit used for this run.",
     )
     args = parser.parse_args()
+    if args.iteration_offset < 0:
+        raise ValueError("--iteration-offset must be non-negative")
+    if args.iteration_horizon is not None and args.iteration_horizon <= 0:
+        raise ValueError("--iteration-horizon must be positive")
 
     if args.iterations < 0:
         raise ValueError("--iterations must be non-negative")
@@ -2043,6 +2065,8 @@ def main() -> None:
         "fixed_step": args.fixed_step,
         "iterations": args.iterations,
         "schedule": [{"step": step, "iterations": iters} for step, iters in args.schedule],
+        "iteration_offset": args.iteration_offset,
+        "iteration_horizon": args.iteration_horizon,
         "initial_boxes_json": str(args.initial_boxes_json) if args.initial_boxes_json is not None else None,
         "xml_path": str(args.xml_path),
         "labels_path": str(args.labels_path),
@@ -2187,6 +2211,7 @@ def main() -> None:
             source_run_id=run_id,
             deadline=deadline,
             prefetch_candidate_statuses_enabled=args.prefetch_candidate_statuses,
+            iteration_offset=args.iteration_offset,
         )
     elif args.algorithm == "surrogate_filtered_greedy":
         if surrogate is None:
@@ -2234,6 +2259,8 @@ def main() -> None:
             initial_phase="search_initial" if pre_search_trace else "initial",
             deadline=deadline,
             prefetch_candidate_statuses_enabled=args.prefetch_candidate_statuses,
+            iteration_offset=args.iteration_offset,
+            iteration_horizon=args.iteration_horizon,
         )
     trace = pre_search_trace + search_trace
     elapsed_seconds = time.perf_counter() - started
