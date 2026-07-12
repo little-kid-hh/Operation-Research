@@ -27,6 +27,13 @@ seconds. It is beneficial late: `-8` uncached boxes and `-8.94` subprocess
 seconds. Wall time has the same direction but is treated as secondary because
 it contains machine noise.
 
+A subsequent exact repeat of the iteration-100 fine branch found more than 20%
+timing variation with identical trajectory and uncached-query count. Therefore
+the single-run time differences in this table are exploratory only. Uncached
+queries are the deterministic policy-training label; subprocess and wall time
+require repeated runs and distributional reporting at the final evaluation
+gate.
+
 ## Consequence for the learning problem
 
 A fixed rule that always chooses coarse or always chooses fine cannot realize
