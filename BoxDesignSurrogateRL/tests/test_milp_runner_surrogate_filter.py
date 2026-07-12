@@ -177,6 +177,11 @@ class HeightExpansionPrioritizer:
 
 
 class SurrogateFilterTest(unittest.TestCase):
+    def test_parse_box_move(self) -> None:
+        runner = _load_runner_module()
+        move = runner.parse_box_move("4:height:-0.25")
+        self.assertEqual((move.box_id, move.dimension, move.delta), (4, "height", -0.25))
+
     def test_policy_union_can_add_and_select_a_non_ranker_candidate(self) -> None:
         runner = _load_runner_module()
         orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]

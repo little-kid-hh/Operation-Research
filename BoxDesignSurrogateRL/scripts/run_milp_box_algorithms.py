@@ -36,7 +36,7 @@ from box_design_surrogate.milp_oracle import (
     MilpLabelTableOracle,
 )
 from box_design_surrogate.policy_context import ORDER_CONTEXT_SCHEMA, order_distribution_context
-from box_design_surrogate.search import apply_move, coordinate_moves
+from box_design_surrogate.search import BoxMove, apply_move, coordinate_moves
 
 
 RANKER_SAFETY_POLICIES = ("none", "all_expansions", "targeted_expansion_capture")
