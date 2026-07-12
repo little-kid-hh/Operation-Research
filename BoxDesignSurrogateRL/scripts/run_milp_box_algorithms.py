@@ -2135,6 +2135,15 @@ def main() -> None:
         ),
     )
     parser.add_argument(
+        "--forced-first-action-step",
+        type=float,
+        default=None,
+        help=(
+            "Restrict the first ranker+MILP decision to this positive move scale, "
+            "then continue with the configured search action space."
+        ),
+    )
+    parser.add_argument(
         "--repair-margins",
         type=parse_float_list,
         default=parse_float_list("1.0,1.05,1.1,1.25,1.5,2.0"),
@@ -2167,6 +2176,12 @@ def main() -> None:
         raise ValueError("--repair-max-rounds must be non-negative")
     if args.max_elapsed_seconds is not None and args.max_elapsed_seconds <= 0.0:
         raise ValueError("--max-elapsed-seconds must be positive when supplied")
+    if args.forced_first_action_step is not None and args.forced_first_action_step <= 0.0:
+        raise ValueError("--forced-first-action-step must be positive")
+    if args.forced_first_move is not None and args.forced_first_action_step is not None:
+        raise ValueError("--forced-first-move and --forced-first-action-step are mutually exclusive")
+    if args.forced_first_action_step is not None and args.algorithm not in RANKER_ALGORITHMS:
+        raise ValueError("--forced-first-action-step requires a ranker algorithm")
     if args.orders_offset < 0:
         raise ValueError("--orders-offset must be non-negative")
     if args.orders_limit is not None and args.orders_limit < args.k:
@@ -2349,6 +2364,7 @@ def main() -> None:
         "candidate_trace_csv": str(args.candidate_trace_csv) if args.candidate_trace_csv is not None else None,
         "coverage_repair": args.coverage_repair,
         "forced_first_move": asdict(args.forced_first_move) if args.forced_first_move is not None else None,
+        "forced_first_action_step": args.forced_first_action_step,
         "repair_margins": args.repair_margins,
         "repair_max_rounds": args.repair_max_rounds,
         "max_elapsed_seconds": args.max_elapsed_seconds,
@@ -2406,6 +2422,39 @@ def main() -> None:
                 "improved": score_rank(search_initial_score) < score_rank(before_forced_score),
                 "candidate_evaluations": 1,
                 "generated_candidates": 1,
+                **score_to_dict(search_initial_score),
+            }
+        )
+
+    if args.forced_first_action_step is not None:
+        if ranker is None:
+            raise RuntimeError("forced first action step requires an initialized candidate ranker")
+        before_forced_score = search_initial_score or oracle.evaluate(orders, search_boxes)
+        search_boxes, search_initial_score, forced_action, forced_metrics = best_single_action_ranker_filtered(
+            oracle=oracle,
+            ranker=ranker,
+            orders=orders,
+            current=search_boxes,
+            current_score=before_forced_score,
+            step=args.forced_first_action_step,
+            stage=0,
+            iteration=args.iteration_offset,
+            top_k=args.ranker_top_k,
+            adaptive_top_k=args.ranker_adaptive_top_k,
+            noop_fallback=args.ranker_noop_fallback,
+            max_iterations=args.iteration_horizon or sum(iters for _step, iters in args.schedule),
+            safety_policy=args.ranker_safety_policy,
+            safety_max_candidates=args.ranker_safety_max_candidates,
+            prefetch_candidate_statuses_enabled=args.prefetch_candidate_statuses,
+        )
+        pre_search_trace.append(
+            {
+                "phase": "forced_first_action_step",
+                "iteration": args.iteration_offset,
+                "step": args.forced_first_action_step,
+                "action": forced_action,
+                "improved": score_rank(search_initial_score) < score_rank(before_forced_score),
+                **forced_metrics,
                 **score_to_dict(search_initial_score),
             }
         )
