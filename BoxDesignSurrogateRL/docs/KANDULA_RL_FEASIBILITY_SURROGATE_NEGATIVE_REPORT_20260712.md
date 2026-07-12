@@ -175,6 +175,87 @@ Coarse/fine controller 的负门控说明：训练前应先算完美 oracle poli
 
 ## 6. 当前真正成立的正结果：非 RL 的 multiscale ranker
 
+### 6.1 有效的到底是什么
+
+有效组件是 **assignment-aware HGBT candidate ranker + multiscale local search + exact MILP certification**，不是 PPO，也不是 feasibility predictor 直接替代 MILP。
+
+完整流程如下：
+
+```text
+输入当前 10 个箱型和当前 exact MILP assignment
+→ 枚举 10 × 3 × 2 × 4 = 240 个候选动作
+→ HGBT 为每个候选动作预测“它像不像 exact search 会接受的动作”
+→ 按预测分数排序
+→ 先把小 shortlist 送入 MILP
+→ MILP 重新计算 order-box feasibility、assignment、coverage 和 PF
+→ 只接受 MILP 证明字典序改善的动作
+→ 无改善时扩大 shortlist，并在终止前做 exact fallback/audit
+```
+
+因此 ranker 只负责**决定先验证谁**，不负责最终判定可行性，也无权直接接受动作。
+
+### 6.2 Ranker 预测什么
+
+模型是 HGBT accepted-move classifier。它的预测对象是一条候选 box move，例如：
+
+```text
+box 7 的 height 减少 0.5
+```
+
+输出是该候选动作被历史 exact greedy search 接受的倾向分数。随后按分数从高到低排列 240 个动作。它不是下面这种模型：
+
+```text
+输入一个 order 和一个 box → 输出能否装下
+```
+
+后者才是 feasibility predictor。两个模型的学习目标、输入粒度和算法作用都不同。
+
+| 组件 | 输入 | 输出 | 当前结论 |
+|---|---|---|---|
+| Feasibility predictor | 一个 order + 一个 box | 装载可行概率 | 可构造快速 surrogate 环境，但未证明改善 exact 终局 |
+| Candidate ranker | 当前 box-set + assignment + 一个 move | 该 move 值得优先验证的分数 | 三窗口 development 上有效 |
+| PPO policy | 当前状态 | 61/241 个动作的概率 | 已测试配置未超过 ranker |
+| MILP oracle | 一个 order + 一个 box | exact feasible / infeasible / unknown | 最终可行性与 PF 的权威判定 |
+
+### 6.3 Ranker 的训练数据从哪里来
+
+当前 frozen assignment-aware ranker 使用历史 exact candidate traces：
+
+- 7,680 条候选动作记录；
+- 128 个完整搜索状态组；
+- 包含 step `0.5` 和 `0.25` 的 repaired exact traces；
+- 标签为该动作是否被 exact search 接受；
+- 模型为 HistGradientBoostingClassifier（HGBT）。
+
+每条训练记录描述当前状态和一个候选动作，包括：
+
+- 当前 PF、coverage、box-set 体积统计；
+- 被调整箱子的当前尺寸和候选尺寸；
+- 调整方向、步长、体积和表面积变化；
+- 当前 MILP assignment 中有多少订单分配给该箱子；
+- 这些订单的总体积、占比，以及 shrink 后可能失去可行性的订单；
+- 候选箱可能从更大箱子捕获的订单统计。
+
+Assignment-aware 特征只使用当前已知 assignment、订单几何和候选 box geometry，不读取候选动作的 MILP 标签，因此推理时可获得，不构成 label leakage。
+
+当前模型没有使用 step `1.0` 和 `2.0` 的训练候选；multiscale 实验对这两个尺度属于模型迁移。该限制必须保留在论文中，后续可用 frozen protocol 补充 multiscale training traces，但不能反过来污染已完成的 development comparison。
+
+### 6.4 为什么它有效
+
+它解决了当前系统真正昂贵的环节：MILP candidate verification。240 个动作全部用 MILP 检查在运行时间上不可接受，而 HGBT 一次批量排序开销很小。只要好动作在 ranker 前部，搜索就能用较少 MILP query 找到改善；若 ranker 漏掉动作，逐级扩大 shortlist 和 terminal exact audit 负责安全兜底。
+
+multiscale action space 同时解决固定细步长的路径长度问题。固定 `0.25` 需要重复执行大量可交换的小幅 shrink；允许 `2/1/0.5/0.25` 后，可以用大步快速移动，再用小步细化。监督 ranker 让这个从 60 扩大到 240 的动作空间仍可计算。
+
+有效性来自两个互补部分：
+
+```text
+multiscale：提高可达到的解质量，并减少搜索轮数
+ranker：减少每轮需要精确验证的候选
+MILP audit：保持 coverage 和最终可行性口径
+```
+
+### 6.5 它相对什么 baseline 有效
+
 三个互不重叠 development windows 上，相对 converged fine exact search：
 
 | Aggregate metric | Fine exact | Multiscale ranker | Change |
@@ -188,6 +269,8 @@ Coarse/fine controller 的负门控说明：训练前应先算完美 oracle poli
 | Wall time | 3,124.38 s | **2,275.63 s** | **-27.2%** |
 
 这个结果说明 multiscale supervised candidate ordering 能让 240-action search 变得可运行，并进入更好的 PF basin。它不能被包装成 RL 结果。
+
+这里的主表对照是 converged fixed-fine exact search。对 global staged exact baseline，单个 `[200,300)` window 上 multiscale ranker 的 PF 更低 2.79%，但 uncached boxes 多 8.8%、subprocess 多 41.7%、wall time 多 24.9%，属于质量/成本 trade-off，不是全面支配。因此最严谨的正 claim 是：它在三个 development windows 上同时优于 converged fine exact；尚不能声称它全面支配所有 staged exact 配置。
 
 以上是三个 development windows 的配对描述统计，不是最终泛化结论。由于各 RL 变体已经在 development gate 失败，按预先约定的实验纪律，没有为了寻找有利数字而继续运行 untouched test。正式论文若采用 multiscale ranker 正结果，仍需冻结配置后完成独立测试与重复 timing evaluation。
 
