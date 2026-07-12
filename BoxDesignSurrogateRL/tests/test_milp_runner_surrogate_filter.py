@@ -168,7 +168,44 @@ class FixedBudgetSelector:
         return self.runner.BudgetSelection(self.budget, 0.25, (1.0, 0.75))
 
 
+class HeightExpansionPrioritizer:
+    def score_moves(self, boxes, moves):
+        return [
+            0.0 if move.dimension == "height" and move.delta > 0.0 else 100.0
+            for move in moves
+        ]
+
+
 class SurrogateFilterTest(unittest.TestCase):
+    def test_policy_union_can_add_and_select_a_non_ranker_candidate(self) -> None:
+        runner = _load_runner_module()
+        orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]
+
+        best_boxes, best_score, action, metrics = runner.best_single_action_ranker_filtered(
+            oracle=HeightExpansionBestOracle(),
+            ranker=WidthShrinkRanker(),
+            orders=orders,
+            current=[Box(0, 3.0, 3.0, 3.0)],
+            current_score=_milp_score(10.0),
+            step=1.0,
+            stage=1,
+            iteration=1,
+            max_iterations=10,
+            top_k=1,
+            adaptive_top_k=None,
+            noop_fallback=False,
+            candidate_prioritizer=HeightExpansionPrioritizer(),
+            candidate_policy_top_k=1,
+        )
+
+        self.assertEqual(action, "0:height:+1.000000")
+        self.assertEqual(best_boxes[0].height, 4.0)
+        self.assertEqual(best_score.packaging_factor, 4.0)
+        self.assertEqual(metrics["milp_validated_candidates"], 2)
+        self.assertEqual(metrics["candidate_policy_scored_candidates"], 6)
+        self.assertEqual(metrics["candidate_policy_top_k"], 1)
+        self.assertEqual(metrics["candidate_policy_ranker_overlap"], 0)
+
     def test_multiscale_exact_search_can_accept_a_larger_move(self) -> None:
         runner = _load_runner_module()
         orders = [summarize_items("toy.xml", "0", [(1.0, 1.0, 1.0)])]

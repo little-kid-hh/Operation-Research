@@ -46,6 +46,7 @@ RANKER_ALGORITHMS = (
     "ranker_policy_rollout_greedy",
     "budget_rl_ranker_greedy",
     "multiscale_ranker_greedy",
+    "multiscale_ranker_policy_union_greedy",
 )
 DEFAULT_TARGETED_SAFETY_MAX_CANDIDATES = 5
 
@@ -553,6 +554,82 @@ class ExactPolicyRolloutScorer:
         )
 
 
+class MultiscalePolicyPrioritizer:
+    """Map multiscale PPO logits onto the runner's explicit BoxMove list."""
+
+    def __init__(self, *, model: object, checkpoint: dict[str, Any], k: int, orders: list) -> None:
+        self.model = model
+        self.k = int(k)
+        self.orders = list(orders)
+        self.action_steps = tuple(float(value) for value in checkpoint.get("action_steps", []))
+        if not self.action_steps:
+            raise ValueError("candidate policy checkpoint does not declare action_steps")
+        expected_actions = 6 * self.k * len(self.action_steps) + 1
+        if int(checkpoint["action_count"]) != expected_actions:
+            raise ValueError(
+                f"candidate policy action_count {checkpoint['action_count']} does not match "
+                f"K={self.k}, action_steps={self.action_steps} ({expected_actions} actions)"
+            )
+        self.scale_dim = float(checkpoint["scale_dim"])
+        self.include_order_context = bool(checkpoint.get("include_order_context", False))
+        self.checkpoint_mode = str(checkpoint.get("mode", ""))
+        self.checkpoint_objective_mode = str(checkpoint.get("objective_mode", ""))
+
+    def observation(self, boxes: list[Box]) -> np.ndarray:
+        values: list[float] = []
+        for box in sorted(boxes, key=lambda item: item.box_id):
+            values.extend([float(box.length), float(box.width), float(box.height)])
+        obs = np.asarray(values, dtype=np.float32) / max(self.scale_dim, 1e-9)
+        if self.include_order_context:
+            obs = np.concatenate(
+                [obs, order_distribution_context(self.orders, scale_dim=self.scale_dim, normalize=True)]
+            )
+        return obs
+
+    def score_moves(self, boxes: list[Box], moves: list) -> np.ndarray:
+        from scripts.train_kandula_paper_policy import ensure_torch
+
+        torch, _, _ = ensure_torch()
+        obs_t = torch.as_tensor(self.observation(boxes), dtype=torch.float32).unsqueeze(0)
+        with torch.no_grad():
+            logits, _value = self.model(obs_t)
+        logits_np = logits.squeeze(0).cpu().numpy()
+        box_positions = {box.box_id: idx for idx, box in enumerate(sorted(boxes, key=lambda item: item.box_id))}
+        dim_positions = {"length": 0, "width": 1, "height": 2}
+        scores = []
+        for move in moves:
+            step_idx = next(
+                (idx for idx, value in enumerate(self.action_steps) if abs(value - abs(float(move.delta))) <= 1e-12),
+                None,
+            )
+            if step_idx is None:
+                raise ValueError(f"candidate move step {abs(float(move.delta))} is absent from policy checkpoint")
+            local = box_positions[move.box_id] * 3 + dim_positions[move.dimension]
+            if float(move.delta) > 0.0:
+                local += 3 * self.k
+            action = step_idx * 6 * self.k + local
+            scores.append(-float(logits_np[action]))
+        return np.asarray(scores, dtype=np.float64)
+
+
+def make_candidate_policy_prioritizer(
+    args: argparse.Namespace,
+    *,
+    orders: list,
+) -> MultiscalePolicyPrioritizer:
+    if args.candidate_policy_path is None:
+        raise ValueError("--candidate-policy-path is required for multiscale_ranker_policy_union_greedy")
+    from scripts.run_kandula_paper_paas import load_policy
+
+    model, checkpoint = load_policy(args.candidate_policy_path)
+    checkpoint_steps = tuple(float(value) for value in checkpoint.get("action_steps", []))
+    if checkpoint_steps != tuple(float(value) for value in args.action_steps):
+        raise ValueError(
+            f"candidate policy action_steps {checkpoint_steps} do not match runner action_steps {tuple(args.action_steps)}"
+        )
+    return MultiscalePolicyPrioritizer(model=model, checkpoint=checkpoint, k=args.k, orders=orders)
+
+
 def make_policy_rollout_scorer(
     args: argparse.Namespace,
     *,
@@ -1058,6 +1135,8 @@ def best_single_action_ranker_filtered(
     rollout_scorer: CandidateRolloutScorer | None = None,
     budget_selector: CandidateBudgetSelector | None = None,
     action_steps: list[float] | None = None,
+    candidate_prioritizer: MultiscalePolicyPrioritizer | None = None,
+    candidate_policy_top_k: int = 0,
 ) -> tuple[list[Box], MilpBoxSetScore, str, dict[str, Any]]:
     moves = (
         multiscale_coordinate_moves(current, action_steps)
@@ -1090,6 +1169,10 @@ def best_single_action_ranker_filtered(
             "budget_policy_selected_budget": "",
             "budget_policy_q_margin": "",
             "budget_policy_q_values": "",
+            "candidate_policy_scored_candidates": 0,
+            "candidate_policy_eval_seconds": 0.0,
+            "candidate_policy_top_k": 0,
+            "candidate_policy_ranker_overlap": 0,
         }
 
     feature_rows = [
@@ -1136,6 +1219,17 @@ def best_single_action_ranker_filtered(
         top_k_sequence.append(generated_candidates)
 
     ranked_indices = sorted(range(generated_candidates), key=lambda idx: (float(predicted_scores[idx]), idx))
+    candidate_policy_eval_seconds = 0.0
+    candidate_policy_indices: list[int] = []
+    if candidate_prioritizer is not None:
+        policy_started = time.perf_counter()
+        policy_scores = candidate_prioritizer.score_moves(current, moves)
+        candidate_policy_eval_seconds = time.perf_counter() - policy_started
+        if len(policy_scores) != generated_candidates:
+            raise RuntimeError("candidate policy returned an unexpected number of scores")
+        candidate_policy_indices = sorted(
+            range(generated_candidates), key=lambda idx: (float(policy_scores[idx]), idx)
+        )[: min(candidate_policy_top_k, generated_candidates)]
     safety_indices = ranker_safety_indices(
         safety_policy=safety_policy,
         moves=moves,
@@ -1159,6 +1253,9 @@ def best_single_action_ranker_filtered(
     noop_fallback_used = False
     for tier_keep in top_k_sequence:
         tier_indices = list(ranked_indices[:tier_keep])
+        if candidate_policy_indices:
+            seen = set(tier_indices)
+            tier_indices.extend(idx for idx in candidate_policy_indices if idx not in seen)
         if safety_indices:
             seen = set(tier_indices)
             tier_indices.extend(idx for idx in safety_indices if idx not in seen)
@@ -1242,6 +1339,10 @@ def best_single_action_ranker_filtered(
             if budget_selection is not None
             else ""
         ),
+        "candidate_policy_scored_candidates": generated_candidates if candidate_prioritizer is not None else 0,
+        "candidate_policy_eval_seconds": candidate_policy_eval_seconds,
+        "candidate_policy_top_k": len(candidate_policy_indices),
+        "candidate_policy_ranker_overlap": len(set(candidate_policy_indices) & set(ranked_indices[:top_k_sequence[0]])),
     }
     return best_boxes, best_score, best_action, metrics
 
@@ -1515,6 +1616,8 @@ def run_ranker_filtered_greedy(
     iteration_offset: int = 0,
     iteration_horizon: int | None = None,
     action_steps: list[float] | None = None,
+    candidate_prioritizer: MultiscalePolicyPrioritizer | None = None,
+    candidate_policy_top_k: int = 0,
 ) -> tuple[list[Box], MilpBoxSetScore, list[dict]]:
     current = sorted(boxes, key=lambda b: b.box_id)
     current_score = initial_score if initial_score is not None else oracle.evaluate(orders, current)
@@ -1585,6 +1688,8 @@ def run_ranker_filtered_greedy(
                 rollout_scorer=rollout_scorer,
                 budget_selector=budget_selector,
                 action_steps=action_steps,
+                candidate_prioritizer=candidate_prioritizer,
+                candidate_policy_top_k=candidate_policy_top_k,
             )
             improved = score_rank(best_score) < score_rank(current_score)
             trace.append(
@@ -1677,6 +1782,10 @@ def write_trace(path: Path, trace: list[dict]) -> None:
         "policy_rollout_milp_validations",
         "ranker_eval_seconds",
         "policy_rollout_eval_seconds",
+        "candidate_policy_scored_candidates",
+        "candidate_policy_eval_seconds",
+        "candidate_policy_top_k",
+        "candidate_policy_ranker_overlap",
         "prefetch_eval_seconds",
         "milp_eval_seconds",
         "policy_rollout_selected_weighted_pf",
@@ -1742,6 +1851,7 @@ def main() -> None:
             "budget_rl_ranker_greedy",
             "multiscale_greedy",
             "multiscale_ranker_greedy",
+            "multiscale_ranker_policy_union_greedy",
         ],
         required=True,
     )
@@ -1799,6 +1909,18 @@ def main() -> None:
         type=Path,
         default=None,
         help="Candidate ranker joblib artifact used by ranker_filtered_greedy.",
+    )
+    parser.add_argument(
+        "--candidate-policy-path",
+        type=Path,
+        default=None,
+        help="Multiscale PPO checkpoint used to add policy-prioritized candidates to each ranker tier.",
+    )
+    parser.add_argument(
+        "--candidate-policy-top-k",
+        type=int,
+        default=5,
+        help="Number of PPO-prioritized candidates unioned with each supervised-ranker tier.",
     )
     parser.add_argument("--tau", type=float, default=0.95, help="Surrogate feasibility probability threshold.")
     parser.add_argument("--tau-high", type=float, default=0.99, help="Surrogate risk-shaping high threshold.")
@@ -2031,6 +2153,8 @@ def main() -> None:
         raise ValueError("--surrogate-candidate-batch-size must be positive")
     if args.ranker_top_k <= 0:
         raise ValueError("--ranker-top-k must be positive")
+    if args.candidate_policy_top_k <= 0:
+        raise ValueError("--candidate-policy-top-k must be positive")
     if args.ranker_adaptive_top_k is not None and any(value <= 0 for value in args.ranker_adaptive_top_k):
         raise ValueError("--ranker-adaptive-top-k values must be positive")
     if args.ranker_safety_max_candidates is not None and args.ranker_safety_max_candidates <= 0:
@@ -2045,6 +2169,8 @@ def main() -> None:
         raise ValueError("--policy-path is required for ranker_policy_rollout_greedy")
     if args.algorithm == "budget_rl_ranker_greedy" and args.budget_policy_path is None:
         raise ValueError("--budget-policy-path is required for budget_rl_ranker_greedy")
+    if args.algorithm == "multiscale_ranker_policy_union_greedy" and args.candidate_policy_path is None:
+        raise ValueError("--candidate-policy-path is required for multiscale_ranker_policy_union_greedy")
     if args.algorithm == "budget_rl_ranker_greedy" and not args.ranker_noop_fallback:
         raise ValueError("budget_rl_ranker_greedy requires --ranker-noop-fallback for exact terminal audit")
     if args.ranker_handoff_min_iterations < 0:
@@ -2081,6 +2207,11 @@ def main() -> None:
         else None
     )
     budget_selector = make_budget_selector(args) if args.algorithm == "budget_rl_ranker_greedy" else None
+    candidate_prioritizer = (
+        make_candidate_policy_prioritizer(args, orders=orders)
+        if args.algorithm == "multiscale_ranker_policy_union_greedy"
+        else None
+    )
 
     run_id = datetime.now().strftime("run_%Y%m%d_%H%M%S_%f")
     run_dir = args.out_root / args.algorithm / run_id
@@ -2115,6 +2246,12 @@ def main() -> None:
         "oracle_cache_dir": str(args.oracle_cache_dir) if args.oracle_cache_dir is not None else None,
         "model_path": str(args.model_path) if args.algorithm == "surrogate_filtered_greedy" else None,
         "candidate_ranker_path": str(args.candidate_ranker_path) if args.algorithm in RANKER_ALGORITHMS else None,
+        "candidate_policy_path": str(args.candidate_policy_path) if candidate_prioritizer is not None else None,
+        "candidate_policy_top_k": args.candidate_policy_top_k if candidate_prioritizer is not None else None,
+        "candidate_policy_checkpoint_mode": getattr(candidate_prioritizer, "checkpoint_mode", None),
+        "candidate_policy_checkpoint_objective_mode": getattr(
+            candidate_prioritizer, "checkpoint_objective_mode", None
+        ),
         "tau": args.tau if args.algorithm == "surrogate_filtered_greedy" else None,
         "tau_high": args.tau_high if args.algorithm == "surrogate_filtered_greedy" else None,
         "lambda_risk": args.lambda_risk if args.algorithm == "surrogate_filtered_greedy" else None,
@@ -2302,7 +2439,13 @@ def main() -> None:
             prefetch_candidate_statuses_enabled=args.prefetch_candidate_statuses,
             iteration_offset=args.iteration_offset,
             iteration_horizon=args.iteration_horizon,
-            action_steps=args.action_steps if args.algorithm == "multiscale_ranker_greedy" else None,
+            action_steps=(
+                args.action_steps
+                if args.algorithm in {"multiscale_ranker_greedy", "multiscale_ranker_policy_union_greedy"}
+                else None
+            ),
+            candidate_prioritizer=candidate_prioritizer,
+            candidate_policy_top_k=args.candidate_policy_top_k,
         )
     trace = pre_search_trace + search_trace
     elapsed_seconds = time.perf_counter() - started
@@ -2340,6 +2483,15 @@ def main() -> None:
         "surrogate_eval_seconds": float(sum(row.get("surrogate_eval_seconds", 0.0) for row in trace)),
         "ranker_eval_seconds": float(sum(row.get("ranker_eval_seconds", 0.0) for row in trace)),
         "policy_rollout_eval_seconds": float(sum(row.get("policy_rollout_eval_seconds", 0.0) for row in trace)),
+        "candidate_policy_scored_candidates": int(
+            sum(row.get("candidate_policy_scored_candidates", 0) for row in trace)
+        ),
+        "candidate_policy_eval_seconds": float(
+            sum(row.get("candidate_policy_eval_seconds", 0.0) for row in trace)
+        ),
+        "candidate_policy_ranker_overlap": int(
+            sum(row.get("candidate_policy_ranker_overlap", 0) for row in trace)
+        ),
         "prefetch_eval_seconds": float(sum(row.get("prefetch_eval_seconds", 0.0) for row in trace)),
         "milp_eval_seconds": float(sum(row.get("milp_eval_seconds", 0.0) for row in trace)),
         "surrogate_tiers_evaluated": int(sum(row.get("surrogate_tiers_evaluated", 0) for row in trace)),

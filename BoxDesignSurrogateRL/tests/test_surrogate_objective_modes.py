@@ -26,6 +26,24 @@ class CountingLengthProbabilityModel(LengthProbabilityModel):
 
 
 class SurrogateObjectiveModeTest(unittest.TestCase):
+    def test_multiscale_actions_decode_step_before_local_transform(self) -> None:
+        game = SurrogateBoxSizingGame(
+            self.orders,
+            [Box(0, 4.0, 3.0, 2.0)],
+            self.evaluator,
+            step_size=0.5,
+            action_steps=[2.0, 1.0],
+            objective_mode="paper_pf_surrogate",
+        )
+
+        large_step = game.apply_action(game.boxes, 0)
+        small_step = game.apply_action(game.boxes, 6)
+
+        self.assertEqual(game.action_count, 13)
+        self.assertEqual(game.resign_action, 12)
+        self.assertEqual((large_step[0].length, large_step[0].width, large_step[0].height), (3.0, 2.0, 2.0))
+        self.assertEqual((small_step[0].length, small_step[0].width, small_step[0].height), (3.0, 3.0, 2.0))
+
     def setUp(self) -> None:
         self.orders = [summarize_items("unit", "order0", [(1.0, 1.0, 1.0)])]
         self.boxes = [

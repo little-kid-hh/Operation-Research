@@ -61,6 +61,7 @@ class SurrogateBoxSizingGame:
         evaluator: SurrogateEvaluator,
         *,
         step_size: float = 0.5,
+        action_steps: list[float] | tuple[float, ...] | None = None,
         max_steps: int = 100,
         min_dimension: float = 0.01,
         normalize_observation: bool = True,
@@ -78,6 +79,8 @@ class SurrogateBoxSizingGame:
             raise ValueError("initial_boxes must be non-empty")
         if step_size <= 0:
             raise ValueError("step_size must be positive")
+        if action_steps is not None and (not action_steps or any(step <= 0.0 for step in action_steps)):
+            raise ValueError("action_steps must contain positive values")
         if max_steps <= 0:
             raise ValueError("max_steps must be positive")
         if objective_mode not in {"paper_pf_surrogate", "risk_aware_surrogate"}:
@@ -90,6 +93,9 @@ class SurrogateBoxSizingGame:
             else BatchSurrogateEvaluator.from_evaluator(evaluator, orders)
         )
         self.step_size = float(step_size)
+        self.action_steps = tuple(float(step) for step in (action_steps or [step_size]))
+        if len(set(self.action_steps)) != len(self.action_steps):
+            raise ValueError("action_steps must be unique")
         self.max_steps = int(max_steps)
         self.min_dimension = float(min_dimension)
         self.normalize_observation = normalize_observation
@@ -103,8 +109,9 @@ class SurrogateBoxSizingGame:
         self.candidate_batch_size = candidate_batch_size
         self.include_order_context = bool(include_order_context)
         self.k = len(self.initial_boxes)
-        self.resign_action = 6 * self.k
-        self.action_count = 6 * self.k + 1
+        self.actions_per_step = 6 * self.k
+        self.resign_action = self.actions_per_step * len(self.action_steps)
+        self.action_count = self.resign_action + 1
         self.observation_dim = 3 * self.k + (len(ORDER_CONTEXT_SCHEMA) if self.include_order_context else 0)
         self.scale_dim = max(max(box.length, box.width, box.height) for box in self.initial_boxes)
         self.initial_evaluation = self.evaluate_box_set(self.initial_boxes)
@@ -251,8 +258,10 @@ class SurrogateBoxSizingGame:
     def apply_action(self, boxes: Iterable[Box], action: int) -> list[Box]:
         if action < 0 or action >= self.resign_action:
             raise ValueError(f"transform action out of range: {action}")
-        direction = -1.0 if action < 3 * self.k else 1.0
-        flat_idx = action if action < 3 * self.k else action - 3 * self.k
+        step_idx, local_action = divmod(action, self.actions_per_step)
+        action_step = self.action_steps[step_idx]
+        direction = -1.0 if local_action < 3 * self.k else 1.0
+        flat_idx = local_action if local_action < 3 * self.k else local_action - 3 * self.k
         box_idx = flat_idx // 3
         dim_idx = flat_idx % 3
         out = []
@@ -260,7 +269,7 @@ class SurrogateBoxSizingGame:
         for idx, box in enumerate(sorted_boxes):
             dims = [box.length, box.width, box.height]
             if idx == box_idx:
-                dims[dim_idx] = max(self.min_dimension, dims[dim_idx] + direction * self.step_size)
+                dims[dim_idx] = max(self.min_dimension, dims[dim_idx] + direction * action_step)
                 dims = sorted(dims, reverse=True)
             out.append(Box(box.box_id, float(dims[0]), float(dims[1]), float(dims[2])))
         return out

@@ -177,10 +177,18 @@ def discounted_returns(rewards: list[float], gamma: float) -> list[float]:
     return list(reversed(out))
 
 
-def action_type(action: int, k: int) -> str:
-    if action == 6 * k:
+def action_type(action: int, k: int, action_count: int) -> str:
+    if action == action_count - 1:
         return "resign"
-    return "decrement" if action < 3 * k else "increment"
+    local_action = action % (6 * k)
+    return "decrement" if local_action < 3 * k else "increment"
+
+
+def parse_action_steps(value: str) -> list[float]:
+    steps = [float(part.strip()) for part in value.split(",") if part.strip()]
+    if not steps or any(step <= 0.0 for step in steps) or len(set(steps)) != len(steps):
+        raise argparse.ArgumentTypeError("action steps must be unique positive numbers")
+    return steps
 
 
 def policy_training_reward(
@@ -292,7 +300,7 @@ def collect_episode(
                 "objective_mode": getattr(env, "objective_mode", ""),
                 "step": step,
                 "action": action,
-                "action_type": action_type(action, env.k),
+                "action_type": action_type(action, env.k, env.action_count),
                 "reward": raw_reward,
                 "environment_reward": environment_reward,
                 "objective": metrics["objective"],
@@ -502,6 +510,12 @@ def main() -> None:
     parser.add_argument("--k", type=int, default=10)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--step-size", type=float, default=0.5)
+    parser.add_argument(
+        "--action-steps",
+        type=parse_action_steps,
+        default=None,
+        help="Optional multiscale surrogate actions, e.g. 2.0,1.0,0.5,0.25; paper mode stays single-step.",
+    )
     parser.add_argument("--max-steps", type=int, default=50)
     parser.add_argument("--episodes", type=int, default=100)
     parser.add_argument("--batch-episodes", type=int, default=4)
@@ -560,6 +574,8 @@ def main() -> None:
     )
     parser.add_argument("--out-root", type=Path, default=ROOT / "results" / "kandula_paper_policy")
     args = parser.parse_args()
+    if args.action_steps is not None and args.mode != "surrogate":
+        raise ValueError("--action-steps is currently supported only in surrogate mode")
     reward_scale = args.reward_scale
     if reward_scale == 0.0:
         reward_scale = (
@@ -640,6 +656,7 @@ def main() -> None:
                     initial_boxes,
                     evaluator,
                     step_size=args.step_size,
+                    action_steps=args.action_steps,
                     max_steps=args.max_steps,
                     uncovered_weight=args.surrogate_uncovered_weight,
                     low_margin_weight=args.surrogate_low_margin_weight,
@@ -738,6 +755,7 @@ def main() -> None:
                 "action_count": env.action_count,
                 "k": env.k,
                 "step_size": args.step_size,
+                "action_steps": list(env.action_steps) if isinstance(env, SurrogateBoxSizingGame) else [args.step_size],
                 "hidden_dim": args.hidden_dim,
                 "hidden_layers": args.hidden_layers,
                 "normalize_observation": env.normalize_observation,
