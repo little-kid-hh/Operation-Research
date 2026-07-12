@@ -177,6 +177,23 @@ def parse_positive_float_list(value: str) -> list[float]:
     return values
 
 
+def parse_box_move(value: str) -> BoxMove:
+    parts = [part.strip() for part in value.split(":")]
+    if len(parts) != 3:
+        raise argparse.ArgumentTypeError("move must be box_id:dimension:delta")
+    try:
+        box_id = int(parts[0])
+        delta = float(parts[2])
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("move box_id and delta must be numeric") from exc
+    dimension = parts[1].lower()
+    if box_id < 0 or dimension not in {"length", "width", "height"} or delta == 0.0:
+        raise argparse.ArgumentTypeError(
+            "move requires nonnegative box_id, dimension length/width/height, and nonzero delta"
+        )
+    return BoxMove(box_id=box_id, dimension=dimension, delta=delta)
+
+
 def multiscale_coordinate_moves(boxes: list[Box], steps: list[float]) -> list:
     return [move for step in steps for move in coordinate_moves(boxes, step)]
 
@@ -2109,6 +2126,15 @@ def main() -> None:
     )
     parser.add_argument("--coverage-repair", choices=["none", "geometric_expand"], default="none")
     parser.add_argument(
+        "--forced-first-move",
+        type=parse_box_move,
+        default=None,
+        help=(
+            "Execute one audited box_id:dimension:delta transition before search. "
+            "Intended for counterfactual branch-and-follow label generation."
+        ),
+    )
+    parser.add_argument(
         "--repair-margins",
         type=parse_float_list,
         default=parse_float_list("1.0,1.05,1.1,1.25,1.5,2.0"),
@@ -2322,6 +2348,7 @@ def main() -> None:
         "prefetch_candidate_statuses": args.prefetch_candidate_statuses,
         "candidate_trace_csv": str(args.candidate_trace_csv) if args.candidate_trace_csv is not None else None,
         "coverage_repair": args.coverage_repair,
+        "forced_first_move": asdict(args.forced_first_move) if args.forced_first_move is not None else None,
         "repair_margins": args.repair_margins,
         "repair_max_rounds": args.repair_max_rounds,
         "max_elapsed_seconds": args.max_elapsed_seconds,
@@ -2360,6 +2387,28 @@ def main() -> None:
             pre_search_trace.extend(repair_trace)
         else:
             raise ValueError(f"unknown coverage repair mode: {args.coverage_repair}")
+
+    if args.forced_first_move is not None:
+        known_box_ids = {box.box_id for box in search_boxes}
+        if args.forced_first_move.box_id not in known_box_ids:
+            raise ValueError(f"forced move references unknown box_id {args.forced_first_move.box_id}")
+        before_forced_score = search_initial_score or oracle.evaluate(orders, search_boxes)
+        search_boxes = apply_move(search_boxes, args.forced_first_move)
+        search_initial_score = oracle.evaluate(orders, search_boxes)
+        pre_search_trace.append(
+            {
+                "phase": "forced_first_move",
+                "iteration": 0,
+                "action": (
+                    f"{args.forced_first_move.box_id}:{args.forced_first_move.dimension}:"
+                    f"{args.forced_first_move.delta:.6f}"
+                ),
+                "improved": score_rank(search_initial_score) < score_rank(before_forced_score),
+                "candidate_evaluations": 1,
+                "generated_candidates": 1,
+                **score_to_dict(search_initial_score),
+            }
+        )
 
     if args.algorithm == "paper_fixed_step":
         best_boxes, best_score, search_trace = run_fixed_step(
